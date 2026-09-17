@@ -153,8 +153,8 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       view.current = null;
     };
     // Re-created only when the note changes, which is what makes the undo
-    // history per note rather than per session.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // history per note rather than per session. Everything else it needs is
+    // read through `callbacks`, so this deliberately depends on the path alone.
   }, [props.path]);
 
   // Content replaced from outside — a reload after an external edit, or a

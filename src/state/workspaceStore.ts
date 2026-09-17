@@ -415,10 +415,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       clearTimeout(timer);
       saveTimers.delete(path);
     }
-    set((state) => {
-      const { [path]: _removed, ...rest } = state.buffers;
-      return { buffers: rest };
-    });
+    set((state) => ({ buffers: without(state.buffers, path) }));
   },
 
   async handleExternalChange(path) {
@@ -450,8 +447,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
     set((state) => {
       const { layout } = tree.pruneMissing(state.layout, (candidate) => candidate !== path);
-      const { [path]: _removed, ...rest } = state.buffers;
-      return { layout, buffers: rest };
+      return { layout, buffers: without(state.buffers, path) };
     });
     schedulePersist(get);
   },
@@ -461,12 +457,21 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       const layout = tree.retargetTabs(state.layout, from, to);
       const buffer = state.buffers[from];
       if (!buffer) return { layout };
-      const { [from]: _removed, ...rest } = state.buffers;
-      return { layout, buffers: { ...rest, [to]: { ...buffer, path: to } } };
+      return {
+        layout,
+        buffers: { ...without(state.buffers, from), [to]: { ...buffer, path: to } },
+      };
     });
     schedulePersist(get);
   },
 }));
+
+/** A copy of `record` without one key. */
+function without<T>(record: Record<string, T>, key: string): Record<string, T> {
+  const copy = { ...record };
+  delete copy[key];
+  return copy;
+}
 
 function activeTabOfLayout(layout: PaneLayout) {
   const pane = tree.findLeaf(layout.root, layout.activePaneId) ?? tree.leaves(layout.root)[0];
