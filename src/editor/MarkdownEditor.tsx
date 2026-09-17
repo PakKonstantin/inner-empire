@@ -54,6 +54,11 @@ export interface MarkdownEditorProps {
   initialCursor?: number;
   readOnly?: boolean;
   placeholder?: string;
+  /**
+   * Copy a dropped or pasted file into the vault and return the link text to
+   * insert. Returning null means the drop was not handled.
+   */
+  onImportFile?: (file: File) => Promise<string | null>;
 }
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
@@ -127,6 +132,56 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
         callbacks.current.placeholder
           ? placeholderExtension(callbacks.current.placeholder)
           : [],
+        // Dropping an image or a PDF into a note files it in the vault and
+        // links to it, which is the behaviour that makes attachments usable
+        // without a separate import step.
+        EditorView.domEventHandlers({
+          drop: (event, currentView) => {
+            const files = event.dataTransfer?.files;
+            if (!files || files.length === 0 || !callbacks.current.onImportFile) return false;
+            event.preventDefault();
+
+            const position =
+              currentView.posAtCoords({ x: event.clientX, y: event.clientY }) ??
+              currentView.state.selection.main.head;
+
+            void (async () => {
+              const insertions: string[] = [];
+              for (const file of Array.from(files)) {
+                const link = await callbacks.current.onImportFile?.(file);
+                if (link) insertions.push(link);
+              }
+              if (insertions.length === 0) return;
+              const text = insertions.join('\n');
+              currentView.dispatch({
+                changes: { from: position, insert: text },
+                selection: { anchor: position + text.length },
+              });
+            })();
+            return true;
+          },
+          paste: (event, currentView) => {
+            const files = event.clipboardData?.files;
+            if (!files || files.length === 0 || !callbacks.current.onImportFile) return false;
+            event.preventDefault();
+
+            void (async () => {
+              const position = currentView.state.selection.main.head;
+              const insertions: string[] = [];
+              for (const file of Array.from(files)) {
+                const link = await callbacks.current.onImportFile?.(file);
+                if (link) insertions.push(link);
+              }
+              if (insertions.length === 0) return;
+              const text = insertions.join('\n');
+              currentView.dispatch({
+                changes: { from: position, insert: text },
+                selection: { anchor: position + text.length },
+              });
+            })();
+            return true;
+          },
+        }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             callbacks.current.onChange(update.state.doc.toString());
@@ -198,6 +253,40 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       ),
     });
   }, [props.readOnly]);
+
+  // The outline and plugins ask the editor to move or insert through events,
+  // rather than holding a reference to it. Only the focused editor responds, so
+  // a split does not act twice.
+  useEffect(() => {
+    const onJump = (event: Event) => {
+      const editor = view.current;
+      if (!editor || !editor.hasFocus) {
+        // The outline acts on the visible editor even when focus is in the
+        // sidebar, so the first mounted editor takes it when none is focused.
+        if (!editor || globalThis.document.activeElement?.closest('.ie-editor')) return;
+      }
+      const detail = (event as CustomEvent<{ line: number }>).detail;
+      scrollToLine(editor, detail.line);
+    };
+
+    const onInsert = (event: Event) => {
+      const editor = view.current;
+      if (!editor || !editor.hasFocus) return;
+      const detail = (event as CustomEvent<{ text: string }>).detail;
+      const position = editor.state.selection.main.head;
+      editor.dispatch({
+        changes: { from: position, insert: detail.text },
+        selection: { anchor: position + detail.text.length },
+      });
+    };
+
+    window.addEventListener('ie:jump-to-line', onJump);
+    window.addEventListener('ie:insert-text', onInsert);
+    return () => {
+      window.removeEventListener('ie:jump-to-line', onJump);
+      window.removeEventListener('ie:insert-text', onInsert);
+    };
+  }, []);
 
   return <div className="ie-editor" ref={host} data-path={props.path} />;
 }

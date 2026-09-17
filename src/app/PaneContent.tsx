@@ -6,8 +6,9 @@
  * pane knowing how any of them work.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
+import { CanvasBoard } from '@/canvas/CanvasBoard';
 import { MarkdownEditor } from '@/editor/MarkdownEditor';
 import { GraphView, type GraphSettings } from '@/graph/GraphView';
 import { renderMarkdown } from '@/markdown/renderer';
@@ -34,6 +35,8 @@ export interface PaneContentProps {
   /** Which link targets exist, so unresolved links look different. */
   resolvedTargets: Set<string>;
   assetUrl: (target: string) => string | null;
+  /** Copy a dropped file into the vault and return the link to insert. */
+  onImportFile: (file: File, note: VaultPath) => Promise<string | null>;
 }
 
 export function PaneContent(props: PaneContentProps) {
@@ -62,7 +65,13 @@ export function PaneContent(props: PaneContentProps) {
       return <PdfViewer path={tab.path} assetUrl={props.assetUrl} />;
 
     case 'canvas':
-      return <CanvasPlaceholder path={tab.path} />;
+      return (
+        <CanvasBoard
+          path={tab.path}
+          onOpenNote={(path, options) => props.onOpen(path, options)}
+          assetUrl={props.assetUrl}
+        />
+      );
 
     case 'read':
       return (
@@ -96,6 +105,7 @@ export function PaneContent(props: PaneContentProps) {
           onFollowTag={props.onFollowTag}
           isResolved={isResolved}
           resolveAsset={props.assetUrl}
+          onImportFile={(file) => props.onImportFile(file, tab.path)}
           placeholder="Start writing. Link to another note with [[double brackets]]."
         />
       );
@@ -249,16 +259,6 @@ function PdfViewer({
           </button>
         </p>
       </object>
-    </div>
-  );
-}
-
-function CanvasPlaceholder({ path }: { path: VaultPath }) {
-  const [ready, setReady] = useState(false);
-  useEffect(() => setReady(true), []);
-  return (
-    <div className="ie-empty">
-      {ready ? `Canvas: ${pathFileName(path)}` : ''}
     </div>
   );
 }

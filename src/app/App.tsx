@@ -18,6 +18,7 @@ import { PropertiesPanel } from '@/components/PropertiesPanel';
 import { TagPanel } from '@/components/TagPanel';
 import { FileExplorer } from '@/explorer/FileExplorer';
 import { DEFAULT_GRAPH_SETTINGS, GraphView, type GraphSettings } from '@/graph/GraphView';
+import { PluginPanelHost, usePlugins } from '@/plugins/usePlugins';
 import { SearchPanel } from '@/search/SearchPanel';
 import { api } from '@/services/api';
 import { events } from '@/services/events';
@@ -62,6 +63,7 @@ export function App() {
   const [assetUrls, setAssetUrls] = useState<Record<string, string>>({});
   const [activeProperties, setActiveProperties] = useState<Property[]>([]);
   const pendingJump = useRef<number | null>(null);
+  const activePathRef = useRef<VaultPath | null>(null);
 
   const isOpen = vault.status !== 'closed' && vault.status !== 'opening';
   const activePane = useMemo(() => findPane(workspace.layout), [workspace.layout]);
@@ -70,6 +72,35 @@ export function App() {
     : null;
   const activePath = activeTab?.path ?? null;
   const activeBuffer = activePath ? workspace.buffers[activePath] : undefined;
+
+  activePathRef.current = activeTab?.path ?? null;
+
+  // Plugins see the workspace through this bridge and nothing else, so what
+  // they can reach is a deliberate list rather than whatever is exported.
+  const pluginHost = usePlugins({
+    enabled: vault.status === 'ready',
+    appVersion: APP_VERSION,
+    workspace: {
+      activeFile: () => activePathRef.current,
+      activeContent: () => {
+        const path = activePathRef.current;
+        return path ? (useWorkspaceStore.getState().buffers[path]?.content ?? null) : null;
+      },
+      setActiveContent: (content) => {
+        const path = activePathRef.current;
+        if (path) useWorkspaceStore.getState().editBuffer(path, content);
+      },
+      insertAtCursor: (text) => {
+        // Dispatched rather than reaching into the editor, so the pane tree
+        // stays free of editor references.
+        window.dispatchEvent(new CustomEvent('ie:insert-text', { detail: { text } }));
+      },
+      openFile: async (path, options) => {
+        await useWorkspaceStore.getState().openFile(path);
+        if (options?.newPane) useWorkspaceStore.getState().splitActivePane('vertical');
+      },
+    },
+  });
 
   const dirtyPaths = useMemo(
     () =>
@@ -206,6 +237,31 @@ export function App() {
     [assetUrls],
   );
 
+  /**
+   * File a dropped or pasted attachment in the vault and return the link.
+   *
+   * The bytes go through the backend rather than being written from here,
+   * because that is where the attachment-folder setting, name sanitising and
+   * the atomic write live.
+   */
+  const importFile = useCallback(
+    async (file: File, note: VaultPath): Promise<string | null> => {
+      try {
+        const bytes = Array.from(new Uint8Array(await file.arrayBuffer()));
+        const stored = await api.importAttachment(file.name, bytes, note);
+        await refreshLinkState();
+        const isImage = /\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(stored);
+        // An image is embedded so it shows; anything else is linked so the
+        // note stays readable.
+        return isImage ? `![[${pathFileName(stored)}]]` : `[[${pathFileName(stored)}]]`;
+      } catch (error) {
+        notify('error', `Could not file that attachment: ${message(error)}`);
+        return null;
+      }
+    },
+    [refreshLinkState],
+  );
+
   const actions = useMemo<CommandActions>(
     () => ({
       openPalette: (mode) => setDialog({ kind: 'palette', mode }),
@@ -312,6 +368,7 @@ export function App() {
               onOpen={(path, options) => void openFile(path, options ?? {})}
               resolvedTargets={resolvedTargets}
               assetUrl={assetUrlFor}
+              onImportFile={importFile}
             />
           ) : (
             <div className="ie-empty">
@@ -366,6 +423,14 @@ export function App() {
                 icon: '#',
                 render: () => <TagPanel onSelectTag={followTag} />,
               },
+              ...pluginHost.panels
+                .filter((panel) => panel.side === 'left')
+                .map((panel) => ({
+                  id: `${panel.pluginId}:${panel.id}`,
+                  label: panel.label,
+                  icon: panel.icon,
+                  render: () => <PluginPanelHost panel={panel} />,
+                })),
             ]}
           />
         ) : null}
@@ -445,6 +510,14 @@ export function App() {
                     <div className="ie-empty">Open a note to see its neighbourhood.</div>
                   ),
               },
+              ...pluginHost.panels
+                .filter((panel) => panel.side === 'right')
+                .map((panel) => ({
+                  id: `${panel.pluginId}:${panel.id}`,
+                  label: panel.label,
+                  icon: panel.icon,
+                  render: () => <PluginPanelHost panel={panel} />,
+                })),
             ]}
           />
         ) : null}
@@ -471,10 +544,22 @@ export function App() {
         hotkeys={settings.hotkeys}
       />
 
+      {pluginHost.pendingConfirm ? (
+        <ConfirmDialog
+          title={pluginHost.pendingConfirm.title}
+          message={pluginHost.pendingConfirm.message}
+          onCancel={() => pluginHost.pendingConfirm?.resolve(false)}
+          onConfirm={() => pluginHost.pendingConfirm?.resolve(true)}
+        />
+      ) : null}
+
       <Notifications />
     </div>
   );
 }
+
+/** Reported to plugins so they can check compatibility. */
+const APP_VERSION = '0.1.0';
 
 /** Every modal, kept out of the shell so the shell reads as a layout. */
 function Dialogs({

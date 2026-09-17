@@ -7,6 +7,27 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // The plugin examples are browser modules the app loads at runtime, not
+    // part of the build, so they are checked against browser globals and
+    // without the TypeScript rules.
+    files: ['docs/plugin-api/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        document: 'readonly',
+        window: 'readonly',
+        console: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        Date: 'readonly',
+        Promise: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {

@@ -1,0 +1,7 @@
+{
+  "id": "quick-capture",
+  "name": "Quick Capture",
+  "version": "1.0.0",
+  "description": "Adds commands for capturing a thought into today's note.",
+  "permissions": ["vault:read", "vault:write", "workspace", "commands", "ui"]
+}

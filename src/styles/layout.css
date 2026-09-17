@@ -1515,3 +1515,217 @@
   font-size: 11px;
   pointer-events: none;
 }
+
+/* ---------- Canvas ---------- */
+
+.ie-canvas {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-canvas__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--background-secondary);
+  flex: none;
+  font-size: var(--font-size-small);
+}
+
+.ie-canvas__surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+  cursor: default;
+  outline: none;
+}
+
+/* The grid is a background pattern rather than elements, so panning a large
+   board costs nothing. */
+.ie-canvas__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--background-modifier-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--background-modifier-border) 1px, transparent 1px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ie-canvas__world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.ie-canvas__edges {
+  position: absolute;
+  left: -10000px;
+  top: -10000px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.ie-canvas__edge path:last-of-type {
+  pointer-events: stroke;
+}
+
+.ie-canvas__marquee {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: var(--accent-muted);
+  pointer-events: none;
+}
+
+.ie-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  overflow: hidden;
+  cursor: grab;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.ie-card.is-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ie-card--group {
+  background: var(--background-modifier-hover);
+  border-style: dashed;
+  z-index: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  box-shadow: none;
+}
+
+.ie-card--text,
+.ie-card--file,
+.ie-card--link {
+  z-index: 1;
+}
+
+.ie-card__text,
+.ie-card__preview {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3);
+  font-size: var(--font-size-small);
+  line-height: 1.55;
+}
+
+.ie-card__text p:first-child,
+.ie-card__preview p:first-child {
+  margin-top: 0;
+}
+
+.ie-card__editor {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  padding: var(--space-3);
+  font-family: var(--font-text);
+  font-size: var(--font-size-small);
+  line-height: 1.55;
+  resize: none;
+}
+
+.ie-card__editor:focus {
+  outline: none;
+}
+
+.ie-card__placeholder {
+  color: var(--text-faint);
+}
+
+.ie-card__title {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-normal);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-align: left;
+  flex: none;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-card__title:hover {
+  color: var(--accent);
+}
+
+.ie-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--background-primary);
+}
+
+.ie-card__missing {
+  padding: var(--space-3);
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+}
+
+.ie-card__link {
+  padding: var(--space-3);
+  word-break: break-all;
+  font-size: var(--font-size-small);
+}
+
+.ie-card__group-label {
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  background: transparent;
+  border: none;
+}
+
+.ie-card__port {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--background-primary);
+  border: 2px solid var(--accent);
+  cursor: crosshair;
+  z-index: 2;
+}
+
+.ie-card__port--top { top: -6px; left: 50%; margin-left: -5px; }
+.ie-card__port--bottom { bottom: -6px; left: 50%; margin-left: -5px; }
+.ie-card__port--left { left: -6px; top: 50%; margin-top: -5px; }
+.ie-card__port--right { right: -6px; top: 50%; margin-top: -5px; }
+
+.ie-card__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    var(--accent) 50%,
+    var(--accent) 60%,
+    transparent 60%
+  );
+}
