@@ -2,9 +2,9 @@
 //! reference correct when files move.
 
 pub mod reference;
-// pub mod rename; (next step)
-// pub mod resolver; (next step)
+pub mod rename;
+pub mod resolver;
 
 pub use reference::{heading_matches, slugify, LinkTarget};
-// re-exported once rename lands
-// re-exported once resolver lands
+pub use rename::{plan_rename, RenameEdit, RenamePlan};
+pub use resolver::{LinkResolution, LinkResolver, ResolutionOutcome};
