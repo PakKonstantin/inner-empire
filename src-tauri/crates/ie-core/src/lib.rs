@@ -1,6 +1,7 @@
 //! Inner Empire core.
 
 pub mod error;
+pub mod index;
 pub mod links;
 pub mod markdown;
 pub mod model;

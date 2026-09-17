@@ -21,7 +21,6 @@ time = { version = "0.3", features = ["formatting", "parsing", "macros", "serde"
 unicode-normalization = "0.1"
 uuid = { version = "1", features = ["v4", "v7"] }
 sha2 = "0.10"
-walkdir = "2"
 
 [dev-dependencies]
 tempfile.workspace = true

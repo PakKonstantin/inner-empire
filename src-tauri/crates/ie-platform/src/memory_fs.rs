@@ -19,9 +19,19 @@ enum Node {
     Dir,
 }
 
+/// An entry stores both the name as it was created and the key it is looked up
+/// by. In case-insensitive mode the two differ, which is what makes this double
+/// behave like NTFS: case-preserving, case-insensitive. A double that lowercased
+/// stored names would hide exactly the bug it exists to catch.
+#[derive(Debug, Clone)]
+struct Entry {
+    display: String,
+    node: Node,
+}
+
 #[derive(Debug)]
 pub struct MemoryFileSystem {
-    nodes: Mutex<BTreeMap<String, Node>>,
+    nodes: Mutex<BTreeMap<String, Entry>>,
     case_sensitive: bool,
     clock: Mutex<i64>,
 }
@@ -35,7 +45,13 @@ impl Default for MemoryFileSystem {
 impl MemoryFileSystem {
     pub fn new(case_sensitive: bool) -> Self {
         let mut nodes = BTreeMap::new();
-        nodes.insert("/".to_string(), Node::Dir);
+        nodes.insert(
+            "/".to_string(),
+            Entry {
+                display: "/".to_string(),
+                node: Node::Dir,
+            },
+        );
         Self {
             nodes: Mutex::new(nodes),
             case_sensitive,
@@ -43,9 +59,9 @@ impl MemoryFileSystem {
         }
     }
 
-    /// Normalise to a `/`-separated absolute key. Windows-style input is
-    /// accepted because `Components` already understands it.
-    fn key(&self, path: &Path) -> String {
+    /// The `/`-separated absolute spelling of a path, as given. Windows-style
+    /// input is accepted because `Components` already understands it.
+    fn display_path(path: &Path) -> String {
         let mut parts: Vec<String> = Vec::new();
         for component in path.components() {
             match component {
@@ -56,11 +72,20 @@ impl MemoryFileSystem {
                 _ => {}
             }
         }
-        let joined = format!("/{}", parts.join("/"));
+        format!("/{}", parts.join("/"))
+    }
+
+    /// The key a path is looked up by: folded when the filesystem is
+    /// case-insensitive.
+    fn key(&self, path: &Path) -> String {
+        self.fold(&Self::display_path(path))
+    }
+
+    fn fold(&self, path: &str) -> String {
         if self.case_sensitive {
-            joined
+            path.to_string()
         } else {
-            joined.to_lowercase()
+            path.to_lowercase()
         }
     }
 
@@ -84,7 +109,7 @@ impl MemoryFileSystem {
 impl FileSystem for MemoryFileSystem {
     fn read(&self, path: &Path) -> Result<Vec<u8>> {
         let nodes = self.nodes.lock().expect("memory fs poisoned");
-        match nodes.get(&self.key(path)) {
+        match nodes.get(&self.key(path)).map(|e| &e.node) {
             Some(Node::File { data, .. }) => Ok(data.clone()),
             Some(Node::Dir) => Err(PlatformError::IsADirectory {
                 path: path.to_path_buf(),
@@ -101,32 +126,43 @@ impl FileSystem for MemoryFileSystem {
             path: path.to_path_buf(),
         })?;
         let modified_ms = self.tick();
+        let display = Self::display_path(path);
         let mut nodes = self.nodes.lock().expect("memory fs poisoned");
-        if !matches!(nodes.get(&parent), Some(Node::Dir)) {
+        if !matches!(nodes.get(&parent).map(|e| &e.node), Some(Node::Dir)) {
             return Err(PlatformError::NotFound {
                 path: PathBuf::from(parent),
             });
         }
+        // Writing to an existing file keeps the name it already had, the way a
+        // case-insensitive filesystem does.
+        let display = nodes
+            .get(&key)
+            .map(|e| e.display.clone())
+            .unwrap_or(display);
         nodes.insert(
             key,
-            Node::File {
-                data: contents.to_vec(),
-                modified_ms,
+            Entry {
+                display,
+                node: Node::File {
+                    data: contents.to_vec(),
+                    modified_ms,
+                },
             },
         );
         Ok(())
     }
 
     fn create_dir_all(&self, path: &Path) -> Result<()> {
-        let key = self.key(path);
+        let display = Self::display_path(path);
         let mut nodes = self.nodes.lock().expect("memory fs poisoned");
         let mut accumulated = String::from("/");
-        for segment in key.split('/').filter(|s| !s.is_empty()) {
+        for segment in display.split('/').filter(|s| !s.is_empty()) {
             if accumulated.len() > 1 {
                 accumulated.push('/');
             }
             accumulated.push_str(segment);
-            match nodes.get(&accumulated) {
+            let key = self.fold(&accumulated);
+            match nodes.get(&key).map(|e| &e.node) {
                 Some(Node::File { .. }) => {
                     return Err(PlatformError::NotADirectory {
                         path: PathBuf::from(accumulated),
@@ -134,7 +170,13 @@ impl FileSystem for MemoryFileSystem {
                 }
                 Some(Node::Dir) => {}
                 None => {
-                    nodes.insert(accumulated.clone(), Node::Dir);
+                    nodes.insert(
+                        key,
+                        Entry {
+                            display: accumulated.clone(),
+                            node: Node::Dir,
+                        },
+                    );
                 }
             }
         }
@@ -144,9 +186,12 @@ impl FileSystem for MemoryFileSystem {
     fn remove_file(&self, path: &Path) -> Result<()> {
         let mut nodes = self.nodes.lock().expect("memory fs poisoned");
         match nodes.remove(&self.key(path)) {
-            Some(Node::File { .. }) => Ok(()),
-            Some(node) => {
-                nodes.insert(self.key(path), node);
+            Some(Entry {
+                node: Node::File { .. },
+                ..
+            }) => Ok(()),
+            Some(entry) => {
+                nodes.insert(self.key(path), entry);
                 Err(PlatformError::IsADirectory {
                     path: path.to_path_buf(),
                 })
@@ -192,11 +237,15 @@ impl FileSystem for MemoryFileSystem {
                 path: from.to_path_buf(),
             });
         }
+        let to_display = Self::display_path(to);
         for key in moving {
-            let node = nodes.remove(&key).expect("key came from this map");
+            let mut entry = nodes.remove(&key).expect("key came from this map");
             let suffix = &key[from_key.len()..];
-            nodes.insert(format!("{to_key}{suffix}"), node);
+            let new_display_suffix = entry.display[entry.display.len() - suffix.len()..].to_string();
+            entry.display = format!("{to_display}{new_display_suffix}");
+            nodes.insert(self.fold(&entry.display), entry);
         }
+        let _ = to_key;
         Ok(())
     }
 
@@ -209,7 +258,7 @@ impl FileSystem for MemoryFileSystem {
 
     fn metadata(&self, path: &Path) -> Result<FileMetadata> {
         let nodes = self.nodes.lock().expect("memory fs poisoned");
-        match nodes.get(&self.key(path)) {
+        match nodes.get(&self.key(path)).map(|e| &e.node) {
             Some(Node::File { data, modified_ms }) => Ok(FileMetadata {
                 is_dir: false,
                 is_symlink: false,
@@ -233,7 +282,7 @@ impl FileSystem for MemoryFileSystem {
     fn read_dir(&self, path: &Path) -> Result<Vec<DirEntry>> {
         let key = self.key(path);
         let nodes = self.nodes.lock().expect("memory fs poisoned");
-        if !matches!(nodes.get(&key), Some(Node::Dir)) {
+        if !matches!(nodes.get(&key).map(|e| &e.node), Some(Node::Dir)) {
             return Err(PlatformError::NotFound {
                 path: path.to_path_buf(),
             });
@@ -244,7 +293,7 @@ impl FileSystem for MemoryFileSystem {
             format!("{key}/")
         };
         let mut out = Vec::new();
-        for (child_key, node) in nodes.iter() {
+        for (child_key, entry) in nodes.iter() {
             let Some(rest) = child_key.strip_prefix(&prefix) else {
                 continue;
             };
@@ -252,6 +301,14 @@ impl FileSystem for MemoryFileSystem {
             if rest.is_empty() || rest.contains('/') {
                 continue;
             }
+            // Report the name as it was created, not the folded lookup key.
+            let display_name = entry
+                .display
+                .rsplit('/')
+                .next()
+                .unwrap_or(rest)
+                .to_string();
+            let node = &entry.node;
             let metadata = match node {
                 Node::File { data, modified_ms } => FileMetadata {
                     is_dir: false,
@@ -269,8 +326,8 @@ impl FileSystem for MemoryFileSystem {
                 },
             };
             out.push(DirEntry {
-                path: PathBuf::from(child_key),
-                file_name: rest.to_string(),
+                path: PathBuf::from(&entry.display),
+                file_name: display_name,
                 metadata,
             });
         }
@@ -280,8 +337,8 @@ impl FileSystem for MemoryFileSystem {
     fn canonicalize(&self, path: &Path) -> Result<PathBuf> {
         let key = self.key(path);
         let nodes = self.nodes.lock().expect("memory fs poisoned");
-        if nodes.contains_key(&key) {
-            Ok(PathBuf::from(key))
+        if let Some(entry) = nodes.get(&key) {
+            Ok(PathBuf::from(&entry.display))
         } else {
             Err(PlatformError::NotFound {
                 path: path.to_path_buf(),
@@ -337,6 +394,24 @@ mod tests {
         fs.create_dir_all(Path::new("/v")).unwrap();
         fs.write_atomic(Path::new("/v/MyNote.md"), b"one").unwrap();
         assert_eq!(fs.read_to_string(Path::new("/v/mynote.md")).unwrap(), "one");
+    }
+
+    #[test]
+    fn case_insensitive_mode_preserves_the_name_as_written() {
+        // NTFS folds case for lookup but stores the name you gave it. A double
+        // that lowercased stored names would hide bugs rather than expose them.
+        let fs = MemoryFileSystem::new(false);
+        fs.create_dir_all(Path::new("/v")).unwrap();
+        fs.write_atomic(Path::new("/v/MyNote.md"), b"one").unwrap();
+
+        let listing = fs.read_dir(Path::new("/v")).unwrap();
+        assert_eq!(listing[0].file_name, "MyNote.md");
+
+        // Rewriting through a different spelling keeps the original name.
+        fs.write_atomic(Path::new("/v/MYNOTE.MD"), b"two").unwrap();
+        let listing = fs.read_dir(Path::new("/v")).unwrap();
+        assert_eq!(listing.len(), 1);
+        assert_eq!(listing[0].file_name, "MyNote.md");
     }
 
     #[test]
