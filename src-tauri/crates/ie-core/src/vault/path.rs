@@ -363,9 +363,18 @@ mod tests {
 
     #[test]
     fn parse_normalizes_separators_and_redundant_segments() {
-        assert_eq!(VaultPath::parse("Notes/a.md").unwrap().as_str(), "Notes/a.md");
-        assert_eq!(VaultPath::parse("Notes\\a.md").unwrap().as_str(), "Notes/a.md");
-        assert_eq!(VaultPath::parse("/Notes//./a.md").unwrap().as_str(), "Notes/a.md");
+        assert_eq!(
+            VaultPath::parse("Notes/a.md").unwrap().as_str(),
+            "Notes/a.md"
+        );
+        assert_eq!(
+            VaultPath::parse("Notes\\a.md").unwrap().as_str(),
+            "Notes/a.md"
+        );
+        assert_eq!(
+            VaultPath::parse("/Notes//./a.md").unwrap().as_str(),
+            "Notes/a.md"
+        );
         assert_eq!(VaultPath::parse("Notes/").unwrap().as_str(), "Notes");
     }
 
@@ -380,12 +389,18 @@ mod tests {
     fn from_fs_path_produces_the_same_value_on_both_platforms() {
         // The separator the OS uses is invisible to the result: both spellings
         // of the same location yield the identical VaultPath.
-        let posix = VaultPath::from_fs_path(Path::new("/home/me/Vault"), Path::new("/home/me/Vault/Notes/a.md"));
+        let posix = VaultPath::from_fs_path(
+            Path::new("/home/me/Vault"),
+            Path::new("/home/me/Vault/Notes/a.md"),
+        );
         assert_eq!(posix.unwrap().as_str(), "Notes/a.md");
 
         let nested = VaultPath::from_fs_path(
             Path::new("/v"),
-            &Path::new("/v").join("Projects").join("2026").join("plan.md"),
+            &Path::new("/v")
+                .join("Projects")
+                .join("2026")
+                .join("plan.md"),
         );
         assert_eq!(nested.unwrap().as_str(), "Projects/2026/plan.md");
     }
@@ -430,7 +445,11 @@ mod tests {
         let a = VaultPath::parse("Notes/MyNote.md").unwrap();
         let b = VaultPath::parse("Notes/mynote.md").unwrap();
         assert_ne!(a, b, "the two paths are distinct on a case-sensitive mount");
-        assert_eq!(a.fold(), b.fold(), "but they collapse onto one another on NTFS");
+        assert_eq!(
+            a.fold(),
+            b.fold(),
+            "but they collapse onto one another on NTFS"
+        );
     }
 
     #[test]
@@ -444,7 +463,9 @@ mod tests {
 
     #[test]
     fn app_directory_is_recognised() {
-        assert!(VaultPath::parse(".inner-empire/index.db").unwrap().is_app_internal());
+        assert!(VaultPath::parse(".inner-empire/index.db")
+            .unwrap()
+            .is_app_internal());
         assert!(VaultPath::parse(".inner-empire").unwrap().is_app_internal());
         assert!(!VaultPath::parse(".inner-empire-notes/a.md")
             .unwrap()
@@ -453,7 +474,9 @@ mod tests {
 
     #[test]
     fn windows_forbidden_characters_are_rejected_on_every_platform() {
-        for bad in ["a<b.md", "a>b.md", "a:b.md", "a\"b.md", "a|b.md", "a?b.md", "a*b.md"] {
+        for bad in [
+            "a<b.md", "a>b.md", "a:b.md", "a\"b.md", "a|b.md", "a?b.md", "a*b.md",
+        ] {
             assert!(
                 VaultPath::parse(bad).is_err(),
                 "{bad} should be refused so the vault stays portable"

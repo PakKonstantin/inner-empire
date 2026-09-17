@@ -14,7 +14,10 @@ use crate::state::SharedState;
 /// Fetched per folder rather than as a whole tree, so opening a vault with
 /// fifty thousand files costs one directory read.
 #[tauri::command]
-pub fn list_folder(state: State<'_, SharedState>, path: VaultPath) -> CommandResult<DirectoryListing> {
+pub fn list_folder(
+    state: State<'_, SharedState>,
+    path: VaultPath,
+) -> CommandResult<DirectoryListing> {
     state.with_index(|session| {
         let entries = session.ops().list_folder(&path)?;
         let conn = session.connection();
@@ -144,10 +147,7 @@ pub fn create_note_from_link(
 }
 
 #[tauri::command]
-pub fn create_folder(
-    state: State<'_, SharedState>,
-    path: VaultPath,
-) -> CommandResult<()> {
+pub fn create_folder(state: State<'_, SharedState>, path: VaultPath) -> CommandResult<()> {
     state.with_session(|session| session.ops().create_folder(&path))
 }
 
@@ -272,10 +272,7 @@ pub fn import_attachment(
     let created = state.with_session(|session| {
         let folder = match &session.settings().attachments {
             AttachmentLocation::VaultFolder { folder } => folder.clone(),
-            AttachmentLocation::NextToNote => note
-                .as_ref()
-                .map(|n| n.parent())
-                .unwrap_or_default(),
+            AttachmentLocation::NextToNote => note.as_ref().map(|n| n.parent()).unwrap_or_default(),
             AttachmentLocation::SubfolderOfNote { name } => {
                 let parent = note.as_ref().map(|n| n.parent()).unwrap_or_default();
                 parent.join(name)?
@@ -297,10 +294,7 @@ pub fn import_attachment(
 
 /// Reveal a file in the desktop's file manager.
 #[tauri::command]
-pub fn reveal_in_file_manager(
-    state: State<'_, SharedState>,
-    path: VaultPath,
-) -> CommandResult<()> {
+pub fn reveal_in_file_manager(state: State<'_, SharedState>, path: VaultPath) -> CommandResult<()> {
     let absolute = state.with_index(|session| Ok(session.ops().resolve(&path)))?;
     state
         .host

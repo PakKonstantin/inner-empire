@@ -13,7 +13,9 @@ use std::path::{Path, PathBuf};
 use ie_platform::{FsEvent, HostServices, WatchHandle, WatchOptions};
 
 use crate::error::{CoreError, Diagnostic, Result};
-use crate::index::{indexer::EventOutcome, IndexDb, IndexProgress, Indexer, OpenOutcome, ScanReport};
+use crate::index::{
+    indexer::EventOutcome, IndexDb, IndexProgress, Indexer, OpenOutcome, ScanReport,
+};
 use crate::links::rename::{self, RenamePlan};
 use crate::markdown::{MarkdownParser, MarkdownTransformer};
 use crate::model::{Note, Property};
@@ -156,11 +158,8 @@ impl VaultSession {
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "Vault".to_string());
-        let settings = VaultSettings::new(
-            name,
-            uuid::Uuid::now_v7().to_string(),
-            host.clock.now_ms(),
-        );
+        let settings =
+            VaultSettings::new(name, uuid::Uuid::now_v7().to_string(), host.clock.now_ms());
         let json = serde_json::to_string_pretty(&settings)?;
         host.fs.write_atomic(&path, json.as_bytes())?;
         Ok(settings)
@@ -224,10 +223,7 @@ impl VaultSession {
     /// Start watching the vault. Batches are handed to `sink` on the watcher's
     /// own thread; the caller is expected to forward them to whatever owns this
     /// session and call [`apply_events`](Self::apply_events).
-    pub fn start_watch(
-        &mut self,
-        sink: Box<dyn Fn(Vec<FsEvent>) + Send + 'static>,
-    ) -> Result<()> {
+    pub fn start_watch(&mut self, sink: Box<dyn Fn(Vec<FsEvent>) + Send + 'static>) -> Result<()> {
         self.stop_watch();
         let handle = self
             .host

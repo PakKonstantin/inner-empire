@@ -314,8 +314,8 @@ fn parse_filter(token: &Token) -> Result<Option<Filter>> {
             None => {
                 return Err(CoreError::InvalidQuery {
                     message: format!(
-                        "is:{value} is not recognised — try unresolved, orphan, untagged or dead-end"
-                    ),
+                    "is:{value} is not recognised — try unresolved, orphan, untagged or dead-end"
+                ),
                 })
             }
         },
@@ -348,16 +348,19 @@ pub(crate) fn filter_sql(filter: &Filter) -> (String, Vec<rusqlite::types::Value
         }
         Filter::Path(path) => (
             "f.path_fold LIKE ? ESCAPE '\\'".into(),
-            vec![Value::Text(format!("%{}%", escape_like(&path.to_lowercase())))],
+            vec![Value::Text(format!(
+                "%{}%",
+                escape_like(&path.to_lowercase())
+            ))],
         ),
         Filter::File(name) => (
             "f.name_fold LIKE ? ESCAPE '\\'".into(),
-            vec![Value::Text(format!("%{}%", escape_like(&name.to_lowercase())))],
+            vec![Value::Text(format!(
+                "%{}%",
+                escape_like(&name.to_lowercase())
+            ))],
         ),
-        Filter::Extension(ext) => (
-            "f.ext = ?".into(),
-            vec![Value::Text(ext.to_lowercase())],
-        ),
+        Filter::Extension(ext) => ("f.ext = ?".into(), vec![Value::Text(ext.to_lowercase())]),
         Filter::Section(section) => (
             "EXISTS (SELECT 1 FROM headings h WHERE h.file_id = f.id
               AND lower(h.text) LIKE ? ESCAPE '\\')"
@@ -440,10 +443,7 @@ mod tests {
     fn bare_words_become_terms() {
         assert_eq!(
             q("machine learning").terms,
-            vec![
-                Term::Word("machine".into()),
-                Term::Word("learning".into())
-            ]
+            vec![Term::Word("machine".into()), Term::Word("learning".into())]
         );
     }
 
@@ -477,8 +477,14 @@ mod tests {
 
     #[test]
     fn path_file_and_extension_filters_parse() {
-        assert_eq!(q("path:Projects").filters, vec![Filter::Path("Projects".into())]);
-        assert_eq!(q("file:readme").filters, vec![Filter::File("readme".into())]);
+        assert_eq!(
+            q("path:Projects").filters,
+            vec![Filter::Path("Projects".into())]
+        );
+        assert_eq!(
+            q("file:readme").filters,
+            vec![Filter::File("readme".into())]
+        );
         assert_eq!(q("ext:.png").filters, vec![Filter::Extension("png".into())]);
     }
 
@@ -524,10 +530,7 @@ mod tests {
 
     #[test]
     fn structural_filters_parse_and_reject_typos() {
-        assert_eq!(
-            q("is:orphan").filters,
-            vec![Filter::Is(Structural::Orphan)]
-        );
+        assert_eq!(q("is:orphan").filters, vec![Filter::Is(Structural::Orphan)]);
         let error = parse("is:nonsense").unwrap_err();
         assert_eq!(error.code(), "invalid_query");
         assert!(error.to_string().contains("unresolved"), "{error}");

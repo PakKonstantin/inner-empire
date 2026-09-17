@@ -25,7 +25,10 @@ fn fixture() -> TestVault {
          # Roadmap\n\nShip the machine by Friday. #planning\n",
     );
     vault.write("Attachments/diagram.png", "png bytes");
-    vault.write("Orphan.md", "# Orphan\n\nNothing links here and it links to [[Nowhere]].\n");
+    vault.write(
+        "Orphan.md",
+        "# Orphan\n\nNothing links here and it links to [[Nowhere]].\n",
+    );
     vault.scan();
     vault
 }
@@ -219,7 +222,12 @@ fn paging_walks_through_the_whole_result_set_without_repeats() {
             },
         )
         .unwrap();
-        seen.extend(results.hits.into_iter().map(|h| h.path.as_str().to_string()));
+        seen.extend(
+            results
+                .hits
+                .into_iter()
+                .map(|h| h.path.as_str().to_string()),
+        );
     }
     seen.sort();
     seen.dedup();
@@ -229,7 +237,10 @@ fn paging_walks_through_the_whole_result_set_without_repeats() {
 #[test]
 fn frontmatter_text_is_not_searched_as_body_text() {
     let mut vault = TestVault::new();
-    vault.write("A.md", "---\nsummary: pineapple\n---\n\nThe body says nothing.\n");
+    vault.write(
+        "A.md",
+        "---\nsummary: pineapple\n---\n\nThe body says nothing.\n",
+    );
     vault.scan();
 
     assert!(

@@ -112,7 +112,9 @@ impl PaneNode {
     pub fn prune<F: Fn(&VaultPath) -> bool + Copy>(&mut self, exists: F) -> Vec<VaultPath> {
         match self {
             PaneNode::Leaf {
-                tabs, active_tab_id, ..
+                tabs,
+                active_tab_id,
+                ..
             } => {
                 let mut removed = Vec::new();
                 tabs.retain(|tab| {
@@ -266,11 +268,7 @@ impl Workspace {
                 self.layout.active_pane_id = first.clone();
             }
         }
-        if self
-            .active_file
-            .as_ref()
-            .is_some_and(|path| !exists(path))
-        {
+        if self.active_file.as_ref().is_some_and(|path| !exists(path)) {
             self.active_file = None;
         }
         removed
@@ -366,7 +364,11 @@ mod tests {
         let mut pane = leaf("a", &["gone.md", "kept.md"]);
         pane.prune(|p| p.as_str() == "kept.md");
         match pane {
-            PaneNode::Leaf { active_tab_id, tabs, .. } => {
+            PaneNode::Leaf {
+                active_tab_id,
+                tabs,
+                ..
+            } => {
                 assert_eq!(tabs.len(), 1);
                 assert_eq!(active_tab_id, Some(tabs[0].id.clone()));
             }
@@ -385,7 +387,10 @@ mod tests {
         };
         let json = serde_json::to_string(&workspace).unwrap();
         assert!(json.contains("Projects/2026/plan.md"));
-        assert!(!json.contains('\\'), "a backslash would not survive the trip to Linux");
+        assert!(
+            !json.contains('\\'),
+            "a backslash would not survive the trip to Linux"
+        );
 
         let restored: Workspace = serde_json::from_str(&json).unwrap();
         assert_eq!(restored, workspace);

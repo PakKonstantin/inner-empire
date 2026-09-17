@@ -74,7 +74,10 @@ pub fn expand(template: &str, context: &TemplateContext) -> String {
             }
         }
         // Push one whole character so multi-byte text survives.
-        let ch = template[index..].chars().next().expect("index is on a boundary");
+        let ch = template[index..]
+            .chars()
+            .next()
+            .expect("index is on a boundary");
         out.push(ch);
         index += ch.len_utf8();
     }
@@ -201,7 +204,7 @@ pub fn ensure_daily_note(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ie_platform::{FileSystem, FixedClock, MemoryFileSystem, SharedFileSystem};
+    use ie_platform::{FixedClock, MemoryFileSystem, SharedFileSystem};
     use std::sync::Arc;
 
     /// 2026-09-17T14:05:09Z
@@ -275,7 +278,8 @@ mod tests {
     #[test]
     fn surrounding_markdown_is_untouched() {
         let c = context();
-        let template = "---\ntitle: {{title}}\ncreated: {{date}}\n---\n\n# {{title}}\n\n- [ ] task\n";
+        let template =
+            "---\ntitle: {{title}}\ncreated: {{date}}\n---\n\n# {{title}}\n\n- [ ] task\n";
         assert_eq!(
             expand(template, &c),
             "---\ntitle: My Note\ncreated: 2026-09-17\n---\n\n# My Note\n\n- [ ] task\n"
@@ -285,7 +289,10 @@ mod tests {
     #[test]
     fn multi_byte_text_survives_expansion() {
         let c = context();
-        assert_eq!(expand("café {{title}} — 日本語", &c), "café My Note — 日本語");
+        assert_eq!(
+            expand("café {{title}} — 日本語", &c),
+            "café My Note — 日本語"
+        );
     }
 
     #[test]
@@ -344,7 +351,8 @@ mod tests {
         assert_eq!(path.as_str(), "Daily/2026-09-17.md");
         assert_eq!(ops.read(&path).unwrap(), "# 2026-09-17\n\n");
 
-        ops.write(&path, "# 2026-09-17\n\nMy notes for today.\n").unwrap();
+        ops.write(&path, "# 2026-09-17\n\nMy notes for today.\n")
+            .unwrap();
         let (again, created_again) = ensure_daily_note(&ops, &settings, &clock, 0).unwrap();
         assert!(!created_again);
         assert_eq!(again, path);

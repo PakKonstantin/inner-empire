@@ -44,7 +44,11 @@ pub type Result<T> = std::result::Result<T, PlatformError>;
 impl PlatformError {
     /// Classify a `std::io::Error` into the richer variants where possible so
     /// callers do not have to inspect `ErrorKind` themselves.
-    pub fn from_io(operation: &'static str, path: impl AsRef<Path>, source: std::io::Error) -> Self {
+    pub fn from_io(
+        operation: &'static str,
+        path: impl AsRef<Path>,
+        source: std::io::Error,
+    ) -> Self {
         let path = path.as_ref().to_path_buf();
         match source.kind() {
             std::io::ErrorKind::NotFound => PlatformError::NotFound { path },

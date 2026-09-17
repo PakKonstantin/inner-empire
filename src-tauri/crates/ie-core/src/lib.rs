@@ -1,9 +1,9 @@
 //! Inner Empire core.
 
 pub mod error;
+pub mod events;
 pub mod export;
 pub mod index;
-pub mod events;
 pub mod links;
 pub mod logging;
 pub mod markdown;

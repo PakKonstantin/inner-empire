@@ -12,20 +12,34 @@ use crate::vault::path::VaultPath;
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum CoreEvent {
     #[serde(rename_all = "camelCase")]
-    VaultOpened { root: String, name: String },
+    VaultOpened {
+        root: String,
+        name: String,
+    },
     VaultClosed,
 
     #[serde(rename_all = "camelCase")]
-    FileCreated { path: VaultPath },
+    FileCreated {
+        path: VaultPath,
+    },
     #[serde(rename_all = "camelCase")]
-    FileModified { path: VaultPath },
+    FileModified {
+        path: VaultPath,
+    },
     #[serde(rename_all = "camelCase")]
-    FileDeleted { path: VaultPath },
+    FileDeleted {
+        path: VaultPath,
+    },
     #[serde(rename_all = "camelCase")]
-    FileRenamed { from: VaultPath, to: VaultPath },
+    FileRenamed {
+        from: VaultPath,
+        to: VaultPath,
+    },
 
     #[serde(rename_all = "camelCase")]
-    IndexProgress { progress: IndexProgress },
+    IndexProgress {
+        progress: IndexProgress,
+    },
     #[serde(rename_all = "camelCase")]
     IndexCompleted {
         files: usize,
@@ -33,16 +47,23 @@ pub enum CoreEvent {
         diagnostics: Vec<Diagnostic>,
     },
     #[serde(rename_all = "camelCase")]
-    IndexError { message: String },
+    IndexError {
+        message: String,
+    },
 
     #[serde(rename_all = "camelCase")]
-    ActiveFileChanged { path: Option<VaultPath> },
+    ActiveFileChanged {
+        path: Option<VaultPath>,
+    },
     WorkspaceChanged,
 
     /// Something the user should know about that is not an error, such as a
     /// rename having updated forty links.
     #[serde(rename_all = "camelCase")]
-    Notice { level: NoticeLevel, message: String },
+    Notice {
+        level: NoticeLevel,
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

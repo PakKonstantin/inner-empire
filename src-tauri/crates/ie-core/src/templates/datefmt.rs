@@ -101,8 +101,8 @@ pub fn format(pattern: &str, at: OffsetDateTime) -> String {
 pub fn at(now_ms: i64, offset_seconds: i32) -> OffsetDateTime {
     let utc = OffsetDateTime::from_unix_timestamp_nanos((now_ms as i128) * 1_000_000)
         .unwrap_or(OffsetDateTime::UNIX_EPOCH);
-    let offset = time::UtcOffset::from_whole_seconds(offset_seconds)
-        .unwrap_or(time::UtcOffset::UTC);
+    let offset =
+        time::UtcOffset::from_whole_seconds(offset_seconds).unwrap_or(time::UtcOffset::UTC);
     utc.to_offset(offset)
 }
 

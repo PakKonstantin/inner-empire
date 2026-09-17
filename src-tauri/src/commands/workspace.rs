@@ -14,7 +14,9 @@ use crate::state::SharedState;
 pub fn load_workspace(state: State<'_, SharedState>) -> CommandResult<WorkspaceLoad> {
     state.with_index(|session| {
         let ops = session.ops();
-        let (workspace, removed) = session.workspaces().load_reconciled(|path| ops.exists(path));
+        let (workspace, removed) = session
+            .workspaces()
+            .load_reconciled(|path| ops.exists(path));
         Ok(WorkspaceLoad { workspace, removed })
     })
 }
@@ -28,10 +30,7 @@ pub struct WorkspaceLoad {
 }
 
 #[tauri::command]
-pub fn save_workspace(
-    state: State<'_, SharedState>,
-    workspace: Workspace,
-) -> CommandResult<()> {
+pub fn save_workspace(state: State<'_, SharedState>, workspace: Workspace) -> CommandResult<()> {
     state.with_index(|session| session.workspaces().save(&workspace))
 }
 
@@ -99,8 +98,12 @@ pub fn open_daily_note(
     let clock = std::sync::Arc::clone(&state.host.clock);
     let result = state.with_session(|session| {
         let settings = session.settings().daily_notes.clone();
-        let (path, created) =
-            templates::ensure_daily_note(session.ops(), &settings, &clock, day_offset.unwrap_or(0))?;
+        let (path, created) = templates::ensure_daily_note(
+            session.ops(),
+            &settings,
+            &clock,
+            day_offset.unwrap_or(0),
+        )?;
         if created {
             session.reindex(&path)?;
         }
@@ -199,7 +202,9 @@ pub fn import_files(
             .unwrap_or_else(|| "imported".to_string());
         match std::fs::read(&path) {
             Ok(bytes) => payloads.push((name, bytes)),
-            Err(e) => tracing::warn!(path = %path.display(), error = %e, "skipping unreadable import"),
+            Err(e) => {
+                tracing::warn!(path = %path.display(), error = %e, "skipping unreadable import")
+            }
         }
     }
 
@@ -275,10 +280,7 @@ pub fn save_app_settings(
 
 /// The tail of the log file, for the diagnostics panel.
 #[tauri::command]
-pub fn read_log_tail(
-    state: State<'_, SharedState>,
-    lines: Option<usize>,
-) -> CommandResult<String> {
+pub fn read_log_tail(state: State<'_, SharedState>, lines: Option<usize>) -> CommandResult<String> {
     let dir = state.host.dirs.log_dir().map_err(CommandError::from)?;
     Ok(ie_core::logging::tail(&dir, lines.unwrap_or(200)).unwrap_or_default())
 }

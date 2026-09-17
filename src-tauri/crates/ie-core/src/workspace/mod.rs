@@ -141,18 +141,14 @@ impl WorkspaceStore {
 mod tests {
     use super::*;
     use crate::model::workspace::{PaneLayout, PaneNode, TabMode, TabState};
-    use ie_platform::{FileSystem, MemoryFileSystem};
+    use ie_platform::MemoryFileSystem;
     use std::sync::Arc;
 
     fn store() -> (WorkspaceStore, SharedFileSystem, std::path::PathBuf) {
         let fs: SharedFileSystem = Arc::new(MemoryFileSystem::default());
         let root = std::path::PathBuf::from("/vault");
         fs.create_dir_all(&root).unwrap();
-        (
-            WorkspaceStore::new(Arc::clone(&fs), &root),
-            fs,
-            root,
-        )
+        (WorkspaceStore::new(Arc::clone(&fs), &root), fs, root)
     }
 
     fn workspace_with(paths: &[&str]) -> Workspace {
@@ -198,7 +194,9 @@ mod tests {
     #[test]
     fn the_saved_file_contains_only_portable_paths() {
         let (store, fs, root) = store();
-        store.save(&workspace_with(&["Projects/2026/Plan.md"])).unwrap();
+        store
+            .save(&workspace_with(&["Projects/2026/Plan.md"]))
+            .unwrap();
 
         let text = fs
             .read_to_string(&root.join(APP_DIR).join(WORKSPACE_FILE))
@@ -251,12 +249,20 @@ mod tests {
     #[test]
     fn named_workspaces_can_be_saved_listed_loaded_and_deleted() {
         let (store, _, _) = store();
-        store.save_as("Writing", &workspace_with(&["A.md"])).unwrap();
+        store
+            .save_as("Writing", &workspace_with(&["A.md"]))
+            .unwrap();
         store.save_as("Review", &workspace_with(&["B.md"])).unwrap();
 
         assert_eq!(store.list_saved().unwrap(), vec!["Review", "Writing"]);
         assert_eq!(
-            store.load_saved("Writing").unwrap().layout.root.open_paths()[0].as_str(),
+            store
+                .load_saved("Writing")
+                .unwrap()
+                .layout
+                .root
+                .open_paths()[0]
+                .as_str(),
             "A.md"
         );
 
@@ -267,7 +273,9 @@ mod tests {
     #[test]
     fn a_workspace_name_with_illegal_characters_is_still_usable() {
         let (store, _, _) = store();
-        store.save_as("Q1: Review?", &workspace_with(&["A.md"])).unwrap();
+        store
+            .save_as("Q1: Review?", &workspace_with(&["A.md"]))
+            .unwrap();
         assert_eq!(store.list_saved().unwrap(), vec!["Q1- Review-"]);
     }
 

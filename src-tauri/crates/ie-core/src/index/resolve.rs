@@ -37,7 +37,13 @@ impl Resolution {
     }
 
     pub fn is_ambiguous(&self) -> bool {
-        matches!(self, Resolution::Resolved { ambiguous: true, .. })
+        matches!(
+            self,
+            Resolution::Resolved {
+                ambiguous: true,
+                ..
+            }
+        )
     }
 }
 
@@ -87,9 +93,8 @@ pub fn resolve(conn: &Connection, target: &str) -> Result<Resolution> {
     // One indexed query gathers everything that could possibly match: any file
     // whose stem or full name equals the target's last segment. Ranking then
     // happens in Rust, where the rules are readable and testable.
-    let mut stmt = conn.prepare_cached(
-        "SELECT id, path FROM files WHERE stem_fold = ?1 OR name_fold = ?1",
-    )?;
+    let mut stmt =
+        conn.prepare_cached("SELECT id, path FROM files WHERE stem_fold = ?1 OR name_fold = ?1")?;
     let candidates: Vec<Candidate> = stmt
         .query_map([&tail], |row| {
             Ok(Candidate {
@@ -294,14 +299,8 @@ mod tests {
 
     #[test]
     fn two_equally_good_candidates_resolve_deterministically_and_are_flagged() {
-        let first = rank(
-            "Plan",
-            candidates(&["Beta/Plan.md", "Alpha/Plan.md"]),
-        );
-        let second = rank(
-            "Plan",
-            candidates(&["Alpha/Plan.md", "Beta/Plan.md"]),
-        );
+        let first = rank("Plan", candidates(&["Beta/Plan.md", "Alpha/Plan.md"]));
+        let second = rank("Plan", candidates(&["Alpha/Plan.md", "Beta/Plan.md"]));
         assert!(first.is_ambiguous());
         assert!(second.is_ambiguous());
         // The chosen file must not depend on the order rows came back in.
@@ -320,7 +319,10 @@ mod tests {
 
     #[test]
     fn nothing_matching_resolves_to_nothing() {
-        assert_eq!(rank("Ghost", candidates(&["Plan.md"])), Resolution::Unresolved);
+        assert_eq!(
+            rank("Ghost", candidates(&["Plan.md"])),
+            Resolution::Unresolved
+        );
         assert_eq!(rank("Ghost", Vec::new()), Resolution::Unresolved);
     }
 

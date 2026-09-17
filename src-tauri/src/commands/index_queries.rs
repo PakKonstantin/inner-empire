@@ -2,9 +2,7 @@
 
 use ie_core::index::queries::{self, GraphOptions, UnresolvedTarget};
 use ie_core::links::{LinkResolution, LinkResolver};
-use ie_core::model::{
-    Backlink, Block, FileEntry, GraphData, Heading, ResolvedLink, TagSummary,
-};
+use ie_core::model::{Backlink, Block, FileEntry, GraphData, Heading, ResolvedLink, TagSummary};
 use ie_core::vault::VaultPath;
 use tauri::State;
 
@@ -45,7 +43,11 @@ pub fn unlinked_mentions(
     path: VaultPath,
     limit: Option<usize>,
 ) -> CommandResult<Vec<ie_core::search::SearchHit>> {
-    use ie_core::search::{engine, query::{Query, Term}, SearchOptions};
+    use ie_core::search::{
+        engine,
+        query::{Query, Term},
+        SearchOptions,
+    };
 
     state.with_index(|session| {
         let conn = session.connection();
@@ -87,9 +89,8 @@ pub fn unresolved_links(
     state: State<'_, SharedState>,
     limit: Option<usize>,
 ) -> CommandResult<Vec<UnresolvedTarget>> {
-    state.with_index(|session| {
-        queries::unresolved_links(session.connection(), limit.unwrap_or(200))
-    })
+    state
+        .with_index(|session| queries::unresolved_links(session.connection(), limit.unwrap_or(200)))
 }
 
 #[tauri::command]
@@ -97,9 +98,7 @@ pub fn ambiguous_links(
     state: State<'_, SharedState>,
     limit: Option<usize>,
 ) -> CommandResult<Vec<UnresolvedTarget>> {
-    state.with_index(|session| {
-        queries::ambiguous_links(session.connection(), limit.unwrap_or(200))
-    })
+    state.with_index(|session| queries::ambiguous_links(session.connection(), limit.unwrap_or(200)))
 }
 
 /// Follow a link written in a note.
@@ -168,8 +167,12 @@ impl From<GraphRequest> for GraphOptions {
     fn from(request: GraphRequest) -> Self {
         let defaults = GraphOptions::default();
         GraphOptions {
-            include_attachments: request.include_attachments.unwrap_or(defaults.include_attachments),
-            include_unresolved: request.include_unresolved.unwrap_or(defaults.include_unresolved),
+            include_attachments: request
+                .include_attachments
+                .unwrap_or(defaults.include_attachments),
+            include_unresolved: request
+                .include_unresolved
+                .unwrap_or(defaults.include_unresolved),
             include_tags: request.include_tags.unwrap_or(defaults.include_tags),
             folder: request.folder,
             max_nodes: request.max_nodes.unwrap_or(defaults.max_nodes),

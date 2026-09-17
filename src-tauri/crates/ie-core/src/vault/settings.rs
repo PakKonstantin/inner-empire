@@ -120,7 +120,10 @@ mod tests {
     fn settings_round_trip_through_json_with_portable_paths() {
         let settings = VaultSettings::new("My Vault", "01J", 1_700_000_000_000);
         let json = serde_json::to_string_pretty(&settings).unwrap();
-        assert!(!json.contains('\\'), "a backslash would not survive a move to Linux");
+        assert!(
+            !json.contains('\\'),
+            "a backslash would not survive a move to Linux"
+        );
 
         let restored: VaultSettings = serde_json::from_str(&json).unwrap();
         assert_eq!(restored, settings);

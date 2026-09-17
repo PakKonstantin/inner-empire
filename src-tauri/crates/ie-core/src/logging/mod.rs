@@ -11,7 +11,9 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::EnvFilter;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
     Debug,
@@ -49,8 +51,8 @@ pub fn init(log_dir: &Path, level: LogLevel) -> std::io::Result<()> {
         .append(true)
         .open(log_dir.join("inner-empire.log"))?;
 
-    let filter = EnvFilter::try_from_env("IE_LOG")
-        .unwrap_or_else(|_| EnvFilter::new(level.as_filter()));
+    let filter =
+        EnvFilter::try_from_env("IE_LOG").unwrap_or_else(|_| EnvFilter::new(level.as_filter()));
 
     let _ = tracing_subscriber::registry()
         .with(filter)
@@ -85,7 +87,10 @@ fn rotate(log_dir: &Path) -> std::io::Result<()> {
     for index in (1..MAX_LOG_FILES).rev() {
         let from = log_dir.join(format!("inner-empire.log.{index}"));
         if from.exists() {
-            std::fs::rename(&from, log_dir.join(format!("inner-empire.log.{}", index + 1)))?;
+            std::fs::rename(
+                &from,
+                log_dir.join(format!("inner-empire.log.{}", index + 1)),
+            )?;
         }
     }
     std::fs::rename(&current, log_dir.join("inner-empire.log.1"))?;
@@ -97,11 +102,7 @@ fn rotate(log_dir: &Path) -> std::io::Result<()> {
 pub fn tail(log_dir: &Path, lines: usize) -> std::io::Result<String> {
     let text = std::fs::read_to_string(log_dir.join("inner-empire.log"))?;
     let collected: Vec<&str> = text.lines().rev().take(lines).collect();
-    Ok(collected
-        .into_iter()
-        .rev()
-        .collect::<Vec<_>>()
-        .join("\n"))
+    Ok(collected.into_iter().rev().collect::<Vec<_>>().join("\n"))
 }
 
 #[cfg(test)]
@@ -154,17 +155,20 @@ mod tests {
 
         let count = std::fs::read_dir(dir.path()).unwrap().count();
         assert_eq!(count, MAX_LOG_FILES, "one current plus the rotated ones");
-        let oldest = std::fs::read_to_string(
-            dir.path().join(format!("inner-empire.log.{MAX_LOG_FILES}")),
-        )
-        .unwrap();
+        let oldest =
+            std::fs::read_to_string(dir.path().join(format!("inner-empire.log.{MAX_LOG_FILES}")))
+                .unwrap();
         assert_eq!(oldest, format!("generation {}", MAX_LOG_FILES - 1));
     }
 
     #[test]
     fn the_tail_returns_the_last_lines_in_order() {
         let dir = tempfile::tempdir().unwrap();
-        std::fs::write(dir.path().join("inner-empire.log"), "one\ntwo\nthree\nfour\n").unwrap();
+        std::fs::write(
+            dir.path().join("inner-empire.log"),
+            "one\ntwo\nthree\nfour\n",
+        )
+        .unwrap();
         assert_eq!(tail(dir.path(), 2).unwrap(), "three\nfour");
     }
 }

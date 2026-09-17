@@ -141,7 +141,9 @@ pub enum Diagnostic {
 impl Diagnostic {
     pub fn severity(&self) -> Severity {
         match self {
-            Diagnostic::CaseConflict { .. } | Diagnostic::InterruptedWrite { .. } => Severity::Warning,
+            Diagnostic::CaseConflict { .. } | Diagnostic::InterruptedWrite { .. } => {
+                Severity::Warning
+            }
             Diagnostic::UnreadableFile { .. } => Severity::Error,
             _ => Severity::Info,
         }

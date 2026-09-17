@@ -68,12 +68,7 @@ impl MarkdownTransformer {
     /// `matches` decides what counts as "the same target", which is where case
     /// sensitivity and shortest-unique-path policy live; this function only
     /// applies the decision.
-    pub fn retarget_links<F>(
-        &self,
-        source: &str,
-        matches: F,
-        new_target: &str,
-    ) -> Vec<Edit>
+    pub fn retarget_links<F>(&self, source: &str, matches: F, new_target: &str) -> Vec<Edit>
     where
         F: Fn(&Link) -> bool,
     {
@@ -134,7 +129,12 @@ impl MarkdownTransformer {
 
     /// Set a single property, adding it if absent and preserving the order of
     /// the others.
-    pub fn set_property(&self, source: &str, key: &str, value: crate::model::PropertyValue) -> String {
+    pub fn set_property(
+        &self,
+        source: &str,
+        key: &str,
+        value: crate::model::PropertyValue,
+    ) -> String {
         let (mut properties, _) = frontmatter::parse(source);
         match properties
             .iter_mut()
@@ -189,7 +189,8 @@ impl MarkdownTransformer {
             range: (range.start + trimmed_len)..(range.start + trimmed_len),
             replacement: format!(" ^{id}"),
         };
-        let updated = Self::apply(source, vec![edit.clone()]).unwrap_or_else(|_| source.to_string());
+        let updated =
+            Self::apply(source, vec![edit.clone()]).unwrap_or_else(|_| source.to_string());
         (updated, id, Some(edit))
     }
 }
@@ -308,10 +309,7 @@ mod tests {
 
     #[test]
     fn several_links_on_one_line_are_all_retargeted() {
-        assert_eq!(
-            retarget("[[A]] [[A]] [[A]]", "A", "B"),
-            "[[B]] [[B]] [[B]]"
-        );
+        assert_eq!(retarget("[[A]] [[A]] [[A]]", "A", "B"), "[[B]] [[B]] [[B]]");
     }
 
     #[test]
@@ -366,7 +364,10 @@ mod tests {
             transformer.set_property(source, "status", PropertyValue::Text("active".into()));
         assert!(updated.ends_with("# Body\n\ntext\n"));
         let (properties, _) = frontmatter::parse(&updated);
-        assert_eq!(frontmatter::get(&properties, "title").unwrap().as_text(), "A");
+        assert_eq!(
+            frontmatter::get(&properties, "title").unwrap().as_text(),
+            "A"
+        );
         assert_eq!(
             frontmatter::get(&properties, "status").unwrap().as_text(),
             "active"

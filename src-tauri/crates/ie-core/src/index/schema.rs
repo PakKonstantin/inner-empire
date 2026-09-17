@@ -252,7 +252,10 @@ mod tests {
             "properties",
             "tags",
         ] {
-            assert!(names.contains(&expected.to_string()), "missing table {expected}");
+            assert!(
+                names.contains(&expected.to_string()),
+                "missing table {expected}"
+            );
         }
     }
 

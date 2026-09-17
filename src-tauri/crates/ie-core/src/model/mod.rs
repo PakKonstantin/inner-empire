@@ -9,9 +9,7 @@ pub mod property;
 pub mod workspace;
 
 pub use property::{Property, PropertyKind, PropertyValue};
-pub use workspace::{
-    PaneLayout, PaneNode, SplitDirection, TabState, Workspace, WorkspaceSidebar,
-};
+pub use workspace::{PaneLayout, PaneNode, SplitDirection, TabState, Workspace, WorkspaceSidebar};
 
 use crate::vault::path::VaultPath;
 

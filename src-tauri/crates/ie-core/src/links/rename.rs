@@ -141,18 +141,12 @@ pub fn rewrite_source(
     new_markdown_target: &str,
 ) -> Result<String> {
     let transformer = MarkdownTransformer::new();
-    let matches = |link: &Link| -> bool {
-        targets
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case(&link.target))
-    };
+    let matches =
+        |link: &Link| -> bool { targets.iter().any(|t| t.eq_ignore_ascii_case(&link.target)) };
 
     let mut edits: Vec<Edit> = Vec::new();
     for (kinds, replacement) in [
-        (
-            vec![LinkKind::WikiLink, LinkKind::Embed],
-            new_wiki_target,
-        ),
+        (vec![LinkKind::WikiLink, LinkKind::Embed], new_wiki_target),
         (
             vec![LinkKind::Markdown, LinkKind::MarkdownImage],
             new_markdown_target,
@@ -165,11 +159,9 @@ pub fn rewrite_source(
         ));
     }
 
-    MarkdownTransformer::apply(source, edits).map_err(|message| {
-        crate::error::CoreError::Refused {
-            operation: "update links",
-            reason: message,
-        }
+    MarkdownTransformer::apply(source, edits).map_err(|message| crate::error::CoreError::Refused {
+        operation: "update links",
+        reason: message,
     })
 }
 

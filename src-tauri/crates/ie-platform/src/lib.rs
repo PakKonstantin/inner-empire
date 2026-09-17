@@ -30,9 +30,7 @@ pub use memory_fs::MemoryFileSystem;
 pub use notify_watcher::NotifyWatcher;
 pub use path_resolver::PathResolver;
 pub use platform::PlatformOps;
-pub use shell::{
-    Clipboard, FileDialogOptions, ProcessManager, ShellIntegration, SystemDialog,
-};
+pub use shell::{Clipboard, FileDialogOptions, ProcessManager, ShellIntegration, SystemDialog};
 pub use std_fs::StdFileSystem;
 pub use watcher::{FileWatcher, FsEvent, SharedFileWatcher, WatchHandle, WatchOptions};
 

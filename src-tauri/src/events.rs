@@ -100,17 +100,23 @@ fn indexer_loop(app: AppHandle, receiver: mpsc::Receiver<Vec<FsEvent>>) {
                     let _ = app.emit("fileDeleted", serde_json::json!({ "path": path }));
                 }
                 if !outcome.is_empty() {
-                    let _ = app.emit("indexUpdated", serde_json::json!({
-                        "indexed": outcome.indexed.len(),
-                        "removed": outcome.removed.len(),
-                    }));
+                    let _ = app.emit(
+                        "indexUpdated",
+                        serde_json::json!({
+                            "indexed": outcome.indexed.len(),
+                            "removed": outcome.removed.len(),
+                        }),
+                    );
                 }
             }
             // No vault open: the batch belonged to one that has since closed.
             Err(error) if error.code == "no_vault_open" => {}
             Err(error) => {
                 tracing::warn!(code = %error.code, message = %error.message, "indexing a change failed");
-                let _ = app.emit("indexError", serde_json::json!({ "message": error.message }));
+                let _ = app.emit(
+                    "indexError",
+                    serde_json::json!({ "message": error.message }),
+                );
             }
         }
     }

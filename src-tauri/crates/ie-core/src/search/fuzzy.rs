@@ -111,8 +111,7 @@ fn is_word_start(chars: &[char], index: usize) -> bool {
     }
     let previous = chars[index - 1];
     let current = chars[index];
-    !previous.is_alphanumeric()
-        || (previous.is_lowercase() && current.is_uppercase())
+    !previous.is_alphanumeric() || (previous.is_lowercase() && current.is_uppercase())
 }
 
 #[cfg(test)]
@@ -171,7 +170,9 @@ mod tests {
     #[test]
     fn a_shorter_candidate_wins_when_the_match_is_otherwise_equal() {
         let short = score("ab", "ab").unwrap().score;
-        let long = score("ab", "ab with a great deal of other text").unwrap().score;
+        let long = score("ab", "ab with a great deal of other text")
+            .unwrap()
+            .score;
         assert!(short > long);
     }
 

@@ -163,13 +163,13 @@ pub fn from_yaml(value: &serde_yaml_ng::Value) -> PropertyValue {
 fn to_yaml(value: &PropertyValue) -> serde_yaml_ng::Value {
     match value {
         PropertyValue::Text(s) => serde_yaml_ng::Value::String(s.clone()),
-        PropertyValue::Number(n) => serde_yaml_ng::Value::Number(
-            if n.fract() == 0.0 && n.abs() < 1e15 {
+        PropertyValue::Number(n) => {
+            serde_yaml_ng::Value::Number(if n.fract() == 0.0 && n.abs() < 1e15 {
                 serde_yaml_ng::Number::from(*n as i64)
             } else {
                 serde_yaml_ng::Number::from(*n)
-            },
-        ),
+            })
+        }
         PropertyValue::Checkbox(b) => serde_yaml_ng::Value::Bool(*b),
         PropertyValue::Date(d) => serde_yaml_ng::Value::String(d.clone()),
         PropertyValue::DateTime(d) => serde_yaml_ng::Value::String(d.clone()),
@@ -199,8 +199,7 @@ pub fn render(properties: &[Property]) -> String {
             to_yaml(&property.value),
         );
     }
-    let body = serde_yaml_ng::to_string(&serde_yaml_ng::Value::Mapping(map))
-        .unwrap_or_default();
+    let body = serde_yaml_ng::to_string(&serde_yaml_ng::Value::Mapping(map)).unwrap_or_default();
     format!("---\n{}---\n", body)
 }
 
@@ -321,12 +320,18 @@ mod tests {
             get(&properties, "status"),
             Some(&PropertyValue::Text("active".into()))
         );
-        assert_eq!(get(&properties, "rating"), Some(&PropertyValue::Number(8.0)));
+        assert_eq!(
+            get(&properties, "rating"),
+            Some(&PropertyValue::Number(8.0))
+        );
         assert_eq!(
             get(&properties, "created"),
             Some(&PropertyValue::Date("2026-09-17".into()))
         );
-        assert_eq!(get(&properties, "done"), Some(&PropertyValue::Checkbox(false)));
+        assert_eq!(
+            get(&properties, "done"),
+            Some(&PropertyValue::Checkbox(false))
+        );
         match get(&properties, "tags") {
             Some(PropertyValue::List(items)) => assert_eq!(items.len(), 2),
             other => panic!("expected a list, got {other:?}"),
@@ -347,7 +352,10 @@ mod tests {
     fn yaml_typing_is_respected_so_a_quoted_number_stays_text() {
         let (properties, _) = parse("---\na: 8\nb: \"8\"\n---\n");
         assert_eq!(get(&properties, "a"), Some(&PropertyValue::Number(8.0)));
-        assert_eq!(get(&properties, "b"), Some(&PropertyValue::Text("8".into())));
+        assert_eq!(
+            get(&properties, "b"),
+            Some(&PropertyValue::Text("8".into()))
+        );
     }
 
     #[test]
@@ -410,7 +418,10 @@ mod tests {
         assert_eq!(tags(&list), vec!["AI".to_string(), "Research".to_string()]);
 
         let (inline, _) = parse("---\ntags: AI, Research\n---\n");
-        assert_eq!(tags(&inline), vec!["AI".to_string(), "Research".to_string()]);
+        assert_eq!(
+            tags(&inline),
+            vec!["AI".to_string(), "Research".to_string()]
+        );
 
         let (singular, _) = parse("---\ntag: Solo\n---\n");
         assert_eq!(tags(&singular), vec!["Solo".to_string()]);

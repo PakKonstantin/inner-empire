@@ -5,12 +5,17 @@ use std::sync::Arc;
 
 use ie_core::index::{IndexDb, Indexer};
 use ie_core::vault::path::VaultPath;
-use ie_platform::{FileSystem, FixedClock, MemoryFileSystem, SharedClock, SharedFileSystem};
 #[allow(unused_imports)]
 use ie_platform::FileSystem as _;
+use ie_platform::{FixedClock, MemoryFileSystem, SharedClock, SharedFileSystem};
 
 /// A vault held entirely in memory, so tests are fast and platform-independent
 /// — including the ability to emulate NTFS case folding while running on ext4.
+///
+/// Shared by several test binaries, each of which uses a different subset of
+/// the helpers, so the unused-code warning is silenced for the module rather
+/// than for whichever method one file happens not to call.
+#[allow(dead_code)]
 pub struct TestVault {
     pub fs: SharedFileSystem,
     pub clock: SharedClock,
@@ -19,6 +24,7 @@ pub struct TestVault {
     now_ms: std::cell::Cell<i64>,
 }
 
+#[allow(dead_code)]
 impl TestVault {
     pub fn new() -> Self {
         Self::with_case_sensitivity(true)

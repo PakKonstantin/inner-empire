@@ -171,8 +171,11 @@ impl MarkdownParser {
         for (event, range) in parser.into_offset_iter() {
             match event {
                 Event::Start(Tag::Heading { level, .. }) => {
-                    heading_in_progress =
-                        Some((heading_level_number(level), range.start + body_offset, String::new()));
+                    heading_in_progress = Some((
+                        heading_level_number(level),
+                        range.start + body_offset,
+                        String::new(),
+                    ));
                 }
                 Event::End(TagEnd::Heading(_)) => {
                     if let Some((level, byte_start, text)) = heading_in_progress.take() {
@@ -323,7 +326,10 @@ pub fn is_external_url(dest: &str) -> bool {
             // because no scheme may be followed by whitespace.
             scheme.len() > 1
                 && !rest.starts_with(' ')
-                && scheme.chars().next().is_some_and(|c| c.is_ascii_alphabetic())
+                && scheme
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_alphabetic())
                 && scheme
                     .chars()
                     .all(|c| c.is_ascii_alphanumeric() || c == '+' || c == '-' || c == '.')
@@ -339,7 +345,11 @@ fn split_internal_destination(dest: &str) -> (String, Option<String>, Option<Str
             let path = dest[..idx].to_string();
             let fragment = &dest[idx + 1..];
             if let Some(block) = fragment.strip_prefix('^') {
-                (path, None, Some(block.to_string()).filter(|s| !s.is_empty()))
+                (
+                    path,
+                    None,
+                    Some(block.to_string()).filter(|s| !s.is_empty()),
+                )
             } else {
                 (
                     path,
@@ -364,13 +374,10 @@ pub fn percent_decode(input: &str) -> String {
     while i < bytes.len() {
         if bytes[i] == b'%' && i + 2 < bytes.len() {
             let hex = &input[i + 1..i + 3];
-            match u8::from_str_radix(hex, 16) {
-                Ok(byte) => {
-                    out.push(byte);
-                    i += 3;
-                    continue;
-                }
-                Err(_) => {}
+            if let Ok(byte) = u8::from_str_radix(hex, 16) {
+                out.push(byte);
+                i += 3;
+                continue;
             }
         }
         out.push(bytes[i]);
@@ -499,7 +506,11 @@ mod tests {
         let kinds: Vec<_> = doc.metadata.links.iter().map(|l| l.kind).collect();
         assert_eq!(
             kinds,
-            vec![LinkKind::Markdown, LinkKind::External, LinkKind::MarkdownImage]
+            vec![
+                LinkKind::Markdown,
+                LinkKind::External,
+                LinkKind::MarkdownImage
+            ]
         );
         assert_eq!(doc.metadata.links[0].target, "Notes/Other.md");
         assert_eq!(doc.metadata.links[2].target, "img/pic.png");

@@ -17,9 +17,11 @@ use crate::vault::path::VaultPath;
 /// A file's id, or `None` if it is not indexed.
 pub fn file_id(conn: &Connection, path: &VaultPath) -> Result<Option<i64>> {
     Ok(conn
-        .query_row("SELECT id FROM files WHERE path = ?1", [path.as_str()], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT id FROM files WHERE path = ?1",
+            [path.as_str()],
+            |r| r.get(0),
+        )
         .optional()?)
 }
 
@@ -363,8 +365,7 @@ pub fn case_conflicts(conn: &Connection) -> Result<Vec<Vec<VaultPath>>> {
 
 /// Diagnostics recorded by the last scan.
 pub fn diagnostics(conn: &Connection, limit: usize) -> Result<Vec<Diagnostic>> {
-    let mut stmt =
-        conn.prepare_cached("SELECT payload FROM diagnostics ORDER BY id LIMIT ?1")?;
+    let mut stmt = conn.prepare_cached("SELECT payload FROM diagnostics ORDER BY id LIMIT ?1")?;
     let rows = stmt
         .query_map([limit as i64], |row| row.get::<_, String>(0))?
         .filter_map(std::result::Result::ok)
@@ -497,7 +498,9 @@ pub fn graph(conn: &Connection, options: &GraphOptions) -> Result<GraphData> {
              WHERE l.target_file_id IS NULL AND l.kind <> 'external' AND l.target_text <> ''",
         )?;
         for row in stmt
-            .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?
             .filter_map(std::result::Result::ok)
         {
             let (source, target) = row;
@@ -526,9 +529,13 @@ pub fn graph(conn: &Connection, options: &GraphOptions) -> Result<GraphData> {
     }
 
     if options.include_tags {
-        let mut stmt = conn.prepare("SELECT DISTINCT f.path, t.tag FROM tags t JOIN files f ON f.id = t.file_id")?;
+        let mut stmt = conn.prepare(
+            "SELECT DISTINCT f.path, t.tag FROM tags t JOIN files f ON f.id = t.file_id",
+        )?;
         for row in stmt
-            .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?
             .filter_map(std::result::Result::ok)
         {
             let (path, tag) = row;

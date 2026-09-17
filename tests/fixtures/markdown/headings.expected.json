@@ -1,0 +1,13 @@
+{
+  "links": [],
+  "tags": ["NotAHeading"],
+  "headings": [
+    { "level": 1, "text": "Top level", "slug": "top-level" },
+    { "level": 2, "text": "Getting Started", "slug": "getting-started" },
+    { "level": 3, "text": "What's this?", "slug": "what-s-this" },
+    { "level": 4, "text": "Section 2.1", "slug": "section-2-1" },
+    { "level": 5, "text": "Deep", "slug": "deep" },
+    { "level": 6, "text": "Deepest", "slug": "deepest" }
+  ],
+  "blocks": []
+}

@@ -30,8 +30,8 @@ pub async fn open_vault(
 
     close_current(&state);
 
-    let (mut session, report) = VaultSession::open(state.host.clone(), &root)
-        .map_err(CommandError::from)?;
+    let (mut session, report) =
+        VaultSession::open(state.host.clone(), &root).map_err(CommandError::from)?;
 
     // Let the webview load images, PDFs and media out of this vault, and only
     // this vault. The scope is granted per vault rather than once at startup,
@@ -49,7 +49,11 @@ pub async fn open_vault(
         // next scan instead of immediately. Worth saying, not worth refusing to
         // open the vault over.
         tracing::warn!(error = %e, "could not watch the vault for external changes");
-        crate::events::notify(&app, "warning", "Changes made outside the app will not appear until the index is rebuilt.");
+        crate::events::notify(
+            &app,
+            "warning",
+            "Changes made outside the app will not appear until the index is rebuilt.",
+        );
     }
     state.set_session(Some(session));
     state.remember_vault(&report.root, &report.name);
@@ -72,7 +76,12 @@ pub async fn create_vault(
     name: String,
 ) -> CommandResult<OpenReport> {
     let root = PathBuf::from(&path);
-    if root.exists() && root.read_dir().map(|mut d| d.next().is_some()).unwrap_or(false) {
+    if root.exists()
+        && root
+            .read_dir()
+            .map(|mut d| d.next().is_some())
+            .unwrap_or(false)
+    {
         return Err(CommandError::refused(format!(
             "{} already contains files. Open it as an existing vault instead.",
             root.display()
@@ -80,8 +89,8 @@ pub async fn create_vault(
     }
 
     close_current(&state);
-    let (mut session, report) = VaultSession::create(state.host.clone(), &root, &name)
-        .map_err(CommandError::from)?;
+    let (mut session, report) =
+        VaultSession::create(state.host.clone(), &root, &name).map_err(CommandError::from)?;
 
     if let Err(e) = app
         .asset_protocol_scope()
@@ -166,10 +175,7 @@ pub fn forget_vault(state: State<'_, SharedState>, path: String) {
 /// Offered in settings and after an index error. It can never lose data, which
 /// is why it is safe to expose as a button.
 #[tauri::command]
-pub async fn rebuild_index(
-    app: AppHandle,
-    state: State<'_, SharedState>,
-) -> CommandResult<()> {
+pub async fn rebuild_index(app: AppHandle, state: State<'_, SharedState>) -> CommandResult<()> {
     state.with_session(|session| session.db().clear())?;
     crate::events::spawn_scan(app, (*state).clone(), true);
     Ok(())

@@ -68,9 +68,8 @@ impl IndexDb {
                     "index unusable, rebuilding from the vault"
                 );
                 Self::discard(path)?;
-                let db = Self::try_open(path).map_err(|e| CoreError::IndexCorrupt {
-                    message: e.message,
-                })?;
+                let db = Self::try_open(path)
+                    .map_err(|e| CoreError::IndexCorrupt { message: e.message })?;
                 Ok((db, reason.outcome))
             }
         }
@@ -242,7 +241,8 @@ mod tests {
         let path = dir.path().join("index.db");
         {
             let mut file = std::fs::File::create(&path).unwrap();
-            file.write_all(b"this is definitely not a database").unwrap();
+            file.write_all(b"this is definitely not a database")
+                .unwrap();
         }
 
         let (db, outcome) = IndexDb::open(&path).unwrap();

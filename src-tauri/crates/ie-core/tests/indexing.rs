@@ -20,9 +20,12 @@ fn a_full_scan_indexes_notes_and_skips_app_internals() {
     assert_eq!(report.files_indexed, 3, "{report:?}");
     assert_eq!(vault.db.file_count().unwrap(), 3);
     assert!(
-        queries::file(vault.db.connection(), &TestVault::path(".inner-empire/workspace.json"))
-            .unwrap()
-            .is_none(),
+        queries::file(
+            vault.db.connection(),
+            &TestVault::path(".inner-empire/workspace.json")
+        )
+        .unwrap()
+        .is_none(),
         "app-internal files must never be indexed"
     );
 }
@@ -63,7 +66,10 @@ fn metadata_from_a_note_reaches_every_table() {
         .map(|t| t.name)
         .collect();
     assert!(tags.contains(&"inline/tag".to_string()), "{tags:?}");
-    assert!(tags.contains(&"AI".to_string()), "frontmatter tags count too: {tags:?}");
+    assert!(
+        tags.contains(&"AI".to_string()),
+        "frontmatter tags count too: {tags:?}"
+    );
 
     let keys: Vec<String> = queries::property_keys(conn)
         .unwrap()
@@ -83,7 +89,8 @@ fn backlinks_point_back_at_the_referring_note() {
     vault.write("C.md", "Unrelated.\n");
     vault.scan();
 
-    let backlinks = queries::backlinks(vault.db.connection(), &TestVault::path("Target.md")).unwrap();
+    let backlinks =
+        queries::backlinks(vault.db.connection(), &TestVault::path("Target.md")).unwrap();
     let sources: Vec<String> = backlinks
         .iter()
         .map(|b| b.source_path.as_str().to_string())
@@ -171,7 +178,10 @@ fn deleting_one_of_two_same_named_notes_repoints_the_link_at_the_survivor() {
 #[test]
 fn rebuilding_the_index_from_scratch_reproduces_it_exactly() {
     let mut vault = TestVault::new();
-    vault.write("A.md", "---\nstatus: active\n---\n# A\n\n[[B]] #tag\n\nPoint. ^p\n");
+    vault.write(
+        "A.md",
+        "---\nstatus: active\n---\n# A\n\n[[B]] #tag\n\nPoint. ^p\n",
+    );
     vault.write("B.md", "# B\n\n[[A]]\n");
     vault.write("img.png", "binary");
     vault.scan();
@@ -193,7 +203,12 @@ fn snapshot(vault: &TestVault) -> Vec<String> {
     let conn = vault.db.connection();
     let mut out = Vec::new();
     for file in queries::all_files(conn, 1000).unwrap() {
-        out.push(format!("file {} {} {}", file.path, file.kind.as_str(), file.title));
+        out.push(format!(
+            "file {} {} {}",
+            file.path,
+            file.kind.as_str(),
+            file.title
+        ));
         for heading in queries::headings(conn, &file.path).unwrap() {
             out.push(format!("  heading {} {}", heading.level, heading.text));
         }
@@ -214,7 +229,10 @@ fn snapshot(vault: &TestVault) -> Vec<String> {
         }
     }
     for tag in queries::tag_summaries(conn).unwrap() {
-        out.push(format!("tag {} {} {}", tag.name, tag.count, tag.total_count));
+        out.push(format!(
+            "tag {} {} {}",
+            tag.name, tag.count, tag.total_count
+        ));
     }
     for (key, count) in queries::property_keys(conn).unwrap() {
         out.push(format!("property {key} {count}"));
@@ -306,7 +324,8 @@ fn a_vault_authored_on_linux_opens_on_a_case_insensitive_filesystem() {
     vault.write("Other.md", "See [[mynote]] and [[MYNOTE]].\n");
     vault.scan();
 
-    let links = queries::outgoing_links(vault.db.connection(), &TestVault::path("Other.md")).unwrap();
+    let links =
+        queries::outgoing_links(vault.db.connection(), &TestVault::path("Other.md")).unwrap();
     assert_eq!(links.len(), 2);
     for link in links {
         assert!(
@@ -320,7 +339,10 @@ fn a_vault_authored_on_linux_opens_on_a_case_insensitive_filesystem() {
 #[test]
 fn malformed_frontmatter_is_reported_without_losing_the_note() {
     let mut vault = TestVault::new();
-    vault.write("Bad.md", "---\nbroken: [unclosed\n---\n\n# Still Indexed\n\n[[Other]]\n");
+    vault.write(
+        "Bad.md",
+        "---\nbroken: [unclosed\n---\n\n# Still Indexed\n\n[[Other]]\n",
+    );
     vault.write("Other.md", "# Other\n");
     let report = vault.scan();
 
@@ -459,7 +481,10 @@ fn an_ambiguous_link_still_resolves_but_is_flagged() {
     vault.scan();
 
     let links = queries::outgoing_links(vault.db.connection(), &TestVault::path("A.md")).unwrap();
-    assert!(links[0].target_path.is_some(), "the link still goes somewhere");
+    assert!(
+        links[0].target_path.is_some(),
+        "the link still goes somewhere"
+    );
 
     let ambiguous = queries::ambiguous_links(vault.db.connection(), 10).unwrap();
     assert_eq!(ambiguous.len(), 1);
@@ -470,7 +495,10 @@ fn an_ambiguous_link_still_resolves_but_is_flagged() {
 fn a_markdown_link_to_a_file_resolves_like_a_wiki_link() {
     let mut vault = TestVault::new();
     vault.write("Notes/Other.md", "# Other\n");
-    vault.write("A.md", "[label](Notes/Other.md) and [enc](Notes/Other.md#Section)\n");
+    vault.write(
+        "A.md",
+        "[label](Notes/Other.md) and [enc](Notes/Other.md#Section)\n",
+    );
     vault.scan();
 
     let links = queries::outgoing_links(vault.db.connection(), &TestVault::path("A.md")).unwrap();

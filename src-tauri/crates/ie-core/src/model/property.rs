@@ -38,7 +38,11 @@ impl PropertyKind {
         }
     }
 
-    pub fn from_str(value: &str) -> Option<Self> {
+    /// Parse the representation `as_str` produces.
+    ///
+    /// Named `parse` rather than `from_str` because it is not the `FromStr`
+    /// trait and reading it as one at a call site would be misleading.
+    pub fn parse(value: &str) -> Option<Self> {
         Some(match value {
             "text" => PropertyKind::Text,
             "number" => PropertyKind::Number,
@@ -108,9 +112,9 @@ impl PropertyValue {
         match self {
             PropertyValue::Number(n) => Some(*n),
             PropertyValue::Checkbox(b) => Some(if *b { 1.0 } else { 0.0 }),
-            PropertyValue::Date(d) => parse_date(d).map(|date| {
-                date.midnight().assume_utc().unix_timestamp() as f64
-            }),
+            PropertyValue::Date(d) => {
+                parse_date(d).map(|date| date.midnight().assume_utc().unix_timestamp() as f64)
+            }
             PropertyValue::DateTime(d) => OffsetDateTime::parse(d, &Rfc3339)
                 .ok()
                 .map(|t| t.unix_timestamp() as f64),
@@ -212,9 +216,18 @@ mod tests {
             PropertyValue::infer_from_scalar("2026-09-17T10:30:00Z"),
             PropertyValue::DateTime("2026-09-17T10:30:00Z".into())
         );
-        assert_eq!(PropertyValue::infer_from_scalar("8"), PropertyValue::Number(8.0));
-        assert_eq!(PropertyValue::infer_from_scalar("8.5"), PropertyValue::Number(8.5));
-        assert_eq!(PropertyValue::infer_from_scalar("true"), PropertyValue::Checkbox(true));
+        assert_eq!(
+            PropertyValue::infer_from_scalar("8"),
+            PropertyValue::Number(8.0)
+        );
+        assert_eq!(
+            PropertyValue::infer_from_scalar("8.5"),
+            PropertyValue::Number(8.5)
+        );
+        assert_eq!(
+            PropertyValue::infer_from_scalar("true"),
+            PropertyValue::Checkbox(true)
+        );
         assert_eq!(
             PropertyValue::infer_from_scalar("active"),
             PropertyValue::Text("active".into())
@@ -242,8 +255,12 @@ mod tests {
 
     #[test]
     fn dates_compare_numerically_so_range_queries_work() {
-        let earlier = PropertyValue::Date("2026-01-01".into()).as_number().unwrap();
-        let later = PropertyValue::Date("2026-09-17".into()).as_number().unwrap();
+        let earlier = PropertyValue::Date("2026-01-01".into())
+            .as_number()
+            .unwrap();
+        let later = PropertyValue::Date("2026-09-17".into())
+            .as_number()
+            .unwrap();
         assert!(earlier < later);
     }
 

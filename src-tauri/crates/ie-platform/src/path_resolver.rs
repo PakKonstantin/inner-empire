@@ -72,12 +72,18 @@ mod tests {
 
     #[test]
     fn normalize_refuses_to_escape_the_root() {
-        assert_eq!(PathResolver::normalize(Path::new("../../etc")), Path::new("etc"));
+        assert_eq!(
+            PathResolver::normalize(Path::new("../../etc")),
+            Path::new("etc")
+        );
     }
 
     #[test]
     fn is_within_rejects_siblings() {
-        assert!(PathResolver::is_within(Path::new("/vault"), Path::new("/vault/a/b.md")));
+        assert!(PathResolver::is_within(
+            Path::new("/vault"),
+            Path::new("/vault/a/b.md")
+        ));
         assert!(!PathResolver::is_within(
             Path::new("/vault"),
             Path::new("/vault-other/b.md")
@@ -86,12 +92,18 @@ mod tests {
 
     #[test]
     fn split_extension_handles_dotfiles_and_multiple_dots() {
-        assert_eq!(PathResolver::split_extension("note.md"), ("note", Some("md".into())));
+        assert_eq!(
+            PathResolver::split_extension("note.md"),
+            ("note", Some("md".into()))
+        );
         assert_eq!(
             PathResolver::split_extension("archive.tar.GZ"),
             ("archive.tar", Some("gz".into()))
         );
-        assert_eq!(PathResolver::split_extension(".gitignore"), (".gitignore", None));
+        assert_eq!(
+            PathResolver::split_extension(".gitignore"),
+            (".gitignore", None)
+        );
         assert_eq!(PathResolver::split_extension("README"), ("README", None));
     }
 }

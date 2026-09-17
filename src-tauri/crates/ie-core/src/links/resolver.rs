@@ -49,11 +49,7 @@ pub struct LinkResolver;
 
 impl LinkResolver {
     /// Resolve a link as written, from the note that contains it.
-    pub fn resolve(
-        conn: &Connection,
-        from: &VaultPath,
-        link: &Link,
-    ) -> Result<LinkResolution> {
+    pub fn resolve(conn: &Connection, from: &VaultPath, link: &Link) -> Result<LinkResolution> {
         if link.kind == crate::model::LinkKind::External {
             return Ok(LinkResolution {
                 target: link.target.clone(),

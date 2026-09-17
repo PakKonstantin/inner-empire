@@ -1,0 +1,14 @@
+{
+  "links": [
+    { "kind": "markdown", "target": "Notes/Other.md", "heading": null, "blockId": null, "alias": null },
+    { "kind": "markdown", "target": "Notes/Other.md", "heading": "Section", "blockId": null, "alias": null },
+    { "kind": "markdown", "target": "Notes/Other.md", "heading": null, "blockId": "blk", "alias": null },
+    { "kind": "markdown", "target": "Notes/My Note.md", "heading": null, "blockId": null, "alias": null },
+    { "kind": "markdownImage", "target": "Attachments/picture.png", "heading": null, "blockId": null, "alias": null },
+    { "kind": "external", "target": "https://example.org/guide#installation", "heading": null, "blockId": null, "alias": null },
+    { "kind": "external", "target": "mailto:someone@example.org", "heading": null, "blockId": null, "alias": null }
+  ],
+  "tags": [],
+  "headings": [],
+  "blocks": []
+}

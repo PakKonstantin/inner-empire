@@ -109,7 +109,10 @@ pub fn index_attachment(tx: &Transaction<'_>, record: &FileRecord) -> Result<i64
 
 fn clear_derived(tx: &Transaction<'_>, file_id: i64) -> Result<()> {
     for table in ["headings", "blocks", "tags", "properties", "links"] {
-        tx.execute(&format!("DELETE FROM {table} WHERE file_id = ?1"), [file_id])?;
+        tx.execute(
+            &format!("DELETE FROM {table} WHERE file_id = ?1"),
+            [file_id],
+        )?;
     }
     Ok(())
 }
@@ -269,9 +272,11 @@ fn write_fts(
 /// referring note, and the user needs to see that it now points nowhere.
 pub fn remove_file(tx: &Transaction<'_>, path: &VaultPath) -> Result<Option<i64>> {
     let file_id: Option<i64> = tx
-        .query_row("SELECT id FROM files WHERE path = ?1", [path.as_str()], |row| {
-            row.get(0)
-        })
+        .query_row(
+            "SELECT id FROM files WHERE path = ?1",
+            [path.as_str()],
+            |row| row.get(0),
+        )
         .ok();
 
     let Some(file_id) = file_id else {
@@ -328,9 +333,8 @@ pub fn reresolve_pending(tx: &Transaction<'_>, tail: &str) -> Result<usize> {
 /// that had not been indexed yet.
 pub fn resolve_all_pending(tx: &Transaction<'_>) -> Result<usize> {
     let pending: Vec<(i64, String)> = {
-        let mut stmt = tx.prepare_cached(
-            "SELECT id, target_text FROM links WHERE target_file_id IS NULL",
-        )?;
+        let mut stmt =
+            tx.prepare_cached("SELECT id, target_text FROM links WHERE target_file_id IS NULL")?;
         let rows = stmt
             .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
             .filter_map(std::result::Result::ok)

@@ -14,8 +14,8 @@ use std::collections::HashMap;
 use pulldown_cmark::{html, Options, Parser};
 
 use crate::links::reference::LinkTarget;
-use crate::markdown::parser::{MarkdownParser, ParserOptions};
 use crate::markdown::frontmatter;
+use crate::markdown::parser::{MarkdownParser, ParserOptions};
 use crate::model::{Link, LinkKind};
 use crate::vault::path::VaultPath;
 
@@ -160,7 +160,8 @@ impl MarkdownRenderer {
                 // Only notes are re-extensioned on export: an attachment keeps
                 // its own extension, or `diagram.png` would become
                 // `diagram.html` and the image would not load.
-                let is_note = matches!(path.extension().as_deref(), Some("md" | "markdown" | "mdx"));
+                let is_note =
+                    matches!(path.extension().as_deref(), Some("md" | "markdown" | "mdx"));
                 let base = match (&self.options.internal_link_extension, is_note) {
                     (Some(ext), true) => path
                         .with_extension(Some(ext))
@@ -219,9 +220,11 @@ fn fragment_for(link: &Link) -> String {
 
 fn is_image_target(target: &str) -> bool {
     let lowered = target.to_ascii_lowercase();
-    [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif"]
-        .iter()
-        .any(|ext| lowered.ends_with(ext))
+    [
+        ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif",
+    ]
+    .iter()
+    .any(|ext| lowered.ends_with(ext))
 }
 
 /// Percent-encode the characters that would otherwise break an href.
@@ -373,7 +376,10 @@ mod tests {
 
     #[test]
     fn a_resolved_wiki_link_becomes_an_anchor_to_the_exported_file() {
-        let html = render_with("See [[Other Note]].", &[("Other Note", "Notes/Other Note.md")]);
+        let html = render_with(
+            "See [[Other Note]].",
+            &[("Other Note", "Notes/Other Note.md")],
+        );
         assert!(html.contains("ie-internal-link"), "{html}");
         assert!(html.contains("Notes/Other%20Note.html"), "{html}");
         assert!(html.contains(">Other Note</a>"), "{html}");
@@ -401,7 +407,10 @@ mod tests {
 
     #[test]
     fn an_image_embed_becomes_an_img_tag() {
-        let html = render_with("![[diagram.png]]", &[("diagram.png", "Attachments/diagram.png")]);
+        let html = render_with(
+            "![[diagram.png]]",
+            &[("diagram.png", "Attachments/diagram.png")],
+        );
         assert!(html.contains("<img"), "{html}");
         assert!(html.contains("Attachments/diagram.png"), "{html}");
     }
@@ -419,7 +428,10 @@ mod tests {
         assert!(html.contains("ie-properties"), "{html}");
         assert!(html.contains("<dt>status</dt>"), "{html}");
         assert!(html.contains("<p>Body text.</p>"), "{html}");
-        assert!(!html.contains("<hr"), "frontmatter leaked as a rule:\n{html}");
+        assert!(
+            !html.contains("<hr"),
+            "frontmatter leaked as a rule:\n{html}"
+        );
     }
 
     #[test]
@@ -457,7 +469,10 @@ mod tests {
         assert!(html.starts_with("<!DOCTYPE html>"));
         assert!(html.contains("<title>My Note</title>"));
         assert!(html.contains("--background-primary"));
-        assert!(!html.contains("http://"), "an export must not need the network");
+        assert!(
+            !html.contains("http://"),
+            "an export must not need the network"
+        );
     }
 
     #[test]

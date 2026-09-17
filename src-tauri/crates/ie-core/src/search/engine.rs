@@ -180,7 +180,9 @@ fn search_filters_only(
     };
 
     let total: i64 = {
-        let mut stmt = conn.prepare(&format!("SELECT count(*) FROM files f WHERE {where_clause}"))?;
+        let mut stmt = conn.prepare(&format!(
+            "SELECT count(*) FROM files f WHERE {where_clause}"
+        ))?;
         stmt.query_row(rusqlite::params_from_iter(params.iter()), |row| row.get(0))?
     };
 
@@ -238,9 +240,8 @@ pub struct FileMatch {
 /// An empty query returns the most recently modified files, which is the right
 /// answer for an empty palette.
 pub fn quick_switch(conn: &Connection, needle: &str, limit: usize) -> Result<Vec<FileMatch>> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT path, title, kind, mtime_ms FROM files ORDER BY mtime_ms DESC",
-    )?;
+    let mut stmt = conn
+        .prepare_cached("SELECT path, title, kind, mtime_ms FROM files ORDER BY mtime_ms DESC")?;
     let rows: Vec<(String, Option<String>, String, i64)> = stmt
         .query_map([], |row| {
             Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
@@ -283,7 +284,11 @@ pub fn quick_switch(conn: &Connection, needle: &str, limit: usize) -> Result<Vec
 }
 
 /// Tags whose name contains `needle`, for autocomplete in the editor.
-pub fn complete_tags(conn: &Connection, needle: &str, limit: usize) -> Result<Vec<(String, usize)>> {
+pub fn complete_tags(
+    conn: &Connection,
+    needle: &str,
+    limit: usize,
+) -> Result<Vec<(String, usize)>> {
     let mut stmt = conn.prepare_cached(
         "SELECT tag, count(*) AS uses FROM tags
          WHERE tag_fold LIKE ? ESCAPE '\\'

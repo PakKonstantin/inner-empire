@@ -126,9 +126,8 @@ pub fn scan_tags(source: &str, zones: &ExclusionZones, lines: &LineIndex) -> Vec
 
         // `#` alone, `#123` and `#---` are not tags: requiring a letter avoids
         // turning issue references and horizontal rules into taxonomy.
-        let usable = !name.is_empty()
-            && name.chars().any(|c| c.is_alphabetic())
-            && !name.contains("//");
+        let usable =
+            !name.is_empty() && name.chars().any(|c| c.is_alphabetic()) && !name.contains("//");
 
         if usable {
             let byte_end = body_start + name.len();
@@ -312,7 +311,10 @@ mod tests {
     fn byte_ranges_address_exactly_the_link_text() {
         let source = "before [[Target|Shown]] after";
         let links = scan_links_in(source);
-        assert_eq!(&source[links[0].byte_start..links[0].byte_end], "[[Target|Shown]]");
+        assert_eq!(
+            &source[links[0].byte_start..links[0].byte_end],
+            "[[Target|Shown]]"
+        );
     }
 
     #[test]
@@ -327,7 +329,7 @@ mod tests {
         let source = "real [[Yes]] and code [[No]]";
         let lines = LineIndex::new(source);
         // Pretend the second link sits inside a code span.
-        let zones = ExclusionZones::new(vec![22..28]);
+        let zones = ExclusionZones::single(22..28);
         let links = scan_wikilinks(source, &zones, &lines);
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].target, "Yes");
@@ -378,7 +380,10 @@ mod tests {
 
     #[test]
     fn trailing_punctuation_is_not_swallowed_into_the_tag() {
-        assert_eq!(scan_tags_in("tagged #AI, and #Research."), vec!["AI", "Research"]);
+        assert_eq!(
+            scan_tags_in("tagged #AI, and #Research."),
+            vec!["AI", "Research"]
+        );
         assert_eq!(scan_tags_in("#AI/"), vec!["AI"]);
     }
 
@@ -386,7 +391,7 @@ mod tests {
     fn tags_inside_excluded_regions_are_ignored() {
         let source = "#Real and #Fake";
         let lines = LineIndex::new(source);
-        let zones = ExclusionZones::new(vec![10..15]);
+        let zones = ExclusionZones::single(10..15);
         let names: Vec<_> = scan_tags(source, &zones, &lines)
             .into_iter()
             .map(|t| t.name)
@@ -409,7 +414,10 @@ mod tests {
         let blocks = scan_blocks(source, &ExclusionZones::default(), &lines);
         assert_eq!(blocks.len(), 1);
         assert_eq!(blocks[0].id, "important-point");
-        assert_eq!(&source[blocks[0].byte_start..blocks[0].byte_end], "The important point.");
+        assert_eq!(
+            &source[blocks[0].byte_start..blocks[0].byte_end],
+            "The important point."
+        );
     }
 
     #[test]
@@ -429,7 +437,10 @@ mod tests {
         let source = "Line one\nline two ^id\n";
         let lines = LineIndex::new(source);
         let blocks = scan_blocks(source, &ExclusionZones::default(), &lines);
-        assert_eq!(&source[blocks[0].byte_start..blocks[0].byte_end], "Line one\nline two");
+        assert_eq!(
+            &source[blocks[0].byte_start..blocks[0].byte_end],
+            "Line one\nline two"
+        );
     }
 
     #[test]
@@ -450,7 +461,7 @@ mod tests {
     fn markers_inside_code_blocks_are_ignored() {
         let source = "```\nlet x = y ^2\n```\n";
         let lines = LineIndex::new(source);
-        let zones = ExclusionZones::new(vec![0..source.len()]);
+        let zones = ExclusionZones::single(0..source.len());
         assert!(scan_blocks(source, &zones, &lines).is_empty());
     }
 }

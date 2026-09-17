@@ -241,7 +241,8 @@ impl FileSystem for MemoryFileSystem {
         for key in moving {
             let mut entry = nodes.remove(&key).expect("key came from this map");
             let suffix = &key[from_key.len()..];
-            let new_display_suffix = entry.display[entry.display.len() - suffix.len()..].to_string();
+            let new_display_suffix =
+                entry.display[entry.display.len() - suffix.len()..].to_string();
             entry.display = format!("{to_display}{new_display_suffix}");
             nodes.insert(self.fold(&entry.display), entry);
         }
@@ -302,12 +303,7 @@ impl FileSystem for MemoryFileSystem {
                 continue;
             }
             // Report the name as it was created, not the folded lookup key.
-            let display_name = entry
-                .display
-                .rsplit('/')
-                .next()
-                .unwrap_or(rest)
-                .to_string();
+            let display_name = entry.display.rsplit('/').next().unwrap_or(rest).to_string();
             let node = &entry.node;
             let metadata = match node {
                 Node::File { data, modified_ms } => FileMetadata {
@@ -366,7 +362,10 @@ mod tests {
         fs.write_atomic(Path::new("/vault/Notes/a.md"), b"hello")
             .unwrap();
 
-        assert_eq!(fs.read_to_string(Path::new("/vault/Notes/a.md")).unwrap(), "hello");
+        assert_eq!(
+            fs.read_to_string(Path::new("/vault/Notes/a.md")).unwrap(),
+            "hello"
+        );
         let listing = fs.read_dir(Path::new("/vault/Notes")).unwrap();
         assert_eq!(listing.len(), 1);
         assert_eq!(listing[0].file_name, "a.md");
@@ -426,7 +425,8 @@ mod tests {
     fn renaming_a_directory_moves_its_whole_subtree() {
         let fs = MemoryFileSystem::default();
         fs.create_dir_all(Path::new("/v/old/inner")).unwrap();
-        fs.write_atomic(Path::new("/v/old/inner/a.md"), b"x").unwrap();
+        fs.write_atomic(Path::new("/v/old/inner/a.md"), b"x")
+            .unwrap();
         fs.rename(Path::new("/v/old"), Path::new("/v/new")).unwrap();
 
         assert!(fs.exists(Path::new("/v/new/inner/a.md")));

@@ -45,13 +45,12 @@ impl AppState {
 
     /// Borrow the open vault, or fail with a typed error the UI can act on.
     pub fn session(&self) -> Result<MutexGuard<'_, Option<VaultSession>>, CommandError> {
-        let guard = self
-            .session
-            .lock()
-            .map_err(|_| CommandError::from(CoreError::Refused {
+        let guard = self.session.lock().map_err(|_| {
+            CommandError::from(CoreError::Refused {
                 operation: "lock vault",
                 reason: "the vault state was left inconsistent by an earlier failure".into(),
-            }))?;
+            })
+        })?;
         if guard.is_none() {
             return Err(CoreError::NoVaultOpen.into());
         }

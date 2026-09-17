@@ -27,7 +27,9 @@ pub fn search_vault(
 /// as the user types rather than after they press enter.
 #[tauri::command]
 pub fn validate_query(query: String) -> CommandResult<()> {
-    search::parse(&query).map(|_| ()).map_err(CommandError::from)
+    search::parse(&query)
+        .map(|_| ())
+        .map_err(CommandError::from)
 }
 
 #[tauri::command]

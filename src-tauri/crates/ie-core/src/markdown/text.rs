@@ -54,10 +54,7 @@ impl LineIndex {
     /// Linux.
     pub fn line_text<'a>(&self, source: &'a str, line: usize) -> &'a str {
         let range = self.line_range(line);
-        source
-            .get(range)
-            .unwrap_or("")
-            .trim_end_matches('\r')
+        source.get(range).unwrap_or("").trim_end_matches('\r')
     }
 }
 
@@ -87,6 +84,12 @@ impl ExclusionZones {
             }
         }
         Self { ranges: merged }
+    }
+
+    /// One range. A named constructor rather than a one-element vector,
+    /// which reads as though the range itself were being collected.
+    pub fn single(range: Range<usize>) -> Self {
+        Self::new(Vec::from([range]))
     }
 
     pub fn covers(&self, offset: usize) -> bool {
@@ -169,7 +172,7 @@ mod tests {
 
     #[test]
     fn empty_ranges_are_discarded() {
-        assert!(ExclusionZones::new(vec![5..5]).is_empty());
+        assert!(ExclusionZones::single(5..5).is_empty());
     }
 
     #[test]

@@ -85,13 +85,14 @@ pub(crate) fn normalize(batch: Vec<DebouncedEvent>) -> Vec<FsEvent> {
             }
             EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
                 // Hold it: the matching `To` usually arrives in the same batch.
-                if let Some(orphan) = pending_rename_from.replace(
-                    paths.first().cloned().unwrap_or_default(),
-                ) {
+                if let Some(orphan) =
+                    pending_rename_from.replace(paths.first().cloned().unwrap_or_default())
+                {
                     out.push(FsEvent::Deleted(orphan));
                 }
             }
-            EventKind::Modify(ModifyKind::Name(RenameMode::To)) => match pending_rename_from.take() {
+            EventKind::Modify(ModifyKind::Name(RenameMode::To)) => match pending_rename_from.take()
+            {
                 Some(from) => out.push(FsEvent::Renamed {
                     from,
                     to: paths.first().cloned().unwrap_or_default(),
@@ -238,7 +239,8 @@ mod tests {
 
         // Give the backend a moment to establish the watch before changing files.
         std::thread::sleep(Duration::from_millis(250));
-        fs.write_atomic(&dir.path().join("note.md"), b"hello").unwrap();
+        fs.write_atomic(&dir.path().join("note.md"), b"hello")
+            .unwrap();
 
         let deadline = std::time::Instant::now() + Duration::from_secs(5);
         loop {

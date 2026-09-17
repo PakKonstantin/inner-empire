@@ -150,7 +150,8 @@ impl FileOps {
                 std::process::id(),
                 target.file_name()
             ))?;
-            self.fs.rename(&self.resolve(from), &self.resolve(&staging))?;
+            self.fs
+                .rename(&self.resolve(from), &self.resolve(&staging))?;
             self.fs.rename(&self.resolve(&staging), &destination)?;
         } else {
             self.fs.rename(&self.resolve(from), &destination)?;
@@ -203,8 +204,11 @@ impl FileOps {
             .collect();
 
         entries.sort_by(|a, b| {
-            b.1.cmp(&a.1)
-                .then_with(|| a.0.file_name().to_lowercase().cmp(&b.0.file_name().to_lowercase()))
+            b.1.cmp(&a.1).then_with(|| {
+                a.0.file_name()
+                    .to_lowercase()
+                    .cmp(&b.0.file_name().to_lowercase())
+            })
         });
         Ok(entries)
     }
@@ -286,7 +290,7 @@ impl FileOps {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ie_platform::{FileSystem, MemoryFileSystem};
+    use ie_platform::MemoryFileSystem;
     use std::sync::Arc;
 
     fn ops(case_sensitive: bool) -> (FileOps, SharedFileSystem, std::path::PathBuf) {
@@ -326,9 +330,13 @@ mod tests {
     fn the_rename_policy_finds_a_free_name_instead_of_failing() {
         let (ops, _, _) = ops(true);
         ops.create_note(&p("A.md"), "one", Collision::Fail).unwrap();
-        let second = ops.create_note(&p("A.md"), "two", Collision::Rename).unwrap();
+        let second = ops
+            .create_note(&p("A.md"), "two", Collision::Rename)
+            .unwrap();
         assert_eq!(second.as_str(), "A 1.md");
-        let third = ops.create_note(&p("A.md"), "three", Collision::Rename).unwrap();
+        let third = ops
+            .create_note(&p("A.md"), "three", Collision::Rename)
+            .unwrap();
         assert_eq!(third.as_str(), "A 2.md");
     }
 
@@ -337,7 +345,8 @@ mod tests {
         // On ext4 both files can exist; allowing it produces a vault that loses
         // a note the moment it is opened on Windows.
         let (ops, _, _) = ops(true);
-        ops.create_note(&p("MyNote.md"), "one", Collision::Fail).unwrap();
+        ops.create_note(&p("MyNote.md"), "one", Collision::Fail)
+            .unwrap();
         let error = ops
             .create_note(&p("mynote.md"), "two", Collision::Fail)
             .unwrap_err();
@@ -347,7 +356,8 @@ mod tests {
     #[test]
     fn renaming_a_note_moves_it_and_keeps_its_content() {
         let (ops, _, _) = ops(true);
-        ops.create_note(&p("Old.md"), "content", Collision::Fail).unwrap();
+        ops.create_note(&p("Old.md"), "content", Collision::Fail)
+            .unwrap();
         let new = ops
             .move_entry(&p("Old.md"), &p("New.md"), Collision::Fail)
             .unwrap();
@@ -377,7 +387,8 @@ mod tests {
     #[test]
     fn moving_a_note_into_another_folder_creates_the_folder() {
         let (ops, _, _) = ops(true);
-        ops.create_note(&p("Note.md"), "x", Collision::Fail).unwrap();
+        ops.create_note(&p("Note.md"), "x", Collision::Fail)
+            .unwrap();
         let moved = ops
             .move_entry(&p("Note.md"), &p("Archive/2026/Note.md"), Collision::Fail)
             .unwrap();
@@ -409,14 +420,17 @@ mod tests {
         let (ops, _, _) = ops(true);
         ops.create_note(&p("A.md"), "a", Collision::Fail).unwrap();
         ops.create_note(&p("B.md"), "b", Collision::Fail).unwrap();
-        assert!(ops.move_entry(&p("A.md"), &p("B.md"), Collision::Fail).is_err());
+        assert!(ops
+            .move_entry(&p("A.md"), &p("B.md"), Collision::Fail)
+            .is_err());
         assert_eq!(ops.read(&p("B.md")).unwrap(), "b");
     }
 
     #[test]
     fn duplicating_a_note_makes_a_sibling_with_the_same_content() {
         let (ops, _, _) = ops(true);
-        ops.create_note(&p("Note.md"), "content", Collision::Fail).unwrap();
+        ops.create_note(&p("Note.md"), "content", Collision::Fail)
+            .unwrap();
         let copy = ops.duplicate(&p("Note.md")).unwrap();
         assert_eq!(copy.as_str(), "Note 1.md");
         assert_eq!(ops.read(&copy).unwrap(), "content");
@@ -425,8 +439,10 @@ mod tests {
     #[test]
     fn listing_puts_folders_first_then_files_alphabetically() {
         let (ops, _, _) = ops(true);
-        ops.create_note(&p("zebra.md"), "", Collision::Fail).unwrap();
-        ops.create_note(&p("Apple.md"), "", Collision::Fail).unwrap();
+        ops.create_note(&p("zebra.md"), "", Collision::Fail)
+            .unwrap();
+        ops.create_note(&p("Apple.md"), "", Collision::Fail)
+            .unwrap();
         ops.create_folder(&p("Zulu")).unwrap();
         ops.create_folder(&p("alpha")).unwrap();
 
@@ -474,11 +490,13 @@ mod tests {
     #[test]
     fn permanent_removal_works_for_files_and_folders() {
         let (ops, _, _) = ops(true);
-        ops.create_note(&p("Folder/a.md"), "", Collision::Fail).unwrap();
+        ops.create_note(&p("Folder/a.md"), "", Collision::Fail)
+            .unwrap();
         ops.remove_permanently(&p("Folder/a.md")).unwrap();
         assert!(!ops.exists(&p("Folder/a.md")));
 
-        ops.create_note(&p("Folder/b.md"), "", Collision::Fail).unwrap();
+        ops.create_note(&p("Folder/b.md"), "", Collision::Fail)
+            .unwrap();
         ops.remove_permanently(&p("Folder")).unwrap();
         assert!(!ops.exists(&p("Folder")));
     }
@@ -487,7 +505,9 @@ mod tests {
     fn the_vault_root_is_protected_from_deletion() {
         let (ops, _, _) = ops(true);
         assert_eq!(
-            ops.remove_permanently(&VaultPath::root()).unwrap_err().code(),
+            ops.remove_permanently(&VaultPath::root())
+                .unwrap_err()
+                .code(),
             "refused"
         );
     }

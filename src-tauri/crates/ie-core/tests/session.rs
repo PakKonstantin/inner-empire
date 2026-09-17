@@ -10,9 +10,7 @@ use std::sync::Arc;
 use ie_core::index::queries;
 use ie_core::session::VaultSession;
 use ie_core::vault::{Collision, VaultPath};
-use ie_platform::{
-    FixedClock, HostServices, NotifyWatcher, StdFileSystem, SystemClock, TestDirs,
-};
+use ie_platform::{FixedClock, HostServices, NotifyWatcher, StdFileSystem, SystemClock, TestDirs};
 
 /// Holds the temporary directory for the whole test, so a vault can be closed
 /// and reopened without the folder underneath it disappearing.
@@ -30,7 +28,7 @@ fn host_for(app_data: &Path, frozen_clock: bool) -> HostServices {
         } else {
             Arc::new(SystemClock)
         },
-        dirs: Arc::new(TestDirs::new(app_data.to_path_buf())),
+        dirs: Arc::new(TestDirs::new(app_data)),
         platform: ie_platform::platform::current(),
     }
 }
@@ -143,7 +141,10 @@ fn renaming_a_note_rewrites_every_link_that_pointed_at_it() {
     let mut harness = Harness::new();
     harness.write("My Project.md", "# My Project\n");
     harness.write("A.md", "See [[My Project]] for details.\n");
-    harness.write("B.md", "Also [[My Project|the project]] and ![[My Project]].\n");
+    harness.write(
+        "B.md",
+        "Also [[My Project|the project]] and ![[My Project]].\n",
+    );
     harness.write("C.md", "Unrelated note.\n");
     harness.session_mut().scan(|_| {}).unwrap();
 
@@ -156,7 +157,10 @@ fn renaming_a_note_rewrites_every_link_that_pointed_at_it() {
     assert_eq!(outcome.files_updated, 2);
     assert!(outcome.failures.is_empty(), "{:?}", outcome.failures);
 
-    assert_eq!(harness.read("A.md"), "See [[My Game Project]] for details.\n");
+    assert_eq!(
+        harness.read("A.md"),
+        "See [[My Game Project]] for details.\n"
+    );
     assert_eq!(
         harness.read("B.md"),
         "Also [[My Game Project|the project]] and ![[My Game Project]].\n"
@@ -168,10 +172,16 @@ fn renaming_a_note_rewrites_every_link_that_pointed_at_it() {
 fn renaming_preserves_heading_and_block_references() {
     let mut harness = Harness::new();
     harness.write("Plan.md", "# Plan\n\n## Scope\n\nA key point. ^key\n");
-    harness.write("A.md", "[[Plan#Scope]] and [[Plan#^key]] and [[Plan#Scope|scope]]\n");
+    harness.write(
+        "A.md",
+        "[[Plan#Scope]] and [[Plan#^key]] and [[Plan#Scope|scope]]\n",
+    );
     harness.session_mut().scan(|_| {}).unwrap();
 
-    harness.session_mut().rename(&p("Plan.md"), &p("Roadmap.md")).unwrap();
+    harness
+        .session_mut()
+        .rename(&p("Plan.md"), &p("Roadmap.md"))
+        .unwrap();
 
     assert_eq!(
         harness.read("A.md"),
@@ -186,12 +196,18 @@ fn renaming_updates_markdown_links_as_well_as_wiki_links() {
     harness.write("A.md", "[the plan](Plan.md) and [[Plan]]\n");
     harness.session_mut().scan(|_| {}).unwrap();
 
-    harness.session_mut().rename(&p("Plan.md"), &p("Roadmap.md")).unwrap();
+    harness
+        .session_mut()
+        .rename(&p("Plan.md"), &p("Roadmap.md"))
+        .unwrap();
 
     let updated = harness.read("A.md");
     assert!(updated.contains("(Roadmap.md)"), "{updated}");
     assert!(updated.contains("[[Roadmap]]"), "{updated}");
-    assert!(updated.contains("[the plan]"), "the label must survive: {updated}");
+    assert!(
+        updated.contains("[the plan]"),
+        "the label must survive: {updated}"
+    );
 }
 
 #[test]
@@ -247,7 +263,10 @@ fn renaming_leaves_links_inside_code_blocks_alone() {
     );
     harness.session_mut().scan(|_| {}).unwrap();
 
-    harness.session_mut().rename(&p("Plan.md"), &p("Roadmap.md")).unwrap();
+    harness
+        .session_mut()
+        .rename(&p("Plan.md"), &p("Roadmap.md"))
+        .unwrap();
 
     let updated = harness.read("A.md");
     assert!(updated.contains("Real [[Roadmap]]."), "{updated}");
@@ -277,7 +296,10 @@ fn changing_only_a_notes_capitalisation_works_on_this_filesystem() {
     harness.write("mynote.md", "# Content that must survive\n");
     harness.session_mut().scan(|_| {}).unwrap();
 
-    harness.session_mut().rename(&p("mynote.md"), &p("MyNote.md")).unwrap();
+    harness
+        .session_mut()
+        .rename(&p("mynote.md"), &p("MyNote.md"))
+        .unwrap();
 
     assert_eq!(harness.read("MyNote.md"), "# Content that must survive\n");
 }
@@ -290,9 +312,11 @@ fn deleting_moves_a_note_to_the_trash_and_restoring_brings_it_back() {
 
     let entry = harness.session_mut().delete(&p("Notes/Idea.md")).unwrap();
     assert!(!harness.session().ops().exists(&p("Notes/Idea.md")));
-    assert!(queries::file(harness.session().connection(), &p("Notes/Idea.md"))
-        .unwrap()
-        .is_none());
+    assert!(
+        queries::file(harness.session().connection(), &p("Notes/Idea.md"))
+            .unwrap()
+            .is_none()
+    );
 
     let restored = harness.session_mut().restore(&entry.id).unwrap();
     assert_eq!(restored.as_str(), "Notes/Idea.md");
@@ -351,7 +375,11 @@ fn a_deleted_index_rebuilds_itself_from_the_files() {
     reopened.scan(|_| {}).unwrap();
 
     let backlinks = queries::backlinks(reopened.connection(), &p("B.md")).unwrap();
-    assert_eq!(backlinks.len(), 1, "backlinks came back from the files alone");
+    assert_eq!(
+        backlinks.len(),
+        1,
+        "backlinks came back from the files alone"
+    );
     let tags = queries::tag_summaries(reopened.connection()).unwrap();
     assert!(tags.iter().any(|t| t.name == "tag"));
 }
@@ -371,7 +399,9 @@ fn a_corrupt_index_is_rebuilt_rather_than_reported_as_an_error() {
 
     let reopened = harness.reopen();
     reopened.scan(|_| {}).unwrap();
-    assert!(queries::file(reopened.connection(), &p("A.md")).unwrap().is_some());
+    assert!(queries::file(reopened.connection(), &p("A.md"))
+        .unwrap()
+        .is_some());
 }
 
 #[test]

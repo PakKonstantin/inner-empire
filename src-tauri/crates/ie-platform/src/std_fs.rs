@@ -42,19 +42,17 @@ impl StdFileSystem {
     }
 
     fn temp_sibling(&self, target: &Path) -> Result<PathBuf> {
-        let dir = target.parent().ok_or_else(|| PlatformError::NotADirectory {
-            path: target.to_path_buf(),
-        })?;
+        let dir = target
+            .parent()
+            .ok_or_else(|| PlatformError::NotADirectory {
+                path: target.to_path_buf(),
+            })?;
         let stem = target
             .file_name()
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_else(|| "file".into());
         let n = self.counter.fetch_add(1, Ordering::Relaxed);
-        Ok(dir.join(format!(
-            "{TEMP_PREFIX}{}-{n}-{}",
-            std::process::id(),
-            stem
-        )))
+        Ok(dir.join(format!("{TEMP_PREFIX}{}-{n}-{}", std::process::id(), stem)))
     }
 
     /// Is `name` a leftover from an interrupted `write_atomic`?
@@ -143,7 +141,8 @@ impl FileSystem for StdFileSystem {
     }
 
     fn read_dir(&self, path: &Path) -> Result<Vec<DirEntry>> {
-        let iter = std::fs::read_dir(path).map_err(|e| PlatformError::from_io("read_dir", path, e))?;
+        let iter =
+            std::fs::read_dir(path).map_err(|e| PlatformError::from_io("read_dir", path, e))?;
         let mut out = Vec::new();
         for entry in iter {
             let entry = entry.map_err(|e| PlatformError::from_io("read_dir_entry", path, e))?;
@@ -166,8 +165,8 @@ impl FileSystem for StdFileSystem {
     }
 
     fn canonicalize(&self, path: &Path) -> Result<PathBuf> {
-        let canonical =
-            std::fs::canonicalize(path).map_err(|e| PlatformError::from_io("canonicalize", path, e))?;
+        let canonical = std::fs::canonicalize(path)
+            .map_err(|e| PlatformError::from_io("canonicalize", path, e))?;
         // Windows canonicalization yields a `\\?\` extended-length prefix that
         // is correct but leaks into every message and comparison. Strip it; the
         // remaining path is still absolute and still valid.
@@ -179,7 +178,12 @@ impl FileSystem for StdFileSystem {
     }
 
     fn is_case_sensitive(&self, dir: &Path) -> Result<bool> {
-        if let Some(cached) = self.case_cache.lock().ok().and_then(|c| c.get(dir).copied()) {
+        if let Some(cached) = self
+            .case_cache
+            .lock()
+            .ok()
+            .and_then(|c| c.get(dir).copied())
+        {
             return Ok(cached);
         }
 
@@ -229,8 +233,12 @@ mod tests {
         fs.write_atomic(&target, b"first").unwrap();
         assert_eq!(fs.read_to_string(&target).unwrap(), "first");
 
-        fs.write_atomic(&target, b"second, which is longer").unwrap();
-        assert_eq!(fs.read_to_string(&target).unwrap(), "second, which is longer");
+        fs.write_atomic(&target, b"second, which is longer")
+            .unwrap();
+        assert_eq!(
+            fs.read_to_string(&target).unwrap(),
+            "second, which is longer"
+        );
 
         let leftovers: Vec<_> = fs
             .read_dir(dir.path())
@@ -238,7 +246,10 @@ mod tests {
             .into_iter()
             .filter(|e| StdFileSystem::is_temp_artifact(&e.file_name))
             .collect();
-        assert!(leftovers.is_empty(), "temp files left behind: {leftovers:?}");
+        assert!(
+            leftovers.is_empty(),
+            "temp files left behind: {leftovers:?}"
+        );
     }
 
     #[test]

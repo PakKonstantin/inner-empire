@@ -16,10 +16,15 @@ pub enum FsEvent {
     Modified(PathBuf),
     Deleted(PathBuf),
     /// Both endpoints known: a true rename or move.
-    Renamed { from: PathBuf, to: PathBuf },
+    Renamed {
+        from: PathBuf,
+        to: PathBuf,
+    },
     /// The backend lost events (queue overflow, or a watched directory was
     /// replaced). The only safe response is a rescan of `root`.
-    Rescan { root: PathBuf },
+    Rescan {
+        root: PathBuf,
+    },
 }
 
 impl FsEvent {

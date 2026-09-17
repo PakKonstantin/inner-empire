@@ -75,7 +75,8 @@ impl Trash {
         let dir = self.trash_dir();
         self.fs.create_dir_all(&dir)?;
         let json = serde_json::to_string_pretty(manifest)?;
-        self.fs.write_atomic(&self.manifest_path(), json.as_bytes())?;
+        self.fs
+            .write_atomic(&self.manifest_path(), json.as_bytes())?;
         Ok(())
     }
 
@@ -237,7 +238,7 @@ impl Trash {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ie_platform::{FileSystem, MemoryFileSystem};
+    use ie_platform::MemoryFileSystem;
     use std::sync::Arc;
 
     struct Harness {
@@ -329,8 +330,14 @@ mod tests {
         assert_eq!(h.trash.list().unwrap().len(), 2);
         h.trash.restore("id1").unwrap();
         h.trash.restore("id2").unwrap();
-        assert_eq!(h.fs.read_to_string(&a.to_fs_path(&h.root)).unwrap(), "first");
-        assert_eq!(h.fs.read_to_string(&b.to_fs_path(&h.root)).unwrap(), "second");
+        assert_eq!(
+            h.fs.read_to_string(&a.to_fs_path(&h.root)).unwrap(),
+            "first"
+        );
+        assert_eq!(
+            h.fs.read_to_string(&b.to_fs_path(&h.root)).unwrap(),
+            "second"
+        );
     }
 
     #[test]
@@ -394,7 +401,10 @@ mod tests {
     #[test]
     fn the_vault_root_cannot_be_deleted() {
         let h = harness();
-        let error = h.trash.trash(&VaultPath::root(), 1000, "id".into()).unwrap_err();
+        let error = h
+            .trash
+            .trash(&VaultPath::root(), 1000, "id".into())
+            .unwrap_err();
         assert_eq!(error.code(), "refused");
     }
 
