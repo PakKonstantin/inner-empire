@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode } from 'react';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface MenuItem {
   id: string;
@@ -45,6 +45,7 @@ export function useContextMenu(): ContextMenuApi {
 
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const surface = useRef<HTMLDivElement | null>(null);
 
   const api = useMemo<ContextMenuApi>(
     () => ({
@@ -59,11 +60,17 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!menu) return;
-    const dismiss = () => setMenu(null);
+    const dismiss = (event: Event) => {
+      // A press inside the menu is the user choosing an item. Dismissing here
+      // would unmount the button before its click handler ran, so the item
+      // would light up and do nothing.
+      if (event.target instanceof Node && surface.current?.contains(event.target)) return;
+      setMenu(null);
+    };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenu(null);
     };
-    // Capture phase, so a click that also does something else still closes the
+    // Capture phase, so a press that also does something else still closes the
     // menu first.
     window.addEventListener('pointerdown', dismiss, true);
     window.addEventListener('resize', dismiss);
@@ -78,22 +85,34 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
   return (
     <ContextMenuContext.Provider value={api}>
       {children}
-      {menu ? <ContextMenuSurface menu={menu} onClose={api.close} /> : null}
+      {menu ? <ContextMenuSurface menu={menu} onClose={api.close} surfaceRef={surface} /> : null}
     </ContextMenuContext.Provider>
   );
 }
 
-function ContextMenuSurface({ menu, onClose }: { menu: MenuState; onClose: () => void }) {
+function ContextMenuSurface({
+  menu,
+  onClose,
+  surfaceRef,
+}: {
+  menu: MenuState;
+  onClose: () => void;
+  surfaceRef: React.MutableRefObject<HTMLDivElement | null>;
+}) {
   const [position, setPosition] = useState({ left: menu.x, top: menu.y });
-  const measure = useCallback((element: HTMLDivElement | null) => {
+  const measure = useCallback(
+    (element: HTMLDivElement | null) => {
+    surfaceRef.current = element;
     if (!element) return;
     // Flip the menu when it would run off the edge, so an item near the bottom
     // of the window is still reachable.
     const rect = element.getBoundingClientRect();
     const left = rect.right > window.innerWidth ? Math.max(4, window.innerWidth - rect.width - 4) : rect.left;
     const top = rect.bottom > window.innerHeight ? Math.max(4, window.innerHeight - rect.height - 4) : rect.top;
-    setPosition({ left, top });
-  }, []);
+      setPosition({ left, top });
+    },
+    [surfaceRef],
+  );
 
   return (
     <div

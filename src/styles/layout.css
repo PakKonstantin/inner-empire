@@ -1321,6 +1321,7 @@
   margin: 0 0 var(--space-4);
 }
 
+/* The row is a <label>, so the control inside it is named without an id. */
 .ie-field {
   display: flex;
   align-items: center;

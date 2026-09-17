@@ -95,6 +95,13 @@ function SettingsSection({ section }: { section: Section }) {
   }
 }
 
+/**
+ * One labelled setting.
+ *
+ * The whole row is a `<label>`, so the control inside is associated with the
+ * text without every caller having to invent an id. A screen reader announces
+ * "Theme, combo box" rather than an unnamed control.
+ */
 function Field({
   label,
   hint,
@@ -105,13 +112,13 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="ie-field">
-      <div className="ie-field__label">
+    <label className="ie-field">
+      <span className="ie-field__label">
         <span>{label}</span>
         {hint ? <span className="ie-field__hint">{hint}</span> : null}
-      </div>
-      <div className="ie-field__control">{children}</div>
-    </div>
+      </span>
+      <span className="ie-field__control">{children}</span>
+    </label>
   );
 }
 
