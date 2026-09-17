@@ -1,0 +1,27 @@
+[package]
+name = "ie-core"
+description = "Vault, Markdown, indexing, search and workspace core for Inner Empire. No GUI, no Tauri, no platform-conditional code."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+ie-platform.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+pulldown-cmark = { version = "0.13", default-features = false, features = ["simd", "html"] }
+rusqlite = { version = "0.37", features = ["bundled", "functions", "limits"] }
+serde_yaml_ng = "0.10"
+time = { version = "0.3", features = ["formatting", "parsing", "macros", "serde", "serde-well-known", "local-offset"] }
+unicode-normalization = "0.1"
+uuid = { version = "1", features = ["v4", "v7"] }
+sha2 = "0.10"
+walkdir = "2"
+
+[dev-dependencies]
+tempfile.workspace = true

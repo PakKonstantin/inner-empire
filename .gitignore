@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+.DS_Store
+src-tauri/target/
+target/
+*.log
+.vite/
+coverage/
+test-results/
+playwright-report/
+.playwright/

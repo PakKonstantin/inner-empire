@@ -1,0 +1,20 @@
+[package]
+name = "ie-platform"
+description = "Operating-system abstractions and per-platform adapters for Inner Empire"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+directories = "6"
+time = { version = "0.3", features = ["local-offset"] }
+notify = "8"
+notify-debouncer-full = "0.5"
+
+[dev-dependencies]
+tempfile.workspace = true
