@@ -283,9 +283,11 @@ export function App() {
       focusEditor: () => {
         document.querySelector<HTMLElement>('.ie-editor .cm-content')?.focus();
       },
-      exportActive: () => activePath && void exportNote(activePath),
+      exportActive: (format) => activePath && void exportNote(activePath, format ?? 'html'),
+      printActive: () => activePath && void printNote(activePath, titles[activePath] ?? ''),
+      importFiles: () => void importIntoVault(folderOf(activePath)),
     }),
-    [activePath, workspace],
+    [activePath, titles, workspace],
   );
 
   useAppCommands(actions);
@@ -813,12 +815,15 @@ function jumpToLine(line: number): void {
   window.dispatchEvent(new CustomEvent('ie:jump-to-line', { detail: { line } }));
 }
 
-async function exportNote(path: VaultPath): Promise<void> {
+async function exportNote(
+  path: VaultPath,
+  format: 'html' | 'markdown',
+): Promise<void> {
   const { pickFolder } = await import('@/services/dialogs');
   const destination = await pickFolder({ title: 'Export to' });
   if (!destination) return;
   try {
-    const result = await api.exportNotes([path], destination, { format: 'html' });
+    const result = await api.exportNotes([path], destination, { format });
     notify('success', `Exported ${result.files.length} ${result.files.length === 1 ? 'file' : 'files'}.`);
     if (result.unresolvedLinks.length > 0) {
       notify(
@@ -829,6 +834,110 @@ async function exportNote(path: VaultPath): Promise<void> {
   } catch (error) {
     notify('error', message(error));
   }
+}
+
+/**
+ * Print the note, which is also how a PDF is produced.
+ *
+ * The webview's own print dialogue offers "save as PDF" on both platforms, so
+ * this reuses the renderer the reading view already uses rather than shipping
+ * a second PDF engine. What the user gets is what they were reading.
+ */
+async function printNote(path: VaultPath, title: string): Promise<void> {
+  try {
+    const note = await api.readNote(path);
+    const frame = document.createElement('iframe');
+    frame.style.position = 'fixed';
+    frame.style.right = '100%';
+    frame.style.width = '0';
+    frame.style.height = '0';
+    frame.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(frame);
+
+    const view = frame.contentDocument;
+    if (!view) {
+      frame.remove();
+      notify('error', 'Could not prepare the note for printing.');
+      return;
+    }
+
+    // Render through the same pipeline the reading view uses, then take the
+    // resulting markup. Links become plain text: a printed page has nowhere
+    // for them to go.
+    const holder = document.createElement('div');
+    holder.className = 'ie-reading__body';
+    document.body.appendChild(holder);
+    const { createRoot } = await import('react-dom/client');
+    const root = createRoot(holder);
+    const { renderMarkdown } = await import('@/markdown/renderer');
+    root.render(
+      renderMarkdown(note.content, {
+        path,
+        onFollowLink: () => {},
+        onFollowTag: () => {},
+        onFollowExternal: () => {},
+        resolveAsset: () => null,
+      }),
+    );
+
+    // One frame for React to commit before the markup is read.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    const body = holder.innerHTML;
+    root.unmount();
+    holder.remove();
+
+    view.open();
+    view.write(
+      `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(
+        title || pathFileName(path),
+      )}</title><style>
+        body { font: 12pt/1.6 Georgia, "Times New Roman", serif; margin: 2cm; color: #111; }
+        h1, h2, h3 { line-height: 1.25; }
+        pre, code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 10pt; }
+        pre { background: #f4f4f4; padding: 0.6em; border-radius: 4px; overflow-x: auto; }
+        blockquote { border-left: 3px solid #ccc; margin-left: 0; padding-left: 1em; color: #444; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 4px 8px; }
+        img { max-width: 100%; }
+        button { all: unset; }
+      </style></head><body>${body}</body></html>`,
+    );
+    view.close();
+
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
+    // Give the dialogue time to take the document before it is discarded.
+    setTimeout(() => frame.remove(), 60_000);
+  } catch (error) {
+    notify('error', `Could not print: ${message(error)}`);
+  }
+}
+
+async function importIntoVault(folder: VaultPath): Promise<void> {
+  const { pickFiles } = await import('@/services/dialogs');
+  const chosen = await pickFiles({ title: 'Import into the vault' });
+  if (chosen.length === 0) return;
+
+  try {
+    const result = await api.importFiles(folder, chosen);
+    notify(
+      'success',
+      `Imported ${result.imported.length} ${result.imported.length === 1 ? 'file' : 'files'}.`,
+    );
+    if (result.skipped.length > 0) {
+      notify('warning', `Skipped ${result.skipped.length}: ${result.skipped.join(', ')}`);
+    }
+  } catch (error) {
+    notify('error', `Could not import: ${message(error)}`);
+  }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 function describeDiagnostic(diagnostic: Diagnostic): string {

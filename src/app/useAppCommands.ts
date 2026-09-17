@@ -29,7 +29,10 @@ export interface CommandActions {
   insertTemplate: () => void;
   activePath: () => VaultPath | null;
   focusEditor: () => void;
-  exportActive: () => void;
+  exportActive: (format?: 'html' | 'markdown') => void;
+  /** Render the note through the browser's print dialogue, which can save a PDF. */
+  printActive: () => void;
+  importFiles: () => void;
 }
 
 export function useAppCommands(actions: CommandActions): void {
@@ -116,10 +119,32 @@ export function useAppCommands(actions: CommandActions): void {
       },
       {
         id: 'note.export',
-        name: 'Export this note',
+        name: 'Export this note as HTML',
         category: 'Notes',
         isAvailable: hasNote,
         run: () => actions.exportActive(),
+      },
+      {
+        id: 'note.exportMarkdown',
+        name: 'Export this note as Markdown',
+        category: 'Notes',
+        isAvailable: hasNote,
+        run: () => actions.exportActive('markdown'),
+      },
+      {
+        id: 'note.print',
+        name: 'Print, or save as PDF',
+        category: 'Notes',
+        defaultHotkey: 'Mod+Shift+P',
+        isAvailable: hasNote,
+        run: () => actions.printActive(),
+      },
+      {
+        id: 'vault.import',
+        name: 'Import files into this vault',
+        category: 'Vault',
+        isAvailable: hasVault,
+        run: () => actions.importFiles(),
       },
       {
         id: 'note.dailyNote',

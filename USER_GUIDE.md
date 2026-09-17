@@ -244,11 +244,26 @@ copy gets a numbered name rather than overwriting what is there.
 | Ctrl+Shift+D | Today's note |
 | Ctrl+Shift+T | Insert a template |
 | Ctrl+Shift+R | Switch between editing and reading |
+| Ctrl+Shift+P | Print, or save as PDF |
 | F2 | Rename |
 | Ctrl+, | Settings |
 
 Every one of these is editable in Settings → Keyboard shortcuts, and everything
 in the command palette can be given a shortcut whether or not it has one now.
+
+## Getting notes in and out
+
+**Import** copies files into the vault, sanitising any name that would be
+illegal on Windows so the vault stays portable. It is in the command palette
+under "Import files into this vault".
+
+**Export** writes a note out as HTML with its links rewritten to point at the
+exported files, or as Markdown unchanged. Both are in the command palette.
+
+**PDF** goes through Print (Ctrl+Shift+P), which offers "save as PDF" on both
+platforms. What you get is what you were reading: the same renderer, laid out
+for paper. This reuses the printing the system already does well rather than
+shipping a second PDF engine that would render your notes slightly differently.
 
 ## Moving a vault between machines
 
@@ -285,7 +300,7 @@ notes anywhere.
 If a plugin fails, it is disabled and you are told which one; the app carries
 on.
 
-See the [plugin guide](plugin-api/README.md) to write one.
+See the [plugin guide](PLUGIN_API.md) to write one.
 
 ## When something goes wrong
 

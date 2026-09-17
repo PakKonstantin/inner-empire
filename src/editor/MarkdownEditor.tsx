@@ -14,7 +14,12 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { indentUnit } from '@codemirror/language';
-import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
+import {
+  highlightSelectionMatches,
+  openSearchPanel,
+  search,
+  searchKeymap,
+} from '@codemirror/search';
 import { Compartment, EditorState } from '@codemirror/state';
 import {
   EditorView,
@@ -123,6 +128,22 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
             preventDefault: true,
             run: () => {
               callbacks.current.onSave();
+              return true;
+            },
+          },
+          {
+            // CodeMirror binds replace to Mod-Alt-f; Ctrl+H is what people
+            // reach for and what the documentation promises.
+            key: 'Mod-h',
+            preventDefault: true,
+            run: (target) => {
+              openSearchPanel(target);
+              // The panel opens with replace showing when it is asked for by
+              // this binding rather than by plain find.
+              const field = target.dom.querySelector<HTMLInputElement>(
+                '.cm-panel.cm-search input[name="replace"]',
+              );
+              field?.focus();
               return true;
             },
           },

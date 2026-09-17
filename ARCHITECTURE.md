@@ -127,47 +127,55 @@ inner-empire/
 ```
 ie-core/src/
 ├── lib.rs
-├── error.rs          CoreError, Result<T>, user-facing messages
-├── model/            Vault Note File Folder Link Backlink Tag Property
-│                     Heading Block Workspace Pane Tab — serde types
+├── error.rs          CoreError, Diagnostic, Result — typed, with stable codes
+├── session.rs        VaultSession: the application's unit of work
+├── events.rs         CoreEvent, EventSink
+├── recovery.rs       the unsaved-work journal (§7)
+├── model/
+│   ├── mod.rs        FileKind Link Backlink Tag Heading Block Note Graph…
+│   ├── property.rs   PropertyValue and its typing rules (§6)
+│   └── workspace.rs  the pane tree, tabs, sidebars
 ├── vault/
-│   ├── path.rs       VaultPath  (§4)
-│   ├── vault.rs      open/create/close, config, name collisions
-│   ├── fileops.rs    create/rename/move/delete, atomic write (§7)
-│   ├── trash.rs      in-vault trash with manifest (§8)
-│   └── attachments.rs
+│   ├── path.rs       VaultPath (§4)
+│   ├── settings.rs   per-vault settings, stored in the vault
+│   ├── fileops.rs    create/rename/move/delete, case-collision refusal
+│   └── trash.rs      the in-vault trash with its manifest (§8)
 ├── markdown/
-│   ├── lexer.rs      inline scanner for app extensions
-│   ├── parser.rs     MarkdownParser: source → Document AST
-│   ├── ast.rs        Node types
-│   ├── frontmatter.rs YAML → PropertyValue (typed, §6)
-│   ├── extract.rs    links, tags, headings, blocks, embeds
-│   ├── render.rs     MarkdownRenderer: AST → HTML (export)
-│   └── transform.rs  MarkdownTransformer: AST-guided source rewrites
+│   ├── parser.rs     MarkdownParser: CommonMark walk, then extension scan
+│   ├── scanner.rs    wiki links, embeds, tags, block identifiers
+│   ├── frontmatter.rs  YAML → PropertyValue, and surgical writing back
+│   ├── text.rs       LineIndex and ExclusionZones
+│   ├── render.rs     MarkdownRenderer: source → HTML, for export
+│   └── transform.rs  MarkdownTransformer: byte-range edits back to source
 ├── links/
-│   ├── reference.rs  LinkTarget parsing ([[Note#H^b|alias]])
-│   ├── resolver.rs   target → VaultPath, shortest-unique matching
-│   └── rename.rs     rename propagation across the vault
+│   ├── reference.rs  the `[[Note#H^b|alias]]` grammar, in one place
+│   ├── resolver.rs   the typed resolution surface the app calls
+│   └── rename.rs     rename planning and link rewriting (§47 of the brief)
 ├── index/
-│   ├── schema.rs     DDL + migrations
-│   ├── db.rs         connection, pragmas, pooling
-│   ├── writer.rs     upsert/remove a single file's derived data
-│   ├── indexer.rs    scan, incremental update, rebuild, progress events
-│   └── queries.rs    backlinks, tags, unresolved, graph, outline
+│   ├── schema.rs     DDL, pragmas, migration-by-rebuild
+│   ├── db.rs         opening, integrity checking, discarding and recreating
+│   ├── resolve.rs    the link-resolution ranking policy
+│   ├── writer.rs     one file's derived rows, inside a transaction
+│   ├── indexer.rs    full scan, incremental update, watcher events
+│   └── queries.rs    backlinks, tags, outline, graph, diagnostics
 ├── search/
-│   ├── query.rs      query-language parser (§10)
-│   ├── engine.rs     FTS5 execution + filters + ranking
-│   └── fuzzy.rs      filename fuzzy matcher for quick-switcher
-├── graph/build.rs    global + local graph construction
-├── watcher/          debounced event coalescing over FileWatcher
-├── workspace/        workspace persistence (portable JSON)
-├── templates/        template expansion, daily notes
-├── export/           HTML export with link rewriting
-├── logging/          tracing subscriber, rotating file sink
-└── events.rs         CoreEvent enum + EventBus
+│   ├── query.rs      the query language and its SQL
+│   ├── engine.rs     FTS5 execution, ranking, snippets, quick switch
+│   └── fuzzy.rs      filename matching for the quick switcher
+├── templates/
+│   ├── mod.rs        variable expansion, daily notes
+│   └── datefmt.rs    the small date-format language
+├── workspace/mod.rs  workspace persistence (portable JSON)
+├── export/mod.rs     HTML and Markdown export, import
+└── logging/mod.rs    rotating file logs, never the UI
 ```
 
----
+There is no `graph/` module: graph construction is two queries in
+`index/queries.rs`, because a graph is a projection of the links table and
+giving it its own module would have meant moving the SQL away from the schema
+it depends on. There is no `watcher/` module either: normalising the backends'
+event streams is the platform layer's job, and coalescing them is four lines
+in `index/indexer.rs`.
 
 ## 4. `VaultPath` — the cross-platform keystone
 
@@ -526,15 +534,49 @@ desktop-environment-specific code.
 
 ## 16. What is deliberately not built yet
 
-Named here so it is a decision, not an omission:
+Named here so each is a decision rather than an omission.
 
-* **macOS.** Abstractions and the `platform/` split are in place; no adapter,
-  no CI leg, no bundle.
-* **Auto-update server.** Client architecture  is wired, endpoint is empty.
-* **Plugin realm isolation.** Capability + permission + error containment are
-  in; a Worker-based realm is the next step.
-* **Sync / collaboration.** The core exposes content hashes and an event
-  stream, which is the hook a later sync engine needs.
-* **AI / RAG / embeddings.** `ie-core` is the natural host: it already owns
-  chunkable structure (headings, blocks) and a per-file content hash for
-  incremental embedding. No code yet.
+* **macOS.** The platform split and every abstraction are in place, and adding
+  it means a `platform/macos` module and one arm in `platform::current()`.
+  There is no adapter, no CI leg and no bundle.
+
+* **An update server.** The client architecture accommodates one — packaging is
+  already per-platform and signing keys are a configuration change — but no
+  endpoint exists and nothing checks for updates. Building the client half
+  against a server that does not exist would be inventing an interface.
+
+* **Plugin realm isolation.** Capability-based access, declared permissions and
+  error containment are implemented and tested. A plugin still runs in the same
+  JavaScript context as the application, so the containment is real but is not
+  a sandbox. `PLUGIN_API.md` says so plainly rather than implying more. The API
+  is asynchronous throughout, so moving the host into a Worker is a transport
+  change rather than a redesign.
+
+* **Sync and collaboration.** The core exposes a content hash per file and an
+  event stream, which is what a later sync engine would need. Nothing more.
+
+* **AI, retrieval and embeddings.** `ie-core` is the natural host: it already
+  owns chunkable structure — headings, blocks, properties — and a per-file
+  content hash that makes incremental embedding possible. No code yet, and no
+  half-built scaffolding pretending otherwise.
+
+## 17. Where the seams are
+
+Three places in this codebase are load-bearing, in the sense that getting them
+wrong would be expensive to discover later. They are worth knowing before
+changing anything.
+
+**`VaultPath`** is why a vault opens identically on both platforms. Every
+persisted reference goes through it, and its constructors are the only place
+the invariants are established. Adding a way to build one without validation
+would quietly remove the guarantee.
+
+**The index-as-cache rule** is what makes every recovery path safe: a corrupt
+index is thrown away, a schema change is a rebuild, and a bug in the indexer
+costs a rescan rather than data. Storing anything in SQLite that is not also in
+a Markdown file would end that, and an integration test exists to catch it.
+
+**The two Markdown implementations** are held together by the conformance
+corpus and nothing else. A construct added to one and not the other is a bug
+that shows up as a link the index knows about and the editor does not, or the
+reverse. Add the fixture first.

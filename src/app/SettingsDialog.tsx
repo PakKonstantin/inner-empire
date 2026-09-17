@@ -674,7 +674,8 @@ function PluginSettings() {
         grant it.
       </p>
       <p>
-        The developer guide is in <code>docs/plugin-api/</code> in the repository.
+        The developer guide is <code>PLUGIN_API.md</code> in the repository, with six
+        worked examples under <code>docs/plugin-api/examples/</code>.
       </p>
     </>
   );

@@ -95,8 +95,8 @@ invariants and the trade-offs.
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How it is put together and why |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Setup, tests, builds, packaging |
-| [USER_GUIDE.md](docs/USER_GUIDE.md) | Using the app |
-| [PLUGIN_API.md](docs/plugin-api/README.md) | Writing a plugin |
+| [USER_GUIDE.md](USER_GUIDE.md) | Using the app |
+| [PLUGIN_API.md](PLUGIN_API.md) | Writing a plugin |
 
 ## Privacy
 
