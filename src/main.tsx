@@ -19,7 +19,11 @@ import {
   watchSystemTheme,
 } from '@/state/settingsStore';
 import { subscribeVaultEvents, useVaultStore } from '@/state/vaultStore';
-import { subscribeWorkspaceEvents, useWorkspaceStore } from '@/state/workspaceStore';
+import {
+  startRecoveryJournal,
+  subscribeWorkspaceEvents,
+  useWorkspaceStore,
+} from '@/state/workspaceStore';
 
 import '@/styles/theme.css';
 import '@/styles/base.css';
@@ -34,6 +38,9 @@ async function start(): Promise<void> {
   await events.bridge();
   subscribeVaultEvents();
   subscribeWorkspaceEvents();
+  // Unsaved text is noted down periodically, so a crash costs seconds rather
+  // than everything since the last autosave.
+  startRecoveryJournal();
 
   // The workspace is loaded whenever a vault opens, including one reopened at
   // startup, so the same path covers both.

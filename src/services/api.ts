@@ -132,6 +132,11 @@ export const api = {
     call<void>('set_properties', { path, properties }),
   importAttachment: (fileName: string, bytes: number[], note?: VaultPath) =>
     call<VaultPath>('import_attachment', { fileName, bytes, note }),
+  journalUnsaved: (path: VaultPath, content: string) =>
+    call<void>('journal_unsaved', { path, content }),
+  clearJournal: (path: VaultPath) => call<void>('clear_journal', { path }),
+  recoverableNotes: () => call<RecoveryCandidate[]>('recoverable_notes'),
+  pruneJournal: (maxAgeDays?: number) => call<number>('prune_journal', { maxAgeDays }),
   revealInFileManager: (path: VaultPath) => call<void>('reveal_in_file_manager', { path }),
   openExternal: (url: string) => call<void>('open_external', { url }),
 
@@ -201,6 +206,17 @@ export const api = {
     call<void>('save_app_settings', { settings }),
   readLogTail: (lines?: number) => call<string>('read_log_tail', { lines }),
 };
+
+/** Unsaved text a previous run left behind. */
+export interface RecoveryCandidate {
+  path: VaultPath;
+  content: string;
+  savedMs: number;
+  /** The file already holds this text; there is nothing to recover. */
+  alreadySaved: boolean;
+  /** The file changed after this was written, so restoring would lose work. */
+  fileIsNewer: boolean;
+}
 
 export interface UnresolvedTargetDto {
   target: string;

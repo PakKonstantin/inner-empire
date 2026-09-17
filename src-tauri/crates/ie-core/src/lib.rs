@@ -8,6 +8,7 @@ pub mod links;
 pub mod logging;
 pub mod markdown;
 pub mod model;
+pub mod recovery;
 pub mod search;
 pub mod session;
 pub mod templates;

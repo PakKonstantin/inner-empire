@@ -19,6 +19,7 @@ use crate::index::{
 use crate::links::rename::{self, RenamePlan};
 use crate::markdown::{MarkdownParser, MarkdownTransformer};
 use crate::model::{Note, Property};
+use crate::recovery::{RecoveryCandidate, RecoveryEntry, RecoveryJournal};
 use crate::vault::settings::{VaultSettings, VAULT_SETTINGS_FILE};
 use crate::vault::{Collision, FileOps, Trash, VaultPath, APP_DIR};
 use crate::workspace::WorkspaceStore;
@@ -48,6 +49,7 @@ pub struct VaultSession {
     transformer: MarkdownTransformer,
     watch: Option<Box<dyn WatchHandle>>,
     case_sensitive: bool,
+    recovery: RecoveryJournal,
 }
 
 impl VaultSession {
@@ -79,7 +81,11 @@ impl VaultSession {
             .folder_names
             .extend(settings.extra_ignored_folders.iter().cloned());
 
+        let recovery =
+            RecoveryJournal::new(std::sync::Arc::clone(&host.fs), &host.dirs, &settings.id)?;
+
         let session = Self {
+            recovery,
             trash: Trash::new(std::sync::Arc::clone(&host.fs), &root),
             workspaces: WorkspaceStore::new(std::sync::Arc::clone(&host.fs), &root),
             indexer: Indexer::new(
@@ -285,6 +291,11 @@ impl VaultSession {
     /// would make that feel laggy.
     pub fn save_note(&mut self, path: &VaultPath, content: &str) -> Result<()> {
         self.ops.write(path, content)?;
+        // The journal entry has served its purpose the moment the bytes are
+        // durable; leaving it would offer the user back what they already have.
+        if let Err(e) = self.recovery.forget(path) {
+            tracing::warn!(error = %e, "could not clear the recovery entry");
+        }
         self.reindex(path)
     }
 
@@ -443,6 +454,65 @@ impl VaultSession {
         let source = self.ops.read(path)?;
         let updated = self.transformer.set_properties(&source, properties);
         self.save_note(path, &updated)
+    }
+
+    /// Note down a buffer's unsaved text, so a crash costs seconds rather than
+    /// the work since the last autosave.
+    pub fn journal_unsaved(&self, path: &VaultPath, content: &str) -> Result<()> {
+        let base_modified_ms = self
+            .host
+            .fs
+            .metadata(&self.ops.resolve(path))
+            .ok()
+            .and_then(|m| m.modified_ms)
+            .unwrap_or(0);
+
+        self.recovery.record(&RecoveryEntry {
+            path: path.clone(),
+            content: content.to_string(),
+            saved_ms: self.host.clock.now_ms(),
+            base_modified_ms,
+        })
+    }
+
+    /// Forget a note's journal entry, once its text is on disk.
+    pub fn clear_journal(&self, path: &VaultPath) -> Result<()> {
+        self.recovery.forget(path)
+    }
+
+    /// Unsaved work from a previous run, classified against the vault as it is
+    /// now: what is already saved, and what the file has since moved past.
+    pub fn recoverable(&self) -> Result<Vec<RecoveryCandidate>> {
+        let ops = &self.ops;
+        let fs = &self.host.fs;
+        self.recovery.candidates(|path| {
+            let content = ops.read(path).ok()?;
+            let modified = fs
+                .metadata(&ops.resolve(path))
+                .ok()
+                .and_then(|m| m.modified_ms)
+                .unwrap_or(0);
+            Some((content, modified))
+        })
+    }
+
+    /// Drop entries that are already saved or too old to be useful.
+    ///
+    /// Run when a vault opens, after the user has had the chance to act on
+    /// anything genuinely recoverable.
+    pub fn prune_journal(&self, max_age_ms: i64) -> Result<usize> {
+        let ops = &self.ops;
+        let fs = &self.host.fs;
+        let now = self.host.clock.now_ms();
+        self.recovery.prune(now, max_age_ms, |path| {
+            let content = ops.read(path).ok()?;
+            let modified = fs
+                .metadata(&ops.resolve(path))
+                .ok()
+                .and_then(|m| m.modified_ms)
+                .unwrap_or(0);
+            Some((content, modified))
+        })
     }
 
     /// Diagnostics from the last scan.

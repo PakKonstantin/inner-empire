@@ -27,6 +27,14 @@ import * as tree from '@/workspace/paneTree';
 
 /** How long after the last keystroke a note is written. */
 export const AUTOSAVE_DELAY_MS = 800;
+/**
+ * How often unsaved text is journalled.
+ *
+ * Shorter than a person notices and long enough to be cheap. Between this and
+ * the autosave above, a crash costs at most a few seconds of typing, and the
+ * atomic write guarantees the file itself is never damaged.
+ */
+export const JOURNAL_INTERVAL_MS = 5000;
 /** How often the workspace layout itself is persisted. */
 const LAYOUT_SAVE_DELAY_MS = 1200;
 
@@ -96,6 +104,7 @@ interface WorkspaceState {
 
 const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let layoutTimer: ReturnType<typeof setTimeout> | null = null;
+let journalTimer: ReturnType<typeof setInterval> | null = null;
 
 function defaultSidebar(side: 'left' | 'right'): WorkspaceSidebar {
   return side === 'left'
@@ -512,6 +521,33 @@ export function subscribeWorkspaceEvents(): () => void {
     }),
   ];
   return () => offs.forEach((off) => off());
+}
+
+/**
+ * Start journalling unsaved buffers.
+ *
+ * Runs for the life of the window; returns a teardown so tests and hot reloads
+ * do not accumulate timers.
+ */
+export function startRecoveryJournal(): () => void {
+  if (journalTimer) clearInterval(journalTimer);
+
+  journalTimer = setInterval(() => {
+    const buffers = Object.values(useWorkspaceStore.getState().buffers);
+    for (const buffer of buffers) {
+      if (!buffer.dirty) continue;
+      // A failure here is not worth telling the user about: the journal is a
+      // safety net, and the note itself is unaffected.
+      void api.journalUnsaved(buffer.path, buffer.content).catch(() => {});
+    }
+  }, JOURNAL_INTERVAL_MS);
+
+  return () => {
+    if (journalTimer) {
+      clearInterval(journalTimer);
+      journalTimer = null;
+    }
+  };
 }
 
 /** Flush everything, for window close. */

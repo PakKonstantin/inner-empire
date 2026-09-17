@@ -292,6 +292,44 @@ pub fn import_attachment(
     Ok(created)
 }
 
+/// Note down a buffer's unsaved text.
+///
+/// Called on a timer while a note is dirty, so a crash loses seconds rather
+/// than everything since the last autosave. The journal lives in the
+/// application's data directory, not in the vault: a half-finished scrap is
+/// machine-local and should not sync anywhere.
+#[tauri::command]
+pub fn journal_unsaved(
+    state: State<'_, SharedState>,
+    path: VaultPath,
+    content: String,
+) -> CommandResult<()> {
+    state.with_index(|session| session.journal_unsaved(&path, &content))
+}
+
+#[tauri::command]
+pub fn clear_journal(state: State<'_, SharedState>, path: VaultPath) -> CommandResult<()> {
+    state.with_index(|session| session.clear_journal(&path))
+}
+
+/// Unsaved work left by a previous run, if any.
+#[tauri::command]
+pub fn recoverable_notes(
+    state: State<'_, SharedState>,
+) -> CommandResult<Vec<ie_core::recovery::RecoveryCandidate>> {
+    state.with_index(|session| session.recoverable())
+}
+
+/// Drop journal entries that are already saved or older than `max_age_days`.
+#[tauri::command]
+pub fn prune_journal(
+    state: State<'_, SharedState>,
+    max_age_days: Option<i64>,
+) -> CommandResult<usize> {
+    let max_age_ms = max_age_days.unwrap_or(7) * 86_400_000;
+    state.with_index(|session| session.prune_journal(max_age_ms))
+}
+
 /// Reveal a file in the desktop's file manager.
 #[tauri::command]
 pub fn reveal_in_file_manager(state: State<'_, SharedState>, path: VaultPath) -> CommandResult<()> {

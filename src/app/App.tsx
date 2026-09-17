@@ -32,6 +32,7 @@ import { SplitContainer } from '@/workspace/SplitContainer';
 import { TabBar } from '@/workspace/TabBar';
 
 import { PaneContent } from './PaneContent';
+import { RecoveryPrompt } from './RecoveryPrompt';
 import { SettingsDialog } from './SettingsDialog';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
@@ -552,6 +553,8 @@ export function App() {
           onConfirm={() => pluginHost.pendingConfirm?.resolve(true)}
         />
       ) : null}
+
+      <RecoveryPrompt vaultReady={vault.status === 'ready'} />
 
       <Notifications />
     </div>
