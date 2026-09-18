@@ -675,19 +675,19 @@ features → polish**.
 | Phase | Deliverable | Verifiable here? |
 |---|---|---|
 | 0 | This plan, `docs/ios/ARCHITECTURE.md`, `STORAGE.md`, `SYNC.md`, `DEVELOPMENT.md`, `TESTING.md`, `APP_STORE.md` | yes |
-| 1 | `ie-platform` iOS adapter + feature gates; `ie-ffi` crate; generated Swift bindings; bridge tests | yes — `cargo test` on host |
-| 2 | Cross-platform round-trip tests (§7.2); test-vault generator | yes |
-| 3 | `VaultStorage`, bookmarks, coordination, document picker; app skeleton, TabView/NavigationSplitView | Swift compiles only on macOS |
-| 4 | Notes list, editor, keyboard accessory, autosave, lifecycle | no |
-| 5 | Wikilinks, autocomplete, backlinks, outline | no |
-| 6 | Tags, Properties, recent, favourites | no |
-| 7 | Search over the shared engine | no |
-| 8 | Attachments, PhotosPicker, PDFKit, scanner | no |
-| 9 | iPad: split view, tabs, hardware keyboard, drag & drop | no |
-| 10 | Graph, touch gestures | no |
-| 11 | Sync detection, conflict UI, diff | diff engine: yes |
-| 12 | Share extension, widgets, App Intents | no |
-| 13 | Accessibility, performance, Release config, App Store readiness | no |
+| 1 | `ie-platform` iOS adapter + feature gates; `ie-ffi` crate; generated Swift bindings; bridge tests | yes — 40 bridge tests |
+| 2 | Cross-platform round-trip tests (§7.2); test-vault generator | yes — 7 round-trip tests |
+| 3 | `VaultStorage`, bookmarks, coordination, document picker; app skeleton, split view | Swift: no. Bridge side: yes |
+| 4 | Notes list, editor, keyboard accessory, autosave, lifecycle | editing actions: yes, 33 tests. Views: no |
+| 5 | Wikilinks, autocomplete, backlinks, outline | completion triggers: yes, 20 tests. Views: no |
+| 6 | Tags, Properties, recent, favourites | property typing: yes. Views: no. Recent/favourites: not built |
+| 7 | Search over the shared engine | engine: yes. Views: no |
+| 8 | Attachments | placement: yes, in `ie-core`. PhotosPicker/PDFKit/scanner: not built |
+| 9 | iPad: split view, hardware keyboard | Swift: no. Drag & drop: not built |
+| 10 | Graph, touch gestures | layout: yes, 12 tests. View: no |
+| 11 | Sync detection, conflict UI, diff | diff: yes, 10 tests. Conflict UI: no |
+| 12 | Share extension, App Intents | Swift: no. Widgets: not built |
+| 13 | Accessibility, performance, Release config, App Store readiness | not done — see §9.1 |
 
 ---
 
@@ -769,3 +769,53 @@ verification steps a Mac needs.
 | UniFFI record mirroring drifts from `ie-core` | A test enumerates `ie-core`'s public model types and fails when one has no mirror. |
 | `.xcframework` build only works on macOS | The script is written and documented; CI gains a macOS job that is the first thing to run once Apple hardware is available. |
 | Bridge granularity turns out wrong for some screen | The bridge is additive; a screen needing a finer call gets one, and the coordination bracket moves with it. |
+
+### 9.1 What is actually done, and what is not
+
+Written at the end of the iOS work rather than the start, so it says what is
+true rather than what was intended.
+
+**Verified here.** 531 Rust tests run on this machine, including 40 through
+the bridge and 7 that round-trip a vault between the desktop and iOS
+configurations. Everything in the "yes" column above is in that number.
+
+The share of the app's *logic* that ended up in Rust is larger than originally
+planned, and that was a deliberate response to the constraint: there is no
+Swift toolchain here, so logic written in Swift is logic nobody has run. The
+editing actions, completion triggers, graph layout, diff and property typing
+are all Rust for that reason. It also means the desktop and iOS cannot
+disagree about what "toggle bold" does, which is worth having regardless.
+
+**Written but never compiled.** Every `.swift` file. There is no `swiftc` or
+`xcodebuild` in this container. Four kinds of mistake are caught by
+`pnpm ios:symbols` and `pnpm ios:appgroup` — a missing design token, a missing
+`VaultService` member, a missing `VaultHandle` method, a missing bridge symbol,
+and an App Group that two targets disagree about — and each of those checks
+was added after the mistake it catches was made. Everything a compiler would
+catch, and everything only a device shows, is untested:
+
+- types, generics, protocol conformance, actor isolation, exhaustive switches
+- whether the layout survives Dynamic Type at its largest setting
+- whether VoiceOver reads the editor and the graph usefully
+- whether the security-scoped access and coordination brackets behave against
+  a real iCloud Drive vault with evicted files
+- whether a 10,000-note vault opens in the time §57 asks for
+- whether the share extension stays inside its memory limit
+
+**Not built at all.** Named here rather than left to be discovered:
+
+| | Why not |
+|---|---|
+| Widgets | Phase 12. The App Group and intents it would need are in place. |
+| PhotosPicker, PDFKit viewer, document scanner | Phase 8's UI. The attachment *pipeline* underneath them is done and tested. |
+| Recent and favourites lists | Phase 6. |
+| Drag and drop on iPad | Phase 9. |
+| Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |
+| Plugin runtime | §70 excludes it from iOS deliberately. |
+| Accessibility audit, performance validation, Release config | Phase 13, which needs a device. |
+
+**The honest summary.** The shared core and the bridge are finished and
+tested. The iOS app is written in full for the features listed as done above,
+and none of that Swift has been compiled. The next step is not more features:
+it is opening `ios/InnerEmpire.xcodeproj` on a Mac, fixing what the compiler
+says, and running the device checks in `TESTING.md`.

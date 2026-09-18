@@ -78,7 +78,8 @@ for (const used of collect(appSource, /DesignTokens\.(\w+)/g)) {
 const bridgeFunctions = collect(generated, /^public func (\w+)\(/gm);
 const declaredBridgeCalls = ['diffText', 'toggleWrap', 'setHeadingLevel', 'toggleQuote',
   'toggleBullet', 'toggleTask', 'insertWikilink', 'insertTag', 'completionAt',
-  'applyCompletion', 'layoutGraph'];
+  'applyCompletion', 'layoutGraph', 'inferPropertyValue', 'propertyValueAsText',
+  'propertyValueKind'];
 for (const name of declaredBridgeCalls) {
   if (!bridgeFunctions.has(name)) {
     problems.push(`${name}() is declared as a dependency but the bindings do not export it`);

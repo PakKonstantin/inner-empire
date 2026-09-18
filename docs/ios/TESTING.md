@@ -106,3 +106,30 @@ collisions and deliberate unresolved links.
 The generator is committed, not the vault: 1000 files would bloat the repository
 and diff badly. It is deterministic from a seed, and a manifest hash is asserted
 so "the test vault" means the same thing on every machine.
+
+
+## What the first Mac session should do, in order
+
+Nothing in `ios/` has been compiled. That is not a caveat buried in a commit
+message; it is the single most important fact about the state of this work, and
+it decides what to do first.
+
+1. **Compile.** `xcodegen && open ios/InnerEmpire.xcodeproj`, then build. Expect
+   errors: the Swift was written against the generated bindings and checked for
+   missing names, which catches four kinds of mistake and not the rest. Types,
+   generics, actor isolation and exhaustive switches are all unverified.
+2. **Run the unit tests** (`⌘U`). They exercise the bridge from Swift, which is
+   the first time the FFI is crossed in the direction it will actually be used.
+3. **Open a real iCloud Drive vault**, not a local folder. The local case
+   exercises none of the coordination or placeholder handling, and those are
+   where the data-integrity risk lives. Evict a file from the Files app and
+   confirm the listing still shows `Note.md` rather than `.Note.md.icloud`.
+4. **Edit the same note on two devices** and confirm the conflict sheet appears
+   rather than one side winning silently. This is the §61 promise and the one
+   most worth distrusting.
+5. **Share into the app** from Safari and from Photos. If it fails with "choose
+   your vault first", the App Group is not actually shared — check the
+   provisioning profile, not the code, because `pnpm ios:appgroup` already
+   verified the files agree.
+6. **Then** the accessibility and performance passes below, which are the ones
+   that need a device and a person looking at it.
