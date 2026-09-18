@@ -341,8 +341,21 @@ On desktop the index is `<vault>/.inner-empire/index.db`. On iOS it moves to
 `<vault-id>` is the `VaultSettings.id` (a UUIDv7) stored in
 `.inner-empire/vault.json`, which travels with the vault — so the same vault
 opened after an app reinstall finds its own cache, and two vaults never collide.
-`VaultSession::open` gains an optional index-path override to express this; it
-is a parameter, not a conditional, so `ie-core` stays platform-free.
+
+**This is the one change `ie-core` needs, and the reasoning for it.**
+`VaultSession::open` hardcodes `<root>/.inner-empire/index.db`. Nothing the
+host supplies can redirect it, so the choice above is not expressible without
+touching the core. The change is additive and platform-free: an `IndexLocation`
+enum — `InVault` (the default, today's behaviour) or `Directory(PathBuf)` — in
+an `OpenOptions` struct, and `open_with` / `create_with` taking it, with the
+existing `open` / `create` delegating with the default. `Directory` and not a
+file path, because the core already knows the vault id by the time it opens the
+database and can name the file `<id>.db` itself; a file path would force the
+caller to learn the id first, and the only way to do that is to open the vault,
+which would create an index in the very place this is trying to avoid. There is no conditional, no `cfg`, and no mention
+of iOS — a desktop user running a vault from a network share would want exactly
+the same parameter, for exactly the same reason. The risk register below said
+any such change would be justified here before being made; this is that.
 
 **Consequence for §37 ("do not rescan the whole vault on every launch"):** the
 existing incremental indexer already compares `(size, modified_ms)` per file and
@@ -701,7 +714,7 @@ verification steps a Mac needs.
 
 | Risk | Mitigation |
 |---|---|
-| `ie-core` needs changes after all | Phase 1 ends with `git diff --stat src-tauri/crates/ie-core` expected empty. If it is not, the change and its justification go in this document before it is made. |
+| `ie-core` needs changes after all | Happened once, for the index path (§4.5), and is written up there. The standing rule holds for anything further: the change and its reasoning are argued in this document before the code is touched, and `git diff --stat src-tauri/crates/ie-core/src` must show nothing else. |
 | iCloud placeholder handling is subtler than §4.2 assumes | The `MaterializeHook` boundary is one method; widening it is a contained change. `STORAGE.md` records the exact failure modes to test on a device. |
 | UniFFI record mirroring drifts from `ie-core` | A test enumerates `ie-core`'s public model types and fails when one has no mirror. |
 | `.xcframework` build only works on macOS | The script is written and documented; CI gains a macOS job that is the first thing to run once Apple hardware is available. |

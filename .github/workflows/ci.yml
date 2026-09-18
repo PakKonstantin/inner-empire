@@ -97,6 +97,61 @@ jobs:
       - name: Tests
         run: cargo test --manifest-path src-tauri/Cargo.toml --workspace
 
+  # The bridge to the iOS client. The Rust half is fully checkable here; the
+  # Swift half needs a Mac, which is stated plainly in docs/ios/DEVELOPMENT.md
+  # rather than faked with a job that does not really build anything.
+  bridge:
+    name: iOS bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # The point of the feature gate is that an iOS build links neither
+      # `notify` nor `directories`. If that ever stops being true the desktop
+      # build would still pass, so it is checked on its own.
+      - name: Core and platform build without the desktop backends
+        run: |
+          cargo clippy --manifest-path src-tauri/Cargo.toml \
+            -p ie-platform -p ie-core --no-default-features --all-targets -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml \
+            -p ie-platform --no-default-features
+
+      - name: Bridge tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p ie-ffi
+
+      # The committed Swift must not lag the Rust it was generated from. The
+      # generator is pure Rust, so this runs without Xcode.
+      - name: Generated bindings are up to date
+        run: |
+          ./ios/Scripts/build-core.sh --bindings
+          if ! git diff --quiet -- ios/Generated; then
+            echo "::error::ios/Generated is stale. Run ./ios/Scripts/build-core.sh --bindings and commit the result."
+            git diff --stat -- ios/Generated
+            exit 1
+          fi
+
+      # The core is meant to be hosted, not rewritten. A change to it that the
+      # iOS work needed is allowed, but it has to be a deliberate one.
+      - name: Core stays free of host concerns
+        shell: bash
+        run: |
+          if grep -rn 'uniffi' src-tauri/crates/ie-core/; then
+            echo "::error::ie-core must not know about the FFI bridge; mirrors belong in ie-ffi/src/types.rs."
+            exit 1
+          fi
+          if grep -rnE '(UIKit|SwiftUI|objc|NSFileCoordinator)' src-tauri/crates/ie-core/src; then
+            echo "::error::ie-core must not know about Apple frameworks."
+            exit 1
+          fi
+
   # The conformance corpus is what keeps the Rust and TypeScript Markdown
   # implementations from drifting, so it gets its own visible job.
   conformance:

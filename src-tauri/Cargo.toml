@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "crates/ie-core", "crates/ie-platform"]
+members = [".", "crates/ie-core", "crates/ie-ffi", "crates/ie-platform"]
 resolver = "2"
 
 [workspace.package]
@@ -14,6 +14,7 @@ repository = "https://github.com/pakkonstantin/inner-empire"
 # Opting in per consumer, so an iOS build can leave the desktop watcher and
 # directory backends out rather than linking code it must never call.
 ie-core = { path = "crates/ie-core", default-features = false }
+ie-ffi = { path = "crates/ie-ffi" }
 ie-platform = { path = "crates/ie-platform", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

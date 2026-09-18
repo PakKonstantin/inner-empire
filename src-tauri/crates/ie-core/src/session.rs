@@ -52,6 +52,33 @@ pub struct VaultSession {
     recovery: RecoveryJournal,
 }
 
+/// Where a vault's index cache goes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub enum IndexLocation {
+    /// `<root>/.inner-empire/index.db`, travelling with the vault.
+    #[default]
+    InVault,
+    /// `<dir>/<vault-id>.db`.
+    ///
+    /// The vault's own id names the file, so one directory can hold the caches
+    /// for every vault the user has opened without them colliding, and a vault
+    /// that moves still finds its own.
+    Directory(PathBuf),
+}
+
+/// How a vault is opened.
+///
+/// The index location is a parameter rather than a constant because the index
+/// is a cache, and where a cache belongs depends on what the folder is. A vault
+/// on a network share or behind a file-sync provider is the wrong home for a
+/// SQLite database: it wants POSIX advisory locks and its own `-wal` and `-shm`
+/// siblings, neither of which such a folder guarantees, and a full-text index
+/// of every note is the wrong thing to hand a sync client to upload.
+#[derive(Debug, Clone, Default)]
+pub struct OpenOptions {
+    pub index: IndexLocation,
+}
+
 impl VaultSession {
     /// Open a folder as a vault, creating the app's own directory if absent.
     ///
@@ -59,6 +86,15 @@ impl VaultSession {
     /// container: the user points at a directory of Markdown files and it
     /// works, which is the whole premise.
     pub fn open(host: HostServices, root: &Path) -> Result<(Self, OpenReport)> {
+        Self::open_with(host, root, &OpenOptions::default())
+    }
+
+    /// Open, choosing where the derived state lives.
+    pub fn open_with(
+        host: HostServices,
+        root: &Path,
+        options: &OpenOptions,
+    ) -> Result<(Self, OpenReport)> {
         let root = host
             .fs
             .canonicalize(root)
@@ -71,7 +107,11 @@ impl VaultSession {
         let ops = FileOps::new(std::sync::Arc::clone(&host.fs), &root);
         let settings = Self::load_or_create_settings(&host, &root)?;
 
-        let (db, index_outcome) = IndexDb::open(&app_dir.join("index.db"))?;
+        let index_path = match &options.index {
+            IndexLocation::InVault => app_dir.join("index.db"),
+            IndexLocation::Directory(dir) => dir.join(format!("{}.db", settings.id)),
+        };
+        let (db, index_outcome) = IndexDb::open(&index_path)?;
         db.set_meta("vault_id", &settings.id)?;
 
         let case_sensitive = host.fs.is_case_sensitive(&app_dir).unwrap_or(true);
@@ -117,8 +157,18 @@ impl VaultSession {
     /// Create a new vault folder with the conventional subfolders and a
     /// welcome note, then open it.
     pub fn create(host: HostServices, root: &Path, name: &str) -> Result<(Self, OpenReport)> {
+        Self::create_with(host, root, name, &OpenOptions::default())
+    }
+
+    /// Create, choosing where the derived state lives.
+    pub fn create_with(
+        host: HostServices,
+        root: &Path,
+        name: &str,
+        options: &OpenOptions,
+    ) -> Result<(Self, OpenReport)> {
         host.fs.create_dir_all(root)?;
-        let (session, report) = Self::open(host, root)?;
+        let (session, report) = Self::open_with(host, root, options)?;
 
         for folder in ["Notes", "Projects", "Attachments", "Templates", "Daily"] {
             session.ops.create_folder(&VaultPath::parse(folder)?)?;

@@ -60,8 +60,15 @@ impl ContainerDirs {
     /// neither. Keyed by the vault's own id — which lives in the vault and
     /// travels with it — so the same vault finds its own cache again, and two
     /// vaults never collide.
+    pub fn index_dir(&self) -> PathBuf {
+        self.cache.join("index")
+    }
+
+    /// The cache file for one vault. Named by the vault's id rather than by
+    /// anything derived from its location, so it survives the vault moving and
+    /// the container path being reassigned between launches.
     pub fn index_path(&self, vault_id: &str) -> PathBuf {
-        self.cache.join("index").join(format!("{vault_id}.db"))
+        self.index_dir().join(format!("{vault_id}.db"))
     }
 }
 

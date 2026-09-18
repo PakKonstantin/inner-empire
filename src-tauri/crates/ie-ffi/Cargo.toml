@@ -1,0 +1,37 @@
+[package]
+name = "ie-ffi"
+description = "The bridge between the shared Rust core and native hosts that are not Tauri — today, the iOS client."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["lib", "staticlib", "cdylib"]
+name = "ie_ffi"
+
+[dependencies]
+# No desktop backends: the whole point of this crate is a host that supplies
+# its own filesystem, watcher and directories.
+ie-core.workspace = true
+ie-platform.workspace = true
+uniffi = { version = "0.32", features = ["cli", "tokio"] }
+anyhow = "1"
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# The round-trip tests drive the same vault through both hosts, so the test
+# build needs the desktop adapters as well. The iOS build does not: dev
+# dependencies are not compiled for it.
+ie-platform = { workspace = true, features = ["desktop-backends"] }
+serde_json.workspace = true
+tempfile.workspace = true
+
+[build-dependencies]
+uniffi = { version = "0.32", features = ["build"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"

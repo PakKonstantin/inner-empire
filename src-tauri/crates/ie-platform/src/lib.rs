@@ -23,7 +23,7 @@ pub mod shell;
 pub mod std_fs;
 pub mod watcher;
 
-pub use clock::{Clock, FixedClock, SharedClock, SystemClock};
+pub use clock::{Clock, FixedClock, HostOffsetClock, SharedClock, SystemClock};
 pub use dirs::{AppDirs, PortableDirs, SharedAppDirs, TestDirs};
 pub use error::{PlatformError, PlatformKind, Result};
 pub use fs::{DirEntry, FileMetadata, FileSystem, SharedFileSystem};

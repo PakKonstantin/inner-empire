@@ -12,3 +12,11 @@ test-results/
 playwright-report/
 .playwright/
 src-tauri/gen/
+
+# iOS: built artefacts and local signing. The generated Swift bindings in
+# ios/Generated ARE committed — CI regenerates them and fails on a diff, so a
+# change to the Rust API is visible in review without anyone needing a Mac.
+ios/Frameworks/
+ios/Config/Signing.xcconfig
+ios/*.xcodeproj/
+ios/DerivedData/
