@@ -430,6 +430,11 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_diagnostics(uint64_t ptr, RustCal
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_embed_for(uint64_t ptr, RustBuffer attachment, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_FAVOURITES
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_FAVOURITES
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_favourites(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 int64_t uniffi_ie_ffi_fn_method_vaulthandle_force_save_note(uint64_t ptr, RustBuffer path, RustBuffer content, RustCallStatus *_Nonnull out_status
@@ -453,6 +458,11 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_index_cache_path(uint64_t ptr, Ru
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IS_CASE_SENSITIVE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IS_CASE_SENSITIVE
 int8_t uniffi_ie_ffi_fn_method_vaulthandle_is_case_sensitive(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IS_FAVOURITE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IS_FAVOURITE
+int8_t uniffi_ie_ffi_fn_method_vaulthandle_is_favourite(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_JOURNAL_UNSAVED
@@ -583,6 +593,11 @@ void uniffi_ie_ffi_fn_method_vaulthandle_stop_watch(uint64_t ptr, RustCallStatus
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_TAGS
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_TAGS
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_tags(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_TOGGLE_FAVOURITE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_TOGGLE_FAVOURITE
+int8_t uniffi_ie_ffi_fn_method_vaulthandle_toggle_favourite(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_VAULT_ID
@@ -1101,6 +1116,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_embed_for(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_FAVOURITES
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_FAVOURITES
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_favourites(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_force_save_note(void
@@ -1128,6 +1149,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_index_cache_path(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IS_CASE_SENSITIVE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IS_CASE_SENSITIVE
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_is_case_sensitive(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IS_FAVOURITE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IS_FAVOURITE
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_is_favourite(void
     
 );
 #endif
@@ -1284,6 +1311,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_stop_watch(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_TAGS
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_TAGS
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_tags(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_TOGGLE_FAVOURITE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_TOGGLE_FAVOURITE
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_toggle_favourite(void
     
 );
 #endif

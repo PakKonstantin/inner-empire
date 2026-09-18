@@ -210,6 +210,14 @@ pub struct Workspace {
     /// Opaque graph view state (zoom, pan, filters), owned by the frontend.
     #[serde(default)]
     pub graph_state: Option<serde_json::Value>,
+    /// Notes the user pinned, in the order they pinned them.
+    ///
+    /// Here rather than in a file of its own: this struct is already the
+    /// vault's per-user state, and a second file for the same category would
+    /// be one more thing to keep in step. `default` so a workspace written
+    /// before this field existed still loads.
+    #[serde(default)]
+    pub favourites: Vec<VaultPath>,
 }
 
 pub const WORKSPACE_VERSION: u32 = 1;
@@ -234,6 +242,7 @@ impl Default for Workspace {
             },
             active_file: None,
             graph_state: None,
+            favourites: Vec::new(),
         }
     }
 }
@@ -243,6 +252,11 @@ impl Workspace {
     /// empty panes. Returns the paths that were dropped.
     pub fn reconcile<F: Fn(&VaultPath) -> bool + Copy>(&mut self, exists: F) -> Vec<VaultPath> {
         let removed = self.layout.root.prune(exists);
+
+        // A favourite pointing at a note that was deleted or renamed opens
+        // nothing, so the list is reconciled alongside the tabs rather than
+        // accumulating dead entries.
+        self.favourites.retain(exists);
 
         let root = std::mem::replace(
             &mut self.layout.root,
@@ -394,5 +408,76 @@ mod tests {
 
         let restored: Workspace = serde_json::from_str(&json).unwrap();
         assert_eq!(restored, workspace);
+    }
+}
+
+#[cfg(test)]
+mod favourite_tests {
+    use super::*;
+
+    fn path(text: &str) -> VaultPath {
+        VaultPath::parse(text).unwrap()
+    }
+
+    #[test]
+    fn a_workspace_written_before_favourites_existed_still_loads() {
+        // The field is `default`, so a file written by an older build has no
+        // `favourites` key at all. Failing to read it would lose someone's
+        // entire layout over a feature they never used.
+        //
+        // The fixture is derived from the real struct with the key removed,
+        // rather than hand-written: hand-written JSON guesses at the schema
+        // and tests the guess, which is how the first version of this test
+        // failed on a field name that has nothing to do with favourites.
+        let mut value = serde_json::to_value(Workspace::default()).unwrap();
+        value
+            .as_object_mut()
+            .unwrap()
+            .remove("favourites")
+            .expect("the field should have been there to remove");
+
+        let workspace: Workspace =
+            serde_json::from_value(value).expect("an older workspace must still load");
+        assert!(workspace.favourites.is_empty());
+    }
+
+    #[test]
+    fn favourites_survive_a_round_trip() {
+        let workspace = Workspace {
+            favourites: vec![path("Notes/Kept.md"), path("Daily/2026-09-18.md")],
+            ..Default::default()
+        };
+
+        let json = serde_json::to_string(&workspace).unwrap();
+        let back: Workspace = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.favourites, workspace.favourites);
+    }
+
+    #[test]
+    fn a_favourite_whose_note_is_gone_is_dropped_on_reconcile() {
+        let mut workspace = Workspace {
+            favourites: vec![path("Here.md"), path("Gone.md")],
+            ..Default::default()
+        };
+
+        workspace.reconcile(|p| p.as_str() != "Gone.md");
+
+        assert_eq!(workspace.favourites, vec![path("Here.md")]);
+    }
+
+    #[test]
+    fn reconciling_keeps_the_order_the_user_pinned_them_in() {
+        // Sorting them would be a small betrayal: the order is the user's.
+        let mut workspace = Workspace {
+            favourites: vec![path("Zebra.md"), path("Apple.md"), path("Mango.md")],
+            ..Default::default()
+        };
+
+        workspace.reconcile(|_| true);
+
+        assert_eq!(
+            workspace.favourites,
+            vec![path("Zebra.md"), path("Apple.md"), path("Mango.md")]
+        );
     }
 }

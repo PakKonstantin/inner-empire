@@ -371,6 +371,27 @@ launch is a directory walk and a handful of reads. A purged cache is detected by
 `OpenOutcome::Created` and triggers a background rebuild with progress, exactly
 as the desktop does after a schema change.
 
+### 4.9 Favourites, and where per-user state already lives
+
+**Change 3 of 3 to `ie-core`.** I had recorded favourites as blocked on a
+decision about where per-user state should live. That was wrong, and checking
+rather than repeating it resolved the matter: `Workspace`, persisted by
+`WorkspaceStore` into the vault's `.inner-empire/` directory, is already
+exactly that — layout, sidebars, the active file, opaque graph state. It even
+carries a `version` field for precisely this kind of shape change.
+
+So favourites become a `Vec<VaultPath>` on `Workspace`, behind
+`#[serde(default)]` so a workspace written by an older build still loads. No
+new file, no new format, and the desktop can read the same field whenever it
+wants the feature — it does not have favourites either, which is worth saying
+plainly: this is a gap on both platforms rather than iOS lagging behind.
+
+One behaviour is worth pinning rather than leaving implicit. A favourite
+pointing at a note that has since been deleted or renamed is a dead entry, and
+`WorkspaceStore` already reconciles tabs against what exists
+(`load_reconciled`). Favourites go through the same reconciliation, so the
+list cannot accumulate entries that open nothing.
+
 ### 4.8 The App Group, and why the share extension forced it
 
 A share extension is a separate process with a separate container. Two things
@@ -689,7 +710,7 @@ features → polish**.
 | 3 | `VaultStorage`, bookmarks, coordination, document picker; app skeleton, split view | Swift: no. Bridge side: yes |
 | 4 | Notes list, editor, keyboard accessory, autosave, lifecycle | editing actions: yes, 33 tests. Views: no |
 | 5 | Wikilinks, autocomplete, backlinks, outline | completion triggers: yes, 20 tests. Views: no |
-| 6 | Tags, Properties, recent, favourites | property typing: yes. Views: no. Recent/favourites: not built |
+| 6 | Tags, Properties, recent, favourites | typing, recents and favourites: yes, tested. Views: Swift, so no |
 | 7 | Search over the shared engine | engine: yes. Views: no |
 | 8 | Attachments, PhotosPicker, PDFKit, scanner | placement and byte round-trip: yes, in `ie-core` and the bridge. The pickers and viewer: Swift, so no |
 | 9 | iPad: split view, hardware keyboard | Swift: no. Drag & drop: not built |
@@ -784,7 +805,7 @@ verification steps a Mac needs.
 Written at the end of the iOS work rather than the start, so it says what is
 true rather than what was intended.
 
-**Verified here.** 554 Rust tests run on this machine, including 63 through
+**Verified here.** 563 Rust tests run on this machine, including 68 through
 the bridge and 7 that round-trip a vault between the desktop and iOS
 configurations. The bridge count rose late: an audit of which bridge methods
 no test touched found twelve, and the file-watching pipeline was among them —
@@ -819,7 +840,6 @@ catch, and everything only a device shows, is untested:
 | | Why not |
 |---|---|
 | Widget timeline provider | Phase 12. The App Group and intents it needs are in place. |
-| Favourites | Phase 6. Recent notes are now exposed and tested; favourites are per-user state with nowhere agreed to put them, so they wait for that decision rather than inventing a file. |
 | Drag and drop on iPad | Phase 9. |
 | Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |
 | Plugin runtime | §70 excludes it from iOS deliberately. |

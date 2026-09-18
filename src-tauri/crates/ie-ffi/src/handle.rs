@@ -640,6 +640,58 @@ impl VaultHandle {
         )?)
     }
 
+    // ------------------------------------------------------- favourites ----
+
+    /// The notes the user pinned, in the order they pinned them.
+    ///
+    /// Reconciled against what is on disk, so a favourite whose note was
+    /// deleted or renamed elsewhere does not come back as a row that opens
+    /// nothing.
+    pub fn favourites(&self) -> Result<Vec<FileEntry>> {
+        let session = self.session()?;
+        let workspace = session
+            .workspaces()
+            .load_reconciled(|path| session.ops().exists(path))
+            .0;
+
+        // Each is looked up so the list carries titles rather than bare
+        // paths; one that vanished between the reconcile and now is skipped
+        // rather than shown as an error.
+        Ok(workspace
+            .favourites
+            .iter()
+            .filter_map(|path| queries::file(session.connection(), path).ok().flatten())
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Pin or unpin a note. Returns whether it is now a favourite.
+    pub fn toggle_favourite(&self, path: String) -> Result<bool> {
+        let path = Self::path(&path)?;
+        let session = self.session()?;
+        let mut workspace = session.workspaces().load();
+
+        let now_favourite = if let Some(at) = workspace.favourites.iter().position(|p| *p == path) {
+            workspace.favourites.remove(at);
+            false
+        } else {
+            workspace.favourites.push(path);
+            true
+        };
+        session.workspaces().save(&workspace)?;
+        Ok(now_favourite)
+    }
+
+    pub fn is_favourite(&self, path: String) -> Result<bool> {
+        let path = Self::path(&path)?;
+        Ok(self
+            .session()?
+            .workspaces()
+            .load()
+            .favourites
+            .contains(&path))
+    }
+
     // ------------------------------------------------------------ graph ----
 
     /// The whole vault as a graph.

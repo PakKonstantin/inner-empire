@@ -1800,3 +1800,98 @@ fn reading_an_attachment_that_is_not_there_fails_rather_than_returning_nothing()
         .read_attachment("Attachments/missing.png".into())
         .is_err());
 }
+
+// ----------------------------------------------------------- favourites ---
+
+#[test]
+fn pinning_a_note_makes_it_a_favourite_and_pinning_again_undoes_it() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Kept.md".into(), "# Kept\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    assert!(!handle.is_favourite("Kept.md".into()).unwrap());
+
+    assert!(handle.toggle_favourite("Kept.md".into()).unwrap());
+    assert!(handle.is_favourite("Kept.md".into()).unwrap());
+    assert_eq!(handle.favourites().unwrap().len(), 1);
+
+    assert!(!handle.toggle_favourite("Kept.md".into()).unwrap());
+    assert!(handle.favourites().unwrap().is_empty());
+}
+
+#[test]
+fn favourites_keep_the_order_they_were_pinned_in() {
+    // Sorting them would be a small betrayal: the order is the user's, and
+    // alphabetical is not what they arranged.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    for name in ["Zebra.md", "Apple.md", "Mango.md"] {
+        handle
+            .create_note(name.into(), format!("# {name}\n"), Collision::Fail)
+            .unwrap();
+        handle.toggle_favourite(name.into()).unwrap();
+    }
+    handle.scan(None).unwrap();
+
+    let paths: Vec<String> = handle
+        .favourites()
+        .unwrap()
+        .into_iter()
+        .map(|f| f.path.as_str().to_string())
+        .collect();
+    assert_eq!(paths, vec!["Zebra.md", "Apple.md", "Mango.md"]);
+}
+
+#[test]
+fn favourites_survive_the_vault_being_closed_and_reopened() {
+    // They live in the workspace file in the vault, not in memory, which is
+    // also what lets a desktop opening the same vault see them.
+    let fixture = Fixture::new();
+    {
+        let handle = fixture.open();
+        handle
+            .create_note("Kept.md".into(), "# Kept\n".into(), Collision::Fail)
+            .unwrap();
+        handle.scan(None).unwrap();
+        handle.toggle_favourite("Kept.md".into()).unwrap();
+    }
+
+    let reopened = fixture.open();
+    reopened.scan(None).unwrap();
+    assert!(reopened.is_favourite("Kept.md".into()).unwrap());
+}
+
+#[test]
+fn a_favourite_whose_note_was_deleted_elsewhere_does_not_come_back() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Doomed.md".into(), "# Doomed\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+    handle.toggle_favourite("Doomed.md".into()).unwrap();
+    assert_eq!(handle.favourites().unwrap().len(), 1);
+
+    // Deleted from another device, or in the Files app.
+    std::fs::remove_file(fixture.vault.path().join("Doomed.md")).unwrap();
+    handle
+        .apply_events(vec![FsEvent::Deleted {
+            path: "Doomed.md".into(),
+        }])
+        .unwrap();
+
+    assert!(
+        handle.favourites().unwrap().is_empty(),
+        "a favourite that opens nothing is worse than no favourite"
+    );
+}
+
+#[test]
+fn pinning_a_path_outside_the_vault_is_refused() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    assert!(handle.toggle_favourite("../escape.md".into()).is_err());
+}

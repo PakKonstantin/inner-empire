@@ -10,6 +10,7 @@ struct NoteEditorView: View {
     @State private var showingInspector = false
     @State private var showingProperties = false
     @State private var showingAttachments = false
+    @State private var isFavourite = false
     @State private var accessory: UIView?
 
     let path: String
@@ -54,6 +55,18 @@ struct NoteEditorView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    Task {
+                        isFavourite = (try? await model.service.toggleFavourite(path)) ?? isFavourite
+                    }
+                } label: {
+                    Image(systemName: isFavourite ? "star.fill" : "star")
+                }
+                // The label says the action, not the state: VoiceOver reading
+                // "star, on" leaves you guessing what pressing it does.
+                .accessibilityLabel(Text(isFavourite ? "Remove from favourites" : "Add to favourites"))
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
                     showingAttachments = true
                 } label: {
                     Image(systemName: "paperclip")
@@ -84,6 +97,7 @@ struct NoteEditorView: View {
         .onAppear {
             accessory = makeAccessory(for: buffer)
         }
+        .task { isFavourite = (try? await model.service.isFavourite(path)) ?? false }
         .onChange(of: buffer.state) { _, state in
             // A conflict is never resolved silently; the sheet is the only way
             // past it, and it shows both versions before anything is written.

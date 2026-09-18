@@ -280,6 +280,23 @@ actor VaultService {
         try requireOpen().handle.propertyValues(key: key, limit: limit)
     }
 
+    // ------------------------------------------------------- favourites ----
+
+    /// Pinned notes, in the order they were pinned, reconciled against disk.
+    func favourites() throws -> [FileEntry] {
+        try requireOpen().handle.favourites()
+    }
+
+    /// Pin or unpin. Returns whether it is now pinned.
+    @discardableResult
+    func toggleFavourite(_ path: String) throws -> Bool {
+        try requireOpen().handle.toggleFavourite(path: path)
+    }
+
+    func isFavourite(_ path: String) throws -> Bool {
+        try requireOpen().handle.isFavourite(path: path)
+    }
+
     // ------------------------------------------------------------ graph ----
 
     func graph(options: GraphOptions = GraphOptions()) throws -> GraphData {

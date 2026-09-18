@@ -1552,6 +1552,15 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func embedFor(attachment: String) throws  -> String
     
     /**
+     * The notes the user pinned, in the order they pinned them.
+     *
+     * Reconciled against what is on disk, so a favourite whose note was
+     * deleted or renamed elsewhere does not come back as a row that opens
+     * nothing.
+     */
+    func favourites() throws  -> [FileEntry]
+    
+    /**
      * Write a note that the user has confirmed should replace whatever is on
      * disk. The only path that skips the external-change check, and it exists
      * so that the check is never skipped by accident.
@@ -1588,6 +1597,8 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
      * Whether this vault's volume distinguishes `Note.md` from `note.md`.
      */
     func isCaseSensitive() throws  -> Bool
+    
+    func isFavourite(path: String) throws  -> Bool
     
     /**
      * Record an unsaved buffer, so a crash or a termination does not lose it.
@@ -1745,6 +1756,11 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func stopWatch() 
     
     func tags() throws  -> [TagSummary]
+    
+    /**
+     * Pin or unpin a note. Returns whether it is now a favourite.
+     */
+    func toggleFavourite(path: String) throws  -> Bool
     
     /**
      * The vault's stable id, from `.inner-empire/vault.json`.
@@ -1989,6 +2005,22 @@ open func embedFor(attachment: String)throws  -> String  {
 }
     
     /**
+     * The notes the user pinned, in the order they pinned them.
+     *
+     * Reconciled against what is on disk, so a favourite whose note was
+     * deleted or renamed elsewhere does not come back as a row that opens
+     * nothing.
+     */
+open func favourites()throws  -> [FileEntry]  {
+    return try  FfiConverterSequenceTypeFileEntry.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_favourites(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Write a note that the user has confirmed should replace whatever is on
      * disk. The only path that skips the external-change check, and it exists
      * so that the check is never skipped by accident.
@@ -2063,6 +2095,16 @@ open func isCaseSensitive()throws  -> Bool  {
         uniffiCallStatus in
     uniffi_ie_ffi_fn_method_vaulthandle_is_case_sensitive(
             self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func isFavourite(path: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_is_favourite(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(path),uniffiCallStatus
     )
 })
 }
@@ -2431,6 +2473,19 @@ open func tags()throws  -> [TagSummary]  {
         uniffiCallStatus in
     uniffi_ie_ffi_fn_method_vaulthandle_tags(
             self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Pin or unpin a note. Returns whether it is now a favourite.
+     */
+open func toggleFavourite(path: String)throws  -> Bool  {
+    return try  FfiConverterBool.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_toggle_favourite(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(path),uniffiCallStatus
     )
 })
 }
@@ -8198,6 +8253,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_method_vaulthandle_embed_for() != 57056) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_favourites() != 54557) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_force_save_note() != 29393) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8211,6 +8269,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_is_case_sensitive() != 40961) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_is_favourite() != 24827) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_journal_unsaved() != 36419) {
@@ -8289,6 +8350,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_tags() != 7531) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_toggle_favourite() != 9665) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_vault_id() != 64077) {

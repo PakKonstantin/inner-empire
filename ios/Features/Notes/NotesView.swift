@@ -10,6 +10,7 @@ struct NotesView: View {
 
     @State private var folder = ""
     @State private var listing: DirectoryListing?
+    @State private var favourites: [FileEntry] = []
     @State private var loadError: String?
 
     init(selection: Binding<String?> = .constant(nil)) {
@@ -25,6 +26,17 @@ struct NotesView: View {
                         systemImage: "doc.text",
                         description: Text("Create a note to get started.")
                     )
+                }
+                // Only at the vault root: a folder deep in the tree showing
+                // the whole vault's favourites would be noise, not help.
+                if folder.isEmpty && !favourites.isEmpty {
+                    Section("Favourites") {
+                        ForEach(favourites, id: \.path) { note in
+                            NavigationLink(value: Route.note(note.path)) {
+                                Label(note.title, systemImage: "star.fill")
+                            }
+                        }
+                    }
                 }
                 ForEach(listing.folders, id: \.path) { child in
                     NavigationLink(value: Route.folder(child.path)) {
@@ -72,7 +84,13 @@ struct NotesView: View {
                 NoteEditorView(path: path)
             }
         }
-        .task { await load(folder) }
+        .task {
+            await load(folder)
+            // Only the root needs them, so nothing else pays for the query.
+            if folder.isEmpty {
+                favourites = (try? await model.service.favourites()) ?? []
+            }
+        }
         .refreshable { await load(folder) }
     }
 
