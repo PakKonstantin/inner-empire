@@ -4899,6 +4899,109 @@ public func FfiConverterTypeCollision_lower(_ value: Collision) -> RustBuffer {
 
 
 /**
+ * What the editor should be offering, if anything.
+ */
+
+public enum CompletionTrigger: Equatable, Hashable {
+    
+    /**
+     * Nothing to offer at this cursor.
+     */
+    case none
+    /**
+     * Inside `[[…`. `query` is what has been typed so far.
+     */
+    case wikiLink(query: String, 
+        /**
+         * UTF-16 range of the text to replace, excluding the brackets.
+         */replaceStart: UInt32, replaceEnd: UInt32, 
+        /**
+         * The link already has its closing `]]`, so accepting a suggestion
+         * must not add a second pair.
+         */closed: Bool
+    )
+    /**
+     * After a `#`. `query` is the partial tag, which may contain `/`.
+     */
+    case tag(query: String, replaceStart: UInt32, replaceEnd: UInt32
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension CompletionTrigger: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeCompletionTrigger: FfiConverterRustBuffer {
+    typealias SwiftType = CompletionTrigger
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CompletionTrigger {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .none
+        
+        case 2: return .wikiLink(query: try FfiConverterString.read(from: &buf), replaceStart: try FfiConverterUInt32.read(from: &buf), replaceEnd: try FfiConverterUInt32.read(from: &buf), closed: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 3: return .tag(query: try FfiConverterString.read(from: &buf), replaceStart: try FfiConverterUInt32.read(from: &buf), replaceEnd: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CompletionTrigger, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .none:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .wikiLink(query,replaceStart,replaceEnd,closed):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(query, into: &buf)
+            FfiConverterUInt32.write(replaceStart, into: &buf)
+            FfiConverterUInt32.write(replaceEnd, into: &buf)
+            FfiConverterBool.write(closed, into: &buf)
+            
+        
+        case let .tag(query,replaceStart,replaceEnd):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(query, into: &buf)
+            FfiConverterUInt32.write(replaceStart, into: &buf)
+            FfiConverterUInt32.write(replaceEnd, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCompletionTrigger_lift(_ buf: RustBuffer) throws -> CompletionTrigger {
+    return try FfiConverterTypeCompletionTrigger.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeCompletionTrigger_lower(_ value: CompletionTrigger) -> RustBuffer {
+    return FfiConverterTypeCompletionTrigger.lower(value)
+}
+
+
+
+/**
  * A non-fatal problem found while scanning. Collected and reported together,
  * because a vault with a hundred case collisions deserves one report.
  */
@@ -6860,6 +6963,35 @@ public func FfiConverterTypeVaultPath_lower(_ value: VaultPath) -> RustBuffer {
 }
 
 /**
+ * Put a chosen completion into the text.
+ *
+ * Returns the new text and where the cursor should land: after the closing
+ * brackets for a link, after the tag for a tag, so typing continues in the
+ * right place either way.
+ */
+public func applyCompletion(text: String, trigger: CompletionTrigger, choice: String) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_apply_completion(
+        FfiConverterString.lower(text),
+        FfiConverterTypeCompletionTrigger_lower(trigger),
+        FfiConverterString.lower(choice),uniffiCallStatus
+    )
+})
+}
+/**
+ * What, if anything, to complete at `cursor`.
+ */
+public func completionAt(text: String, cursor: UInt32) -> CompletionTrigger  {
+    return try!  FfiConverterTypeCompletionTrigger_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_completion_at(
+        FfiConverterString.lower(text),
+        FfiConverterUInt32.lower(cursor),uniffiCallStatus
+    )
+})
+}
+/**
  * Compare two versions of a note.
  *
  * `local` is what the user has typed; `remote` is what is on disk now.
@@ -6986,6 +7118,12 @@ private let initializationResult: InitializationResult = {
     let scaffolding_contract_version = ffi_ie_ffi_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_apply_completion() != 23016) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_completion_at() != 41167) {
+        return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_func_diff_text() != 16900) {
         return InitializationResult.apiChecksumMismatch

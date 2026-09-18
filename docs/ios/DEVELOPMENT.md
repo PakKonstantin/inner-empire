@@ -98,10 +98,28 @@ pnpm ios:tokens                      # regenerate the design tokens
 ```
 
 `pnpm ios:symbols` is not a type check and does not pretend to be. There is no
-Swift compiler here, so it verifies the one class of error that is mechanical —
-a design token, bridge symbol or service member referenced by a name that does
-not exist. It catches the mistake it was written for and nothing else;
-everything a compiler would catch still waits for a Mac.
+Swift compiler here, so it verifies the one class of error that is mechanical:
+a name referenced that does not exist.
+
+What it covers, and how:
+
+| | Derived from | Gap |
+|---|---|---|
+| Design tokens | the generated file plus the semantic aliases | none |
+| `VaultService` members | the service's own source | none |
+| Bridge types | a declared list, checked against the bindings | a new type used but not listed |
+| Bridge functions | a declared list, checked both ways | a new call added but not listed |
+
+The two declared lists are declared on purpose. Telling a function call from an
+enum case or a closure invocation needs a Swift parser; a regex that guesses
+reports forty false positives on this tree, and a check that cries wolf gets
+turned off. So the app states which bridge symbols it depends on, and the
+script verifies both that the bindings export each one *and* that something
+actually calls it — so the list cannot quietly become a list of names nobody
+uses.
+
+Everything a compiler would catch — types, generics, protocol conformance,
+actor isolation, exhaustive switches — still waits for a Mac.
 
 The iOS `FileSystem` adapter is tested on the host target against a temp
 directory, with the two callback hooks stubbed — the POSIX paths are identical,

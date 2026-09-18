@@ -555,6 +555,16 @@ void uniffi_ie_ffi_fn_method_storagehost_ensure_materialized(uint64_t ptr, RustB
 void uniffi_ie_ffi_fn_method_storagehost_replace_item(uint64_t ptr, RustBuffer relative_target, RustBuffer relative_source, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_APPLY_COMPLETION
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_APPLY_COMPLETION
+RustBuffer uniffi_ie_ffi_fn_func_apply_completion(RustBuffer text, RustBuffer trigger, RustBuffer choice, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_COMPLETION_AT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_COMPLETION_AT
+RustBuffer uniffi_ie_ffi_fn_func_completion_at(RustBuffer text, uint32_t cursor, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_DIFF_TEXT
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_DIFF_TEXT
 RustBuffer uniffi_ie_ffi_fn_func_diff_text(RustBuffer local, RustBuffer remote, uint32_t context_lines, RustCallStatus *_Nonnull out_status
@@ -853,6 +863,18 @@ void ffi_ie_ffi_rust_future_free_void(uint64_t handle
 #ifndef UNIFFI_FFIDEF_FFI_IE_FFI_RUST_FUTURE_COMPLETE_VOID
 #define UNIFFI_FFIDEF_FFI_IE_FFI_RUST_FUTURE_COMPLETE_VOID
 void ffi_ie_ffi_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_APPLY_COMPLETION
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_APPLY_COMPLETION
+uint16_t uniffi_ie_ffi_checksum_func_apply_completion(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_COMPLETION_AT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_COMPLETION_AT
+uint16_t uniffi_ie_ffi_checksum_func_completion_at(void
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_DIFF_TEXT

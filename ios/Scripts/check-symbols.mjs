@@ -64,13 +64,26 @@ for (const used of collect(appSource, /DesignTokens\.(\w+)/g)) {
 }
 
 // --- Free functions from the bridge -------------------------------------
+//
+// A declared list, and deliberately not inferred. Telling a call from an enum
+// case or a closure invocation needs a Swift parser, and a regex that guesses
+// produces forty false positives on this tree — which would mean turning the
+// check off, which is worse than not having it. So the app declares which
+// bridge functions it depends on and both directions are verified: each one
+// must be exported by the bindings, and each one must actually be called, so
+// the list cannot rot into names nobody uses.
+//
+// The gap this leaves: a NEW bridge call added without being listed here is
+// not checked. That is a real limitation, stated rather than papered over.
 const bridgeFunctions = collect(generated, /^public func (\w+)\(/gm);
-// Only names the app calls bare, which in practice are the bridge's.
-const knownBridgeCalls = ['diffText', 'toggleWrap', 'setHeadingLevel', 'toggleQuote',
-  'toggleBullet', 'toggleTask', 'insertWikilink', 'insertTag'];
-for (const name of knownBridgeCalls) {
-  if (!bridgeFunctions.has(name) && appSource.includes(`${name}(`)) {
-    problems.push(`${name}() is called but the bindings do not export it`);
+const declaredBridgeCalls = ['diffText', 'toggleWrap', 'setHeadingLevel', 'toggleQuote',
+  'toggleBullet', 'toggleTask', 'insertWikilink', 'insertTag', 'completionAt',
+  'applyCompletion'];
+for (const name of declaredBridgeCalls) {
+  if (!bridgeFunctions.has(name)) {
+    problems.push(`${name}() is declared as a dependency but the bindings do not export it`);
+  } else if (!new RegExp(`\\b${name}\\s*\\(`).test(appSource)) {
+    problems.push(`${name}() is declared as a dependency but nothing calls it — drop it from the list`);
   }
 }
 
