@@ -140,7 +140,7 @@ impl RecoveryJournal {
             });
         }
 
-        out.sort_by(|a, b| b.saved_ms.cmp(&a.saved_ms));
+        out.sort_by_key(|candidate| std::cmp::Reverse(candidate.saved_ms));
         Ok(out)
     }
 

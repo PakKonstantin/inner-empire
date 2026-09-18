@@ -207,7 +207,7 @@ impl Trash {
 
     pub fn list(&self) -> Result<Vec<TrashEntry>> {
         let mut entries = self.load_manifest()?.entries;
-        entries.sort_by(|a, b| b.trashed_ms.cmp(&a.trashed_ms));
+        entries.sort_by_key(|entry| std::cmp::Reverse(entry.trashed_ms));
         Ok(entries)
     }
 

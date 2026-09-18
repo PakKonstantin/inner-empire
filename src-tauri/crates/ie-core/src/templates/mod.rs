@@ -140,7 +140,7 @@ pub fn list(ops: &FileOps, folder: &VaultPath) -> Result<Vec<TemplateInfo>> {
             path,
         })
         .collect();
-    templates.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    templates.sort_by_key(|template| template.name.to_lowercase());
     Ok(templates)
 }
 

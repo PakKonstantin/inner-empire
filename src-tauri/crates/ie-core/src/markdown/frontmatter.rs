@@ -30,14 +30,12 @@ pub struct FrontmatterSpan {
 /// rule and must stay one.
 pub fn locate(source: &str) -> Option<FrontmatterSpan> {
     let after_marker = source.strip_prefix("---")?;
-    // The opening marker must be alone on its line.
-    let yaml_start = if let Some(rest) = after_marker.strip_prefix("\r\n") {
-        source.len() - rest.len()
-    } else if let Some(rest) = after_marker.strip_prefix('\n') {
-        source.len() - rest.len()
-    } else {
-        return None;
-    };
+    // The opening marker must be alone on its line, in either line ending: a
+    // vault written on Windows and one written on Linux are the same vault.
+    let rest = after_marker
+        .strip_prefix("\r\n")
+        .or_else(|| after_marker.strip_prefix('\n'))?;
+    let yaml_start = source.len() - rest.len();
 
     let mut cursor = yaml_start;
     while cursor <= source.len() {
