@@ -118,6 +118,7 @@ What it covers, and how:
 | Bridge types | a declared list, checked against the bindings | a new type used but not listed |
 | Bridge functions | a declared list, checked both ways | a new call added but not listed |
 | `VaultHandle` methods | the generated protocol | none, for calls on `handle` |
+| Record *fields* | not checked | `results.files` for `results.hits` |
 
 The two declared lists are declared on purpose. Telling a function call from an
 enum case or a closure invocation needs a Swift parser; a regex that guesses
@@ -126,6 +127,13 @@ turned off. So the app states which bridge symbols it depends on, and the
 script verifies both that the bindings export each one *and* that something
 actually calls it — so the list cannot quietly become a list of names nobody
 uses.
+
+Field access on a bridge record is the one gap worth naming, because a real
+bug lived there: `SearchResults` has `hits`, and `results.files` was written
+instead. A check for it was measured rather than assumed — of nine candidate
+accesses in this tree, nine were ordinary Swift members (`.map`, `.isEmpty`,
+`.first`). A check with that false-positive rate gets turned off, so the gap is
+documented instead. A one-off audit found exactly one instance, now fixed.
 
 Everything a compiler would catch — types, generics, protocol conformance,
 actor isolation, exhaustive switches — still waits for a Mac.

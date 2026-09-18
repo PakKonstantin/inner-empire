@@ -59,7 +59,7 @@ struct SearchNotesIntent: AppIntent {
     func perform() async throws -> some IntentResult & ReturnsValue<[String]> & ProvidesDialog {
         let service = try await IntentVault.service()
         let results = try await service.search(query, options: SearchOptions(limit: 20))
-        let titles = results.files.map(\.title)
+        let titles = results.hits.map(\.title)
         return .result(
             value: titles,
             // The count rather than the list: Siri reading twenty note titles

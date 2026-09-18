@@ -9,7 +9,7 @@
 use std::sync::{Arc, Mutex};
 
 use ie_ffi::error::FfiError;
-use ie_ffi::handle::{OpenReportSink, ScanProgress, VaultHandle};
+use ie_ffi::handle::{ChangeObserver, OpenReportSink, ScanProgress, VaultHandle};
 use ie_ffi::host::{HostConfig, StorageKind};
 use ie_ffi::types::*;
 
@@ -1244,4 +1244,342 @@ fn a_laid_out_graph_puts_linked_notes_near_each_other() {
         gap("A.md", "B.md") < gap("Lonely.md", "Alone.md"),
         "the linked pair should sit closer than the unlinked one"
     );
+}
+
+// ---------------------------------------------------------------- watching --
+//
+// These were untested until an audit of which bridge methods no tests touched.
+// They are the path by which a change made *outside* the app reaches the
+// index, which on iOS is the normal case rather than the exception: iCloud
+// writes, the Files app writes, another device writes.
+
+#[test]
+fn an_external_edit_reaches_the_index_without_a_full_walk() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "Note.md".into(),
+            "# Note\n\nOriginal.\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    // Something else changes the file — iCloud, the Files app, a Mac.
+    std::fs::write(
+        fixture.vault.path().join("Note.md"),
+        "# Note\n\nChanged elsewhere with [[Another]].\n",
+    )
+    .unwrap();
+
+    let outcome = handle
+        .apply_events(vec![FsEvent::Modified {
+            path: "Note.md".into(),
+        }])
+        .unwrap();
+
+    assert_eq!(outcome.indexed.len(), 1);
+    assert!(
+        !outcome.needs_full_scan,
+        "one file changing is not a reason to rewalk"
+    );
+
+    // The new link is in the index, which is the point: a stale index would
+    // show backlinks that no longer exist.
+    let links = handle.outgoing_links("Note.md".into()).unwrap();
+    assert!(
+        links.iter().any(|l| l.link.target == "Another"),
+        "{links:?}"
+    );
+}
+
+#[test]
+fn a_file_deleted_outside_the_app_leaves_the_index() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Gone.md".into(), "# Gone\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    std::fs::remove_file(fixture.vault.path().join("Gone.md")).unwrap();
+    let outcome = handle
+        .apply_events(vec![FsEvent::Deleted {
+            path: "Gone.md".into(),
+        }])
+        .unwrap();
+
+    assert_eq!(outcome.removed.len(), 1);
+    // Searching must not offer a note that is not there; opening it would
+    // fail and look like the app had lost it.
+    let results = handle
+        .search("Gone".into(), SearchOptions::default())
+        .unwrap();
+    assert!(
+        !results.hits.iter().any(|h| h.path.as_str() == "Gone.md"),
+        "{results:?}"
+    );
+}
+
+#[test]
+fn a_rename_outside_the_app_moves_the_note_rather_than_duplicating_it() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Before.md".into(), "# Before\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    std::fs::rename(
+        fixture.vault.path().join("Before.md"),
+        fixture.vault.path().join("After.md"),
+    )
+    .unwrap();
+    handle
+        .apply_events(vec![FsEvent::Renamed {
+            from: "Before.md".into(),
+            to: "After.md".into(),
+        }])
+        .unwrap();
+
+    let results = handle
+        .search("Before".into(), SearchOptions::default())
+        .unwrap();
+    assert!(
+        !results.hits.iter().any(|h| h.path.as_str() == "Before.md"),
+        "the old path should be gone, not left beside the new one: {results:?}"
+    );
+    assert!(handle.read_note("After.md".into()).is_ok());
+}
+
+#[test]
+fn losing_track_asks_for_a_rescan_rather_than_guessing() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle.scan(None).unwrap();
+
+    // The host was suspended, or a bookmark resolved stale. Anything could
+    // have happened while it was not looking, so the only safe answer is to
+    // walk the vault again.
+    let outcome = handle.apply_events(vec![FsEvent::Rescan]).unwrap();
+    assert!(outcome.needs_full_scan);
+}
+
+#[test]
+fn a_watch_delivers_a_host_observed_change_to_the_observer() {
+    #[derive(Default)]
+    struct Recorder {
+        seen: Mutex<Vec<FsEvent>>,
+    }
+    impl ChangeObserver for Recorder {
+        fn changed(&self, events: Vec<FsEvent>) {
+            self.seen.lock().unwrap().extend(events);
+        }
+    }
+
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    let recorder = Arc::new(Recorder::default());
+    handle.start_watch(recorder.clone()).unwrap();
+
+    // Starting twice is what happens when the app returns to the foreground
+    // twice in a row; it must not stack two watches on one vault.
+    handle.start_watch(recorder.clone()).unwrap();
+
+    std::fs::write(fixture.vault.path().join("Watched.md"), "# Watched\n").unwrap();
+    handle
+        .deliver_events(vec![FsEvent::Created {
+            path: "Watched.md".into(),
+        }])
+        .unwrap();
+
+    // Debounced, so give the batch time to coalesce and arrive.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    while recorder.seen.lock().unwrap().is_empty() && std::time::Instant::now() < deadline {
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
+    assert!(
+        !recorder.seen.lock().unwrap().is_empty(),
+        "the observer never heard about the change"
+    );
+
+    handle.stop_watch();
+    // Delivering after stopping is what a late presenter callback does. It
+    // must be ignored rather than panic.
+    handle
+        .deliver_events(vec![FsEvent::Created {
+            path: "Late.md".into(),
+        }])
+        .unwrap();
+}
+
+#[test]
+fn stopping_a_watch_that_was_never_started_is_not_an_error() {
+    // The app backgrounds before the vault finished opening.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle.stop_watch();
+    handle.stop_watch();
+}
+
+// ---------------------------------------------------------------- journal ---
+
+#[test]
+fn clearing_the_journal_removes_only_the_note_asked_for() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("A.md".into(), "# A\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("B.md".into(), "# B\n".into(), Collision::Fail)
+        .unwrap();
+
+    handle
+        .journal_unsaved("A.md".into(), "A in progress".into())
+        .unwrap();
+    handle
+        .journal_unsaved("B.md".into(), "B in progress".into())
+        .unwrap();
+    assert_eq!(handle.recoverable().unwrap().len(), 2);
+
+    handle.clear_journal("A.md".into()).unwrap();
+    let left = handle.recoverable().unwrap();
+    assert_eq!(left.len(), 1, "clearing one note must not clear the other");
+    assert_eq!(left[0].path.as_str(), "B.md");
+}
+
+#[test]
+fn clearing_a_journal_entry_that_is_not_there_is_not_an_error() {
+    // The buffer was never dirty, and the editor clears on close regardless.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle.clear_journal("Never.md".into()).unwrap();
+}
+
+#[test]
+fn pruning_keeps_recent_work_and_drops_only_what_is_old() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Fresh.md".into(), "# Fresh\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .journal_unsaved("Fresh.md".into(), "typed just now".into())
+        .unwrap();
+
+    // Nothing is a week old yet, so nothing goes.
+    let pruned = handle.prune_journal(7 * 24 * 60 * 60 * 1000).unwrap();
+    assert_eq!(pruned, 0);
+    assert_eq!(
+        handle.recoverable().unwrap().len(),
+        1,
+        "unsaved work must survive a prune"
+    );
+
+    // The window is strict — an entry goes when `now - saved > max_age` —
+    // so one written in this same millisecond survives `prune(0)`. That is
+    // the right behaviour, and asserting otherwise is what made the first
+    // version of this test fail: whether it passed depended on whether a
+    // millisecond had ticked over between journalling and pruning. The
+    // journal write usually takes long enough that it had, which is why it
+    // passed thirty runs on its own and then failed once in a full-suite run
+    // — the worst kind of flake, the sort that looks deterministic.
+    //
+    // A negative window means "older than a moment in the future", which is
+    // everything, and says what the cleanup path is being asked to do without
+    // depending on the clock at all.
+    let pruned = handle.prune_journal(-1).unwrap();
+    assert_eq!(pruned, 1, "the cleanup path must actually remove things");
+    assert!(handle.recoverable().unwrap().is_empty());
+}
+
+// ------------------------------------------------------------ quick switch --
+
+#[test]
+fn quick_switch_finds_a_note_from_the_initials_of_its_words() {
+    // The completion bar and the quick switcher both go through this, so a
+    // change to its ranking changes what typing `[[` offers.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    for path in ["Daily Standup Notes.md", "Design System.md", "Unrelated.md"] {
+        handle
+            .create_note(path.into(), "# Note\n".into(), Collision::Fail)
+            .unwrap();
+    }
+    handle.scan(None).unwrap();
+
+    let matches = handle.quick_switch("dsn".into(), 10).unwrap();
+    assert_eq!(
+        matches.first().map(|m| m.path.as_str()),
+        Some("Daily Standup Notes.md"),
+        "{matches:?}"
+    );
+}
+
+#[test]
+fn quick_switch_respects_its_limit_and_tolerates_nonsense() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    for n in 0..12 {
+        handle
+            .create_note(format!("Note {n}.md"), "# Note\n".into(), Collision::Fail)
+            .unwrap();
+    }
+    handle.scan(None).unwrap();
+
+    assert!(handle.quick_switch("note".into(), 5).unwrap().len() <= 5);
+    assert!(handle.quick_switch("zzzzz".into(), 5).unwrap().is_empty());
+    // An empty needle is what the completion bar sends the instant `[[` is
+    // typed, before anything else is.
+    assert!(!handle.quick_switch(String::new(), 5).unwrap().is_empty());
+}
+
+// ------------------------------------------------------------------ clock ---
+
+#[test]
+fn the_utc_offset_decides_which_day_a_daily_note_lands_on() {
+    // The host owns the offset, and this is where getting it wrong shows:
+    // a note filed late at night in one zone belongs to a different date in
+    // another, and two devices would then keep two notes for one day.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+
+    handle.set_utc_offset_seconds(14 * 3600);
+    let ahead = handle.daily_note_path(0).unwrap();
+
+    handle.set_utc_offset_seconds(-11 * 3600);
+    let behind = handle.daily_note_path(0).unwrap();
+
+    assert_ne!(
+        ahead, behind,
+        "25 hours apart must be able to fall on different dates"
+    );
+}
+
+// ------------------------------------------------------------ diagnostics ---
+
+#[test]
+fn diagnostics_report_a_note_that_could_not_be_read() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Fine.md".into(), "# Fine\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    // A clean vault has nothing to report, which is what makes a non-empty
+    // list meaningful.
+    assert!(handle.diagnostics().unwrap().is_empty());
+}
+
+#[test]
+fn the_case_sensitivity_of_the_mount_is_reported_rather_than_assumed() {
+    // It is a property of the mount, not the OS: NTFS can be case-sensitive
+    // and a Linux mount can fold case. The app branches on this when it warns
+    // about `Note.md` and `note.md` in one folder.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    let _ = handle.is_case_sensitive().unwrap();
 }

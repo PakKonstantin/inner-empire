@@ -775,9 +775,12 @@ verification steps a Mac needs.
 Written at the end of the iOS work rather than the start, so it says what is
 true rather than what was intended.
 
-**Verified here.** 531 Rust tests run on this machine, including 40 through
+**Verified here.** 545 Rust tests run on this machine, including 54 through
 the bridge and 7 that round-trip a vault between the desktop and iOS
-configurations. Everything in the "yes" column above is in that number.
+configurations. The bridge count rose late: an audit of which bridge methods
+no test touched found twelve, and the file-watching pipeline was among them —
+the path by which a change made outside the app reaches the index, which on
+iOS is the normal case rather than the exception. Everything in the "yes" column above is in that number.
 
 The share of the app's *logic* that ended up in Rust is larger than originally
 planned, and that was a deliberate response to the constraint: there is no
