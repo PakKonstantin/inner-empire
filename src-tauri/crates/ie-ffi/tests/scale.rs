@@ -17,10 +17,14 @@ use ie_ffi::types::*;
 
 fn generate(root: &std::path::Path, notes: usize) {
     let status = std::process::Command::new(env!("CARGO"))
+        // Debug, not release. The generator writes a thousand small files and
+        // is not what is being measured; requiring a release build meant a
+        // whole second profile of the workspace — gigabytes, and minutes —
+        // before the test could run at all. A test that expensive to run is a
+        // test nobody runs, which is what had happened to this one.
         .args([
             "run",
             "--quiet",
-            "--release",
             "-p",
             "ie-ffi",
             "--example",
@@ -123,8 +127,16 @@ fn a_thousand_notes_index_once_and_then_stay_indexed() {
     // The corpus deliberately contains two names differing only by case and a
     // scattering of unresolved links; both should be reported rather than
     // quietly tolerated.
+    // The generator plants two names differing only by case. Asserting it is
+    // found, rather than printing the count and moving on, is what makes this
+    // a check: a vault holding `Note.md` and `note.md` is one that breaks when
+    // it reaches a case-folding filesystem, and noticing is the whole point.
     let diagnostics = handle.diagnostics().unwrap();
     println!("diagnostics: {}", diagnostics.len());
+    assert!(
+        !diagnostics.is_empty(),
+        "the planted case collision was not reported"
+    );
 
     let started = Instant::now();
     let backlinks = handle
@@ -147,4 +159,84 @@ fn a_thousand_notes_index_once_and_then_stay_indexed() {
     );
 
     let _ = Arc::strong_count(&handle);
+}
+
+/// The size the brief actually asks about.
+///
+/// Ignored like the others because it writes ten thousand files, but it is the
+/// number that matters: §57's claim is about a vault this size, and until this
+/// ran, that claim was untested. Run it with
+/// `cargo test -p ie-ffi --test scale -- --ignored --nocapture`.
+#[test]
+#[ignore = "writes ten thousand notes; run explicitly"]
+fn ten_thousand_notes_stay_within_the_shape_the_brief_asks_for() {
+    let container = tempfile::tempdir().unwrap();
+    let parent = tempfile::tempdir().unwrap();
+    let vault = parent.path().join("vault");
+    generate(&vault, 10_000);
+
+    let config = HostConfig {
+        library_dir: container
+            .path()
+            .join("Library")
+            .to_string_lossy()
+            .to_string(),
+        utc_offset_seconds: 0,
+        storage: StorageKind::LocalFolder,
+        watch_debounce_ms: 150,
+    };
+
+    let handle =
+        VaultHandle::open(config.clone(), vault.to_string_lossy().to_string(), None).unwrap();
+
+    let started = Instant::now();
+    let cold = handle.scan(None).unwrap();
+    let cold_ms = started.elapsed().as_millis();
+    println!("cold scan: {} files in {cold_ms}ms", cold.files_seen);
+    assert!(cold.files_indexed >= 10_000);
+
+    // The number that decides whether the app is usable: a second launch must
+    // not re-read the vault. If this regresses, every launch pays the cold
+    // cost, and on a phone that is the difference between opening a note and
+    // watching a spinner.
+    let started = Instant::now();
+    let warm = handle.scan(None).unwrap();
+    let warm_ms = started.elapsed().as_millis();
+    println!(
+        "warm scan: {} unchanged in {warm_ms}ms",
+        warm.files_unchanged
+    );
+    assert_eq!(warm.files_indexed, 0, "a warm scan re-parsed something");
+
+    // Asserted as a shape rather than a stopwatch: a CI runner's absolute
+    // timings mean little, but a warm scan being within a fraction of a cold
+    // one would mean the cache had stopped working, which is a real
+    // regression whatever the hardware.
+    assert!(
+        warm_ms * 10 < cold_ms.max(1),
+        "warm scan {warm_ms}ms is not meaningfully faster than cold {cold_ms}ms"
+    );
+
+    let started = Instant::now();
+    let results = handle
+        .search("note".into(), SearchOptions::default())
+        .unwrap();
+    println!(
+        "search: {} hits of {} in {}ms",
+        results.hits.len(),
+        results.total,
+        started.elapsed().as_millis()
+    );
+    assert!(!results.hits.is_empty());
+
+    // A query, not a walk: searching must not get slower in proportion to the
+    // vault, which is the property that makes the index worth having.
+    let started = Instant::now();
+    let matches = handle.quick_switch("note".into(), 20).unwrap();
+    let switch_ms = started.elapsed().as_millis();
+    println!("quick switch: {} matches in {switch_ms}ms", matches.len());
+    assert!(
+        switch_ms < 2_000,
+        "quick switch took {switch_ms}ms, which would make the completion bar unusable"
+    );
 }

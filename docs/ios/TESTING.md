@@ -133,3 +133,48 @@ it decides what to do first.
    verified the files agree.
 6. **Then** the accessibility and performance passes below, which are the ones
    that need a device and a person looking at it.
+
+
+## Measured, at the size the brief asks about
+
+```sh
+cargo test -p ie-ffi --test scale -- --ignored --nocapture
+```
+
+Both scale tests were `#[ignore]`d and, as far as the history shows, never run
+— partly because the generator was built with `--release`, which meant a whole
+second profile of the workspace before the test could start. A test that
+expensive is a test nobody runs, so the generator now builds in debug; it
+writes small files and is not what is being measured.
+
+What it reports on this container, on a **debug build** of the core:
+
+| | 1,000 notes | 10,000 notes |
+|---|---|---|
+| Cold scan | 1.3s (1,043 files) | 14.5s (10,043 files) |
+| Warm scan | 23ms | 255ms |
+| Reopened from cache | 24ms | — |
+| Search | 10ms | 9ms (100 of 910 hits) |
+| Quick switch | 6ms | 67ms |
+
+Three things these numbers do say:
+
+- **The cache works.** A warm scan is 57× faster than a cold one at 10,000
+  notes, and re-parses nothing. If that ratio ever collapses, every launch
+  pays the cold cost — which is why the test asserts the shape rather than a
+  stopwatch reading.
+- **Scaling is linear, not worse.** Ten times the notes costs about eleven
+  times the cold scan. Nothing here degrades pathologically with vault size.
+- **Search is a query, not a walk.** It does not get slower as the vault
+  grows; 9ms against 10,000 notes is the index doing its job.
+
+And what they do not say: this is a debug build on shared container hardware,
+not a release build on a phone. The 14.5s cold scan in particular is the
+number most likely to change — in both directions, since a release build is
+substantially faster and phone storage is slower. **The first launch on a
+large vault will take real time**, which is why the opening screen shows a
+file count rather than a spinner; that decision is now backed by a
+measurement rather than a guess.
+
+Measuring it on a device is still a Mac job, and is the first entry in the
+performance pass below.

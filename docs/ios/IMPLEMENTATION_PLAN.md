@@ -802,7 +802,7 @@ catch, and everything only a device shows, is untested:
 - whether VoiceOver reads the editor and the graph usefully
 - whether the security-scoped access and coordination brackets behave against
   a real iCloud Drive vault with evicted files
-- whether a 10,000-note vault opens in the time §57 asks for
+- whether a 10,000-note vault opens acceptably *on a phone* (the indexing half is now measured — see below — but on container hardware in a debug build)
 - whether the share extension stays inside its memory limit
 
 **Not built at all.** Named here rather than left to be discovered:
