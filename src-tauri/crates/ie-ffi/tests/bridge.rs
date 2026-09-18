@@ -1773,3 +1773,30 @@ fn asking_about_a_property_nothing_uses_is_empty_rather_than_an_error() {
         .unwrap()
         .is_empty());
 }
+
+#[test]
+fn an_attachments_bytes_come_back_exactly_as_written() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    // Bytes that are not valid UTF-8, because an attachment is not text and
+    // a path that assumed otherwise would corrupt every image in the vault.
+    let bytes: Vec<u8> = vec![
+        0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0x00, 0xfe,
+    ];
+    let path = handle
+        .import_attachment("image.png".into(), bytes.clone(), None)
+        .unwrap();
+
+    assert_eq!(handle.read_attachment(path.as_str().into()).unwrap(), bytes);
+}
+
+#[test]
+fn reading_an_attachment_that_is_not_there_fails_rather_than_returning_nothing() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+    // Empty bytes and a missing file must not look the same to a viewer.
+    assert!(handle
+        .read_attachment("Attachments/missing.png".into())
+        .is_err());
+}

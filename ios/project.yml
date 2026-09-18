@@ -60,6 +60,10 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        # Required. Opening the camera or the photo library without these does
+        # not show a prompt — it terminates the app.
+        INFOPLIST_KEY_NSCameraUsageDescription: Take a photo to attach it to a note.
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Attach a photo from your library to a note.
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: >-
           UIInterfaceOrientationPortrait
           UIInterfaceOrientationLandscapeLeft

@@ -175,6 +175,27 @@ final class NoteBuffer {
 
     // MARK: - Editing
 
+    /// Put text in at the cursor, replacing the selection.
+    ///
+    /// Offsets are UTF-16 because that is what the text view reports, and the
+    /// arithmetic is done on `unicodeScalars`-aware indices rather than by
+    /// slicing a `String` by integer — a note with an emoji before the cursor
+    /// would otherwise insert in the wrong place.
+    func insert(_ markdown: String) {
+        let text = self.text as NSString
+        let start = Int(min(selection.start, selection.end))
+        let end = Int(max(selection.start, selection.end))
+        guard start <= text.length, end <= text.length else { return }
+
+        let updated = text.replacingCharacters(
+            in: NSRange(location: start, length: end - start),
+            with: markdown
+        )
+        self.text = updated
+        let cursor = UInt32(start + (markdown as NSString).length)
+        selection = Selection(start: cursor, end: cursor)
+    }
+
     func apply(_ action: EditorAction, headingLevel: UInt8 = 2) {
         let result = action.apply(to: text, selection: selection, headingLevel: headingLevel)
         text = result.text

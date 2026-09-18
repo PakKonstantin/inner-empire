@@ -664,8 +664,10 @@ be written and validated here. Signing is expressed as
 Bundle identifier, display name and API endpoints come from `.xcconfig` per
 configuration (Debug / Release), not from literals in the plist.
 
-Entitlements are the minimum §73 permits: no camera until the scanner ships and
-then `NSCameraUsageDescription` only, `NSPhotoLibraryUsageDescription` for the
+Entitlements are the minimum §73 permits. The scanner has now shipped, so
+`NSCameraUsageDescription` is present — and it is required rather than
+optional: opening the camera without it does not show a prompt, it terminates
+the app. Alongside it, `NSPhotoLibraryUsageDescription` for the
 picker, `UIFileSharingEnabled` / `LSSupportsOpeningDocumentsInPlace` for Files
 integration, an App Group for the share extension, and background modes limited
 to `processing` for indexing. No background fetch, no location, no contacts, no
@@ -689,11 +691,11 @@ features → polish**.
 | 5 | Wikilinks, autocomplete, backlinks, outline | completion triggers: yes, 20 tests. Views: no |
 | 6 | Tags, Properties, recent, favourites | property typing: yes. Views: no. Recent/favourites: not built |
 | 7 | Search over the shared engine | engine: yes. Views: no |
-| 8 | Attachments | placement: yes, in `ie-core`. PhotosPicker/PDFKit/scanner: not built |
+| 8 | Attachments, PhotosPicker, PDFKit, scanner | placement and byte round-trip: yes, in `ie-core` and the bridge. The pickers and viewer: Swift, so no |
 | 9 | iPad: split view, hardware keyboard | Swift: no. Drag & drop: not built |
 | 10 | Graph, touch gestures | layout: yes, 12 tests. View: no |
 | 11 | Sync detection, conflict UI, diff | diff: yes, 10 tests. Conflict UI: no |
-| 12 | Share extension, App Intents | Swift: no. Widgets: not built |
+| 12 | Share extension, App Intents | Swift: no. Widget timeline provider: not built |
 | 13 | Accessibility, performance, Release config, App Store readiness | not done — see §9.1 |
 
 ---
@@ -782,7 +784,7 @@ verification steps a Mac needs.
 Written at the end of the iOS work rather than the start, so it says what is
 true rather than what was intended.
 
-**Verified here.** 552 Rust tests run on this machine, including 61 through
+**Verified here.** 554 Rust tests run on this machine, including 63 through
 the bridge and 7 that round-trip a vault between the desktop and iOS
 configurations. The bridge count rose late: an audit of which bridge methods
 no test touched found twelve, and the file-watching pipeline was among them —
@@ -816,8 +818,7 @@ catch, and everything only a device shows, is untested:
 
 | | Why not |
 |---|---|
-| Widgets | Phase 12. The App Group and intents it would need are in place. |
-| PhotosPicker, PDFKit viewer, document scanner | Phase 8's UI. The attachment *pipeline* underneath them is done and tested. |
+| Widget timeline provider | Phase 12. The App Group and intents it needs are in place. |
 | Favourites | Phase 6. Recent notes are now exposed and tested; favourites are per-user state with nowhere agreed to put them, so they wait for that decision rather than inventing a file. |
 | Drag and drop on iPad | Phase 9. |
 | Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |

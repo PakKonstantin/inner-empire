@@ -9,6 +9,7 @@ struct NoteEditorView: View {
     @State private var showingConflict = false
     @State private var showingInspector = false
     @State private var showingProperties = false
+    @State private var showingAttachments = false
     @State private var accessory: UIView?
 
     let path: String
@@ -52,6 +53,14 @@ struct NoteEditorView: View {
                 SaveStateBadge(state: buffer.state)
             }
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingAttachments = true
+                } label: {
+                    Image(systemName: "paperclip")
+                }
+                .accessibilityLabel(Text("Add an attachment"))
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     // Backlinks and the outline are about the note you are
                     // reading, so they belong to this screen rather than
@@ -79,6 +88,9 @@ struct NoteEditorView: View {
             // A conflict is never resolved silently; the sheet is the only way
             // past it, and it shows both versions before anything is written.
             showingConflict = state.isConflicted
+        }
+        .attachmentPicker(isPresented: $showingAttachments, notePath: path) { markdown in
+            buffer.insert(markdown)
         }
         .sheet(isPresented: $showingInspector) {
             NavigationStack { NoteInspector(path: path, presentedModally: true) }

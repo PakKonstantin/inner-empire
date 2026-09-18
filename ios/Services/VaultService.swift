@@ -309,6 +309,12 @@ actor VaultService {
         }
     }
 
+    /// An attachment's bytes, materialising it first if iCloud had evicted it.
+    func readAttachment(at path: String) throws -> Data {
+        let (handle, storage) = try requireOpen()
+        return try storage.coordinatingRead { try handle.readAttachment(path: path) }
+    }
+
     /// The Markdown that embeds an attachment in a note.
     func embed(for attachment: String) throws -> String {
         try requireOpen().handle.embedFor(attachment: attachment)

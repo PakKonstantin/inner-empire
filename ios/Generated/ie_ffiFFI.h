@@ -515,6 +515,11 @@ uint32_t uniffi_ie_ffi_fn_method_vaulthandle_prune_journal(uint64_t ptr, int64_t
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_quick_switch(uint64_t ptr, RustBuffer needle, uint32_t limit, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_READ_ATTACHMENT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_READ_ATTACHMENT
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_read_attachment(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_READ_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_READ_NOTE
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_read_note(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
@@ -1195,6 +1200,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_prune_journal(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_QUICK_SWITCH
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_QUICK_SWITCH
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_quick_switch(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_READ_ATTACHMENT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_READ_ATTACHMENT
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_read_attachment(void
     
 );
 #endif

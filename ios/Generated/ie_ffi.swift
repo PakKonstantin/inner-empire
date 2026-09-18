@@ -1669,6 +1669,15 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
      */
     func quickSwitch(needle: String, limit: UInt32) throws  -> [FileMatch]
     
+    /**
+     * Read an attachment's bytes.
+     *
+     * Goes through `FileOps`, so an evicted iCloud file is materialised
+     * first. Reading it directly would hand back the placeholder stub, and a
+     * PDF viewer would report a perfectly good document as corrupt.
+     */
+    func readAttachment(path: String) throws  -> Data
+    
     func readNote(path: String) throws  -> Note
     
     /**
@@ -2235,6 +2244,23 @@ open func quickSwitch(needle: String, limit: UInt32)throws  -> [FileMatch]  {
             self.uniffiCloneHandle(),
         FfiConverterString.lower(needle),
         FfiConverterUInt32.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Read an attachment's bytes.
+     *
+     * Goes through `FileOps`, so an evicted iCloud file is materialised
+     * first. Reading it directly would hand back the placeholder stub, and a
+     * PDF viewer would report a perfectly good document as corrupt.
+     */
+open func readAttachment(path: String)throws  -> Data  {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_read_attachment(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(path),uniffiCallStatus
     )
 })
 }
@@ -8221,6 +8247,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_quick_switch() != 6284) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_read_attachment() != 59682) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_read_note() != 28693) {

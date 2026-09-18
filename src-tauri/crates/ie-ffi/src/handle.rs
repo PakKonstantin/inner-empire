@@ -416,6 +416,16 @@ impl VaultHandle {
         Ok(path)
     }
 
+    /// Read an attachment's bytes.
+    ///
+    /// Goes through `FileOps`, so an evicted iCloud file is materialised
+    /// first. Reading it directly would hand back the placeholder stub, and a
+    /// PDF viewer would report a perfectly good document as corrupt.
+    pub fn read_attachment(&self, path: String) -> Result<Vec<u8>> {
+        let session = self.session()?;
+        Ok(session.ops().read_bytes(&Self::path(&path)?)?)
+    }
+
     /// The Markdown that embeds `attachment` in a note.
     ///
     /// An image embeds inline; anything else becomes a link, because a phone
