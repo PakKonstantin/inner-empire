@@ -716,7 +716,7 @@ features → polish**.
 | 9 | iPad: split view, hardware keyboard | Swift: no. Drag & drop: not built |
 | 10 | Graph, touch gestures | layout: yes, 12 tests. View: no |
 | 11 | Sync detection, conflict UI, diff | diff: yes, 10 tests. Conflict UI: no |
-| 12 | Share extension, App Intents | Swift: no. Widget timeline provider: not built |
+| 12 | Share extension, App Intents, widget | Swift: no. The data all three read is exposed and tested |
 | 13 | Accessibility, performance, Release config, App Store readiness | not done — see §9.1 |
 
 ---
@@ -839,7 +839,6 @@ catch, and everything only a device shows, is untested:
 
 | | Why not |
 |---|---|
-| Widget timeline provider | Phase 12. The App Group and intents it needs are in place. |
 | Drag and drop on iPad | Phase 9. |
 | Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |
 | Plugin runtime | §70 excludes it from iOS deliberately. |

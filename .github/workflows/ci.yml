@@ -169,6 +169,12 @@ jobs:
       - name: The docs name things that exist
         run: node ios/Scripts/check-docs.mjs
 
+      # The mechanical subset of §53: an icon-only button VoiceOver would read
+      # as just "button", and a font size that ignores Dynamic Type. The rest
+      # of accessibility needs a device and a person.
+      - name: Accessibility problems a machine can see
+        run: node ios/Scripts/check-accessibility.mjs
+
       # The core is meant to be hosted, not rewritten. A change to it that the
       # iOS work needed is allowed, but it has to be a deliberate one.
       - name: Core stays free of host concerns

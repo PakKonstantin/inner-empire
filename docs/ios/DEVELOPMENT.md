@@ -96,6 +96,7 @@ pnpm ios:generated                   # bindings and tokens match their sources
 pnpm ios:symbols                     # names referenced from Swift resolve
 pnpm ios:appgroup                    # app and extension share an App Group
 pnpm ios:docs                        # the docs name things that exist
+pnpm ios:a11y                        # unlabelled icon buttons, fixed font sizes
 pnpm ios:bindings                    # regenerate the Swift bindings
 pnpm ios:tokens                      # regenerate the design tokens
 ```

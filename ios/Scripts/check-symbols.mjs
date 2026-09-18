@@ -33,7 +33,7 @@ function swiftFiles(dir) {
   return out;
 }
 
-const appDirs = ['App', 'Features', 'Editor', 'Storage', 'Services', 'Tests', 'ShareExtension']
+const appDirs = ['App', 'Features', 'Editor', 'Storage', 'Services', 'Tests', 'ShareExtension', 'Widget']
   .map((d) => join(iosRoot, d))
   .filter((d) => {
     try { return statSync(d).isDirectory(); } catch { return false; }

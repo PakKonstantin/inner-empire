@@ -339,6 +339,16 @@ actor VaultService {
 
     // ----------------------------------------------------------- dailies ----
 
+    /// Where a daily note is, without creating it.
+    ///
+    /// The widget uses this rather than `dailyNote(dayOffset:)`: a widget
+    /// refresh must not bring a note into being, or every device with the
+    /// widget installed would create tomorrow's note at midnight whether
+    /// anyone wrote in it or not.
+    func dailyNotePath(dayOffset: Int64 = 0) throws -> String {
+        try requireOpen().handle.dailyNotePath(dayOffset: dayOffset)
+    }
+
     /// Today's note, or another day's. Creates it from the template if needed.
     func dailyNote(dayOffset: Int64 = 0) throws -> DailyNote {
         let (handle, storage) = try requireOpen()

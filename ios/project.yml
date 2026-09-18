@@ -100,6 +100,35 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire.uitests
 
+  Widget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+      # The same reach into the vault the app and share extension use, rather
+      # than a third copy of it.
+      - path: Storage
+      - path: Services
+      - path: Generated
+      - path: Features/Intents
+    dependencies:
+      - target: InnerEmpire
+        embed: false
+      - framework: Frameworks/libie_ffi.a
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire.widget
+        INFOPLIST_KEY_CFBundleDisplayName: Your Vault
+        SWIFT_OBJC_BRIDGING_HEADER: Generated/ie_ffiFFI.h
+    entitlements:
+      path: Resources/Widget.entitlements
+    info:
+      path: Resources/Widget-Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
   ShareExtension:
     type: app-extension
     platform: iOS
