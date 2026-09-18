@@ -886,3 +886,223 @@ fn a_file_provider_vault_without_a_host_is_refused() {
         "got {error:?}"
     );
 }
+
+#[test]
+fn an_attachment_lands_where_the_vault_says_and_is_embeddable() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    let png = b"\x89PNG\r\n\x1a\n and some bytes".to_vec();
+    let path = handle
+        .import_attachment("diagram.png".into(), png.clone(), None)
+        .unwrap();
+
+    // The default is a vault-wide Attachments folder, which is what `create`
+    // sets up. The point is that the *core* decided, not the host.
+    assert_eq!(path.as_str(), "Attachments/diagram.png");
+    assert_eq!(
+        std::fs::read(fixture.vault.path().join("Attachments/diagram.png")).unwrap(),
+        png
+    );
+
+    // An image embeds inline; the note that references it resolves the link.
+    assert_eq!(
+        handle.embed_for(path.as_str().into()).unwrap(),
+        "![[Attachments/diagram.png]]"
+    );
+}
+
+#[test]
+fn a_screenshots_name_is_made_safe_before_it_reaches_the_vault() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    // What iOS actually calls a screenshot. The colon is legal on APFS and
+    // illegal on NTFS, so a vault created on a phone would not open on a
+    // desktop.
+    let path = handle
+        .import_attachment("Shot 2026-09-17 at 10:30.png".into(), b"x".to_vec(), None)
+        .unwrap();
+
+    assert!(!path.as_str().contains(':'), "{path:?}");
+    assert!(path.as_str().starts_with("Attachments/"));
+    assert!(fixture.vault.path().join(path.as_str()).exists());
+}
+
+#[test]
+fn a_second_attachment_with_the_same_name_does_not_replace_the_first() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    let first = handle
+        .import_attachment("shot.png".into(), b"first".to_vec(), None)
+        .unwrap();
+    let second = handle
+        .import_attachment("shot.png".into(), b"second".to_vec(), None)
+        .unwrap();
+
+    assert_ne!(first, second);
+    assert_eq!(
+        std::fs::read(fixture.vault.path().join(first.as_str())).unwrap(),
+        b"first"
+    );
+    assert_eq!(
+        std::fs::read(fixture.vault.path().join(second.as_str())).unwrap(),
+        b"second"
+    );
+}
+
+#[test]
+fn a_non_image_attachment_becomes_a_link_rather_than_an_embed() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    // A phone rendering a 40MB video inline is a phone that has stopped
+    // responding.
+    let video = handle
+        .import_attachment("clip.mp4".into(), b"not really a video".to_vec(), None)
+        .unwrap();
+    let embed = handle.embed_for(video.as_str().into()).unwrap();
+    assert!(embed.starts_with("[["), "{embed}");
+    assert!(!embed.starts_with("!"), "{embed}");
+    assert!(embed.contains("|clip"), "{embed}");
+}
+
+#[test]
+fn a_daily_note_is_created_once_and_found_again() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    let today = handle.open_daily_note(0).unwrap();
+    assert!(today.created, "the first call should create it");
+    assert!(fixture.vault.path().join(today.path.as_str()).exists());
+
+    let again = handle.open_daily_note(0).unwrap();
+    assert!(
+        !again.created,
+        "the second call must not make a second file"
+    );
+    assert_eq!(again.path, today.path);
+
+    // And asking where it is does not bring one into being.
+    assert_eq!(handle.daily_note_path(0).unwrap(), today.path);
+}
+
+#[test]
+fn yesterday_and_tomorrow_are_different_notes() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    let yesterday = handle.daily_note_path(-1).unwrap();
+    let today = handle.daily_note_path(0).unwrap();
+    let tomorrow = handle.daily_note_path(1).unwrap();
+
+    assert_ne!(yesterday, today);
+    assert_ne!(today, tomorrow);
+    // The default format is YYYY-MM-DD under Daily/.
+    for path in [&yesterday, &today, &tomorrow] {
+        assert!(path.as_str().starts_with("Daily/"), "{path:?}");
+        assert!(path.as_str().ends_with(".md"), "{path:?}");
+    }
+}
+
+#[test]
+fn a_typed_property_value_means_the_same_thing_here_as_on_the_desktop() {
+    // The user types this into a property field. If iOS guessed differently
+    // from the desktop, the same note would gain and lose quotes as it moved
+    // between them, and a date filter would match on one and not the other.
+    assert_eq!(
+        infer_property_value("2026-09-17".into()),
+        PropertyValue::Date {
+            value: "2026-09-17".into()
+        }
+    );
+    assert_eq!(
+        infer_property_value("true".into()),
+        PropertyValue::Checkbox { value: true }
+    );
+    assert_eq!(
+        infer_property_value("42".into()),
+        PropertyValue::Number { value: 42.0 }
+    );
+    assert_eq!(
+        infer_property_value("1.5".into()),
+        PropertyValue::Number { value: 1.5 }
+    );
+    assert_eq!(infer_property_value(String::new()), PropertyValue::Null);
+    assert_eq!(
+        infer_property_value("just words".into()),
+        PropertyValue::Text {
+            value: "just words".into()
+        }
+    );
+}
+
+#[test]
+fn a_property_value_survives_being_shown_and_typed_back() {
+    for original in [
+        PropertyValue::Text {
+            value: "hello".into(),
+        },
+        PropertyValue::Number { value: 42.0 },
+        PropertyValue::Checkbox { value: false },
+        PropertyValue::Date {
+            value: "2026-09-17".into(),
+        },
+    ] {
+        let shown = property_value_as_text(original.clone());
+        assert_eq!(
+            infer_property_value(shown.clone()),
+            original,
+            "{original:?} became {shown:?} and did not come back"
+        );
+    }
+}
+
+#[test]
+fn a_property_kind_says_which_editor_to_show() {
+    assert_eq!(
+        property_value_kind(PropertyValue::Checkbox { value: true }),
+        PropertyKind::Checkbox
+    );
+    assert_eq!(
+        property_value_kind(PropertyValue::Date {
+            value: "2026-09-17".into()
+        }),
+        PropertyKind::Date
+    );
+    assert_eq!(
+        property_value_kind(PropertyValue::List { values: Vec::new() }),
+        PropertyKind::List
+    );
+}
+
+#[test]
+fn an_attachment_imported_on_ios_is_found_by_a_desktop_reading_the_same_vault() {
+    let fixture = Fixture::new();
+    let handle = fixture.create();
+
+    let path = handle
+        .import_attachment("diagram.png".into(), b"bytes".to_vec(), None)
+        .unwrap();
+    handle
+        .create_note(
+            "Notes/Refers.md".into(),
+            format!("See {}\n", handle.embed_for(path.as_str().into()).unwrap()),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    // The embed resolves to the file, which is what makes the attachment
+    // reachable from the note on any platform.
+    let links = handle.outgoing_links("Notes/Refers.md".into()).unwrap();
+    let embed = links
+        .iter()
+        .find(|l| l.link.kind == LinkKind::Embed)
+        .expect("the embed should be there");
+    assert_eq!(
+        embed.target_path.as_ref().map(|p| p.as_str()),
+        Some(path.as_str())
+    );
+}

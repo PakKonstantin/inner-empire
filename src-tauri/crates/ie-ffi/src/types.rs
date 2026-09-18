@@ -1015,3 +1015,66 @@ pub struct CreatedNote {
     pub path: VaultPath,
     pub modified_ms: i64,
 }
+
+/// A daily note, and whether this call is what brought it into being.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct DailyNote {
+    pub path: VaultPath,
+    /// True when it was just created from the template, so the UI can say
+    /// "new" rather than silently opening an empty note.
+    pub created: bool,
+}
+
+/// Work out what a typed-in property value means.
+///
+/// The user types `2026-09-17` into a property field. Is that a date or a
+/// string? YAML says a date, the desktop already agrees, and iOS must too —
+/// otherwise the same note round-tripping between them would gain and lose
+/// quotes, and a `date:` filter would match on one platform and not the other.
+///
+/// So the inference is the core's, exposed rather than reimplemented.
+#[uniffi::export]
+pub fn infer_property_value(raw: String) -> PropertyValue {
+    core_model::PropertyValue::infer_from_scalar(&raw).into()
+}
+
+/// Render a property value the way it would be typed back in.
+#[uniffi::export]
+pub fn property_value_as_text(value: PropertyValue) -> String {
+    core_model::PropertyValue::from(value).as_text()
+}
+
+/// What kind of editor a property needs: a switch, a date picker, a field.
+#[uniffi::export]
+pub fn property_value_kind(value: PropertyValue) -> PropertyKind {
+    core_model::PropertyValue::from(value).kind().into()
+}
+
+/// The kinds a property value can have.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum PropertyKind {
+    Text,
+    Number,
+    Checkbox,
+    Date,
+    DateTime,
+    List,
+    Object,
+    Null,
+}
+
+impl From<core_model::PropertyKind> for PropertyKind {
+    fn from(kind: core_model::PropertyKind) -> Self {
+        use core_model::PropertyKind as K;
+        match kind {
+            K::Text => PropertyKind::Text,
+            K::Number => PropertyKind::Number,
+            K::Checkbox => PropertyKind::Checkbox,
+            K::Date => PropertyKind::Date,
+            K::DateTime => PropertyKind::DateTime,
+            K::List => PropertyKind::List,
+            K::Object => PropertyKind::Object,
+            K::Null => PropertyKind::Null,
+        }
+    }
+}

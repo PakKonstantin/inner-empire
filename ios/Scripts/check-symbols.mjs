@@ -102,7 +102,7 @@ const typesUsed = ['HostConfig', 'StorageKind', 'StorageHost', 'VaultHandle', 'O
   'Diagnostic', 'DirectoryListing', 'FolderEntry', 'FileEntry', 'FileKind', 'IndexProgress',
   'ScanReport', 'EventOutcome', 'TrashEntry', 'RenamePlan', 'RenameOutcome', 'RecoveryCandidate',
   'Property', 'OpenOutcome', 'Selection', 'EditResult', 'TextDiff', 'DiffLine', 'DiffHunk',
-  'LineChange'];
+  'LineChange', 'DailyNote', 'PropertyKind', 'CompletionTrigger'];
 for (const type of typesUsed) {
   if (!bridgeTypes.has(type) && new RegExp(`\\b${type}\\b`).test(appSource)) {
     problems.push(`${type} is referenced but the bindings do not define it`);

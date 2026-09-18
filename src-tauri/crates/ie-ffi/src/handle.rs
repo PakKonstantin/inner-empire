@@ -386,6 +386,92 @@ impl VaultHandle {
         Ok(())
     }
 
+    // ------------------------------------------------------ attachments ----
+
+    /// Write a file into the vault and return where it landed.
+    ///
+    /// Where that is comes from the vault's own settings, decided by the core,
+    /// so a screenshot filed on a phone goes where a screenshot filed on a
+    /// desktop goes. The name is sanitised there too: an iOS screenshot is
+    /// called "Shot 2026-09-17 at 10:30.png", and that colon is legal here and
+    /// illegal on Windows.
+    pub fn import_attachment(
+        &self,
+        file_name: String,
+        bytes: Vec<u8>,
+        note: Option<String>,
+    ) -> Result<VaultPath> {
+        let note = note.map(|p| Self::path(&p)).transpose()?;
+        let mut session = self.session()?;
+
+        let location = session.settings().attachments.clone();
+        let target = ie_core::vault::attachment_path(&location, note.as_ref(), &file_name)?;
+
+        session.ops().create_folder(&target.parent())?;
+        let path = session
+            .ops()
+            .create_note(&target, "", ie_core::vault::Collision::Rename)?;
+        session.ops().write_bytes(&path, &bytes)?;
+        session.reindex(&path)?;
+        Ok(path)
+    }
+
+    /// The Markdown that embeds `attachment` in a note.
+    ///
+    /// An image embeds inline; anything else becomes a link, because a phone
+    /// rendering a 40MB video inline is a phone that has stopped responding.
+    pub fn embed_for(&self, attachment: String) -> Result<String> {
+        let path = Self::path(&attachment)?;
+        let kind = ie_core::model::FileKind::from_extension(path.extension().as_deref());
+        let stem = path.stem().to_string();
+        Ok(match kind {
+            ie_core::model::FileKind::Image => format!("![[{}]]", path.as_str()),
+            _ => format!("[[{}|{stem}]]", path.as_str()),
+        })
+    }
+
+    // ----------------------------------------------------------- dailies ----
+
+    /// A daily note, creating it from the template if it is not there yet.
+    ///
+    /// `day_offset` is days from today: 0 for today, -1 for yesterday, 1 for
+    /// tomorrow. The format and folder come from the vault's settings, so the
+    /// note a phone opens is the note a desktop opens rather than a second
+    /// file for the same day.
+    ///
+    /// The clock's offset is the one the host supplied, not one read from the
+    /// process — which matters here more than anywhere, because getting it
+    /// wrong puts the note on the wrong day.
+    pub fn open_daily_note(&self, day_offset: i64) -> Result<DailyNote> {
+        let session = self.session()?;
+        let settings = session.settings().daily_notes.clone();
+        let (path, created) = ie_core::templates::ensure_daily_note(
+            session.ops(),
+            &settings,
+            &self.host.services.clock,
+            day_offset,
+        )?;
+        drop(session);
+
+        if created {
+            // Index it immediately: the user is about to look at its
+            // backlinks, and waiting for the watcher would make them empty.
+            self.session()?.reindex(&path)?;
+        }
+        Ok(DailyNote { path, created })
+    }
+
+    /// Where a daily note would be, without creating it.
+    pub fn daily_note_path(&self, day_offset: i64) -> Result<VaultPath> {
+        let session = self.session()?;
+        Ok(ie_core::templates::daily_note_path(
+            &session.settings().daily_notes,
+            self.host.services.clock.now_ms(),
+            self.host.services.clock.local_offset_seconds(),
+            day_offset,
+        )?)
+    }
+
     // --------------------------------------------------------- recovery ----
 
     /// Record an unsaved buffer, so a crash or a termination does not lose it.

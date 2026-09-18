@@ -342,7 +342,7 @@ On desktop the index is `<vault>/.inner-empire/index.db`. On iOS it moves to
 `.inner-empire/vault.json`, which travels with the vault — so the same vault
 opened after an app reinstall finds its own cache, and two vaults never collide.
 
-**This is the one change `ie-core` needs, and the reasoning for it.**
+**Change 1 of 2 to `ie-core`, and the reasoning for it.**
 `VaultSession::open` hardcodes `<root>/.inner-empire/index.db`. Nothing the
 host supplies can redirect it, so the choice above is not expressible without
 touching the core. The change is additive and platform-free: an `IndexLocation`
@@ -363,6 +363,28 @@ reindexes only what moved. With the index surviving in `Library/Caches`, a warm
 launch is a directory walk and a handful of reads. A purged cache is detected by
 `OpenOutcome::Created` and triggers a background rebuild with progress, exactly
 as the desktop does after a schema change.
+
+### 4.7 Attachment placement belongs in the core
+
+**Change 2 of 2 to `ie-core`.** Where a new attachment goes — a vault-wide
+folder, beside the note, or a subfolder of the note's folder — is decided by
+`AttachmentLocation` in `VaultSettings`. But the code that *reads* that setting
+and turns it into a path lives in `src-tauri/src/commands/files.rs`, in the
+desktop shell.
+
+That is a cross-platform compatibility bug waiting to happen, and
+compatibility is the second priority in the brief. If iOS writes its own copy
+in Swift, the two platforms can disagree about where `diagram.png` lands for
+the same vault and the same setting — and the disagreement would only show up
+as attachments scattered across two folders in someone's vault.
+
+So the decision moves into `ie-core::vault::attachments`, which is where vault
+semantics belong, and the desktop command is rewritten to call it. Both hosts
+then read the same setting through the same code, and a test pins the answer
+for all three `AttachmentLocation` cases.
+
+This is additive to the core and removes a duplicate rather than adding one.
+The desktop's behaviour is unchanged, which a test asserts.
 
 ### 4.6 Bookmarks, and never trusting a path
 
@@ -714,7 +736,7 @@ verification steps a Mac needs.
 
 | Risk | Mitigation |
 |---|---|
-| `ie-core` needs changes after all | Happened once, for the index path (§4.5), and is written up there. The standing rule holds for anything further: the change and its reasoning are argued in this document before the code is touched, and `git diff --stat src-tauri/crates/ie-core/src` must show nothing else. |
+| `ie-core` needs changes after all | Happened twice — the index path (§4.5) and attachment placement (§4.7) — both written up before the code was touched. The standing rule holds for anything further: the change and its reasoning are argued in this document before the code is touched, and `git diff --stat src-tauri/crates/ie-core/src` must show nothing else. |
 | iCloud placeholder handling is subtler than §4.2 assumes | The `MaterializeHook` boundary is one method; widening it is a contained change. `STORAGE.md` records the exact failure modes to test on a device. |
 | UniFFI record mirroring drifts from `ie-core` | A test enumerates `ie-core`'s public model types and fails when one has no mirror. |
 | `.xcframework` build only works on macOS | The script is written and documented; CI gains a macOS job that is the first thing to run once Apple hardware is available. |

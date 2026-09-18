@@ -267,21 +267,14 @@ pub fn import_attachment(
     bytes: Vec<u8>,
     note: Option<VaultPath>,
 ) -> CommandResult<VaultPath> {
-    use ie_core::vault::AttachmentLocation;
-
     let created = state.with_session(|session| {
-        let folder = match &session.settings().attachments {
-            AttachmentLocation::VaultFolder { folder } => folder.clone(),
-            AttachmentLocation::NextToNote => note.as_ref().map(|n| n.parent()).unwrap_or_default(),
-            AttachmentLocation::SubfolderOfNote { name } => {
-                let parent = note.as_ref().map(|n| n.parent()).unwrap_or_default();
-                parent.join(name)?
-            }
-        };
-        session.ops().create_folder(&folder)?;
+        // Where this goes is vault semantics, not shell behaviour, so the core
+        // decides: the iOS client reads the same setting through the same code
+        // and cannot disagree about where an attachment lands.
+        let location = session.settings().attachments.clone();
+        let target = ie_core::vault::attachment_path(&location, note.as_ref(), &file_name)?;
+        session.ops().create_folder(&target.parent())?;
 
-        let safe = ie_core::vault::sanitize_segment(&file_name);
-        let target = folder.join(&safe)?;
         let path = session.ops().create_note(&target, "", Collision::Rename)?;
         session.ops().write_bytes(&path, &bytes)?;
         session.reindex(&path)?;
