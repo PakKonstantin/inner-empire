@@ -163,6 +163,12 @@ jobs:
       - name: App and extension share an App Group
         run: node ios/Scripts/check-app-group.mjs
 
+      # The docs were written before the code, which is the right order and
+      # also how they end up naming functions that were renamed since. A doc
+      # that names something nobody can find is worse than no doc.
+      - name: The docs name things that exist
+        run: node ios/Scripts/check-docs.mjs
+
       # The core is meant to be hosted, not rewritten. A change to it that the
       # iOS work needed is allowed, but it has to be a deliberate one.
       - name: Core stays free of host concerns

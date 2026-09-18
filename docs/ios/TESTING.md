@@ -29,7 +29,7 @@ build failure rather than a silent omission.
 
 Two integration tests, both on the host.
 
-**`desktop_vault_opens_identically_through_the_ios_host`**
+**`a_vault_written_on_the_desktop_reads_identically_on_ios`**
 
 Build a vault with `StdFileSystem`: 40 notes covering `[[Note]]`,
 `[[Note|Alias]]`, `[[Note#Heading]]`, `[[Note^block]]`, `![[embed]]`, nested
@@ -43,7 +43,7 @@ through the `ie-ffi` bridge with the iOS `FileSystem`. Assert:
 - the same typed property values
 - the same workspace layout after a load/save cycle
 
-**`ios_vault_opens_identically_on_the_desktop_host`**
+**`a_vault_written_on_ios_reads_identically_on_the_desktop`**
 
 The mirror: create notes, links, properties and attachments through the bridge,
 then reopen with `StdFileSystem` and assert the same five properties, plus that

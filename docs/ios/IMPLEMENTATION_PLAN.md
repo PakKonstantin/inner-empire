@@ -257,8 +257,8 @@ write. That is both correct and fast.
 **Where that is not enough: non-materialised iCloud files.** A vault on iCloud
 Drive can contain `.icloud` placeholder stubs. A plain POSIX `read` returns the
 stub, not the note. So the iOS `FileSystem` is not a bare POSIX adapter; it is
-`CoordinatedFileSystem`, which holds an optional `Arc<dyn MaterializeHook>` — a
-UniFFI callback interface with a single method,
+`CoordinatedFileSystem`, which holds an optional `Arc<dyn StorageHost>` — a
+UniFFI callback interface whose first method is
 `ensureMaterialized(path) -> Result<(), StorageError>`. It is invoked only when
 `read` sees a zero-length file with a `.icloud` sibling, or when `read_dir` sees
 a `brtime`-less placeholder. On an "On My iPhone" vault the hook is never
@@ -275,17 +275,24 @@ uses `NSFileCoordinator` with `.forReplacing` plus
 `FileManager.replaceItemAt(_:withItemAt:)`, which is the documented atomic
 replace on Apple platforms and which the provider understands. Because that API
 is Objective-C, this specific operation *is* a callback into Swift —
-`AtomicWriteHook.replaceItem(at:with:)` — the second and last method on the
-bridge's storage callback surface. Every other operation stays POSIX.
+`StorageHost::replace_item` — the second and last method on the bridge's
+storage callback surface. Every other operation stays POSIX.
 
 Summary of the callback surface Rust asks of Swift: **two methods**,
 `ensureMaterialized` and `replaceItem`. That satisfies §8 (the Core knows
-nothing about SwiftUI or UIKit — it knows about a two-method trait declared in
-`ie-platform`) while keeping the hot path out of the bridge.
+nothing about SwiftUI or UIKit — it knows about a two-method trait) while
+keeping the hot path out of the bridge.
+
+> This section was written before the code. What was built is one trait with
+> both methods rather than the two single-method traits it first proposed —
+> `StorageHost`, in `ie-ffi/src/host.rs`. The surface is the same two methods;
+> only the grouping changed, and the names here were corrected afterwards to
+> match what exists.
 
 ### 4.3 App directories
 
-`IosContainerDirs` maps the four `AppDirs` methods onto the app container:
+`ContainerDirs::under_library`, built from `HostConfig::library_dir`, maps the
+four `AppDirs` methods onto the app container:
 
 | `AppDirs` | iOS location |
 |---|---|
@@ -765,7 +772,7 @@ verification steps a Mac needs.
 | Risk | Mitigation |
 |---|---|
 | `ie-core` needs changes after all | Happened twice — the index path (§4.5) and attachment placement (§4.7) — both written up before the code was touched. The standing rule holds for anything further: the change and its reasoning are argued in this document before the code is touched, and `git diff --stat src-tauri/crates/ie-core/src` must show nothing else. |
-| iCloud placeholder handling is subtler than §4.2 assumes | The `MaterializeHook` boundary is one method; widening it is a contained change. `STORAGE.md` records the exact failure modes to test on a device. |
+| iCloud placeholder handling is subtler than §4.2 assumes | The boundary is `StorageHost::ensure_materialized`, one method on one trait; widening it is a contained change. `STORAGE.md` records the exact failure modes to test on a device. |
 | UniFFI record mirroring drifts from `ie-core` | A test enumerates `ie-core`'s public model types and fails when one has no mirror. |
 | `.xcframework` build only works on macOS | The script is written and documented; CI gains a macOS job that is the first thing to run once Apple hardware is available. |
 | Bridge granularity turns out wrong for some screen | The bridge is additive; a screen needing a finer call gets one, and the coordination bracket moves with it. |
