@@ -142,10 +142,7 @@ fn map_lines(text: &str, selection: Selection, f: impl Fn(&str) -> String) -> Ed
     let (from, to) = (byte_offset(text, from16), byte_offset(text, to16));
     let (span_start, span_end) = line_span(text, from, to);
 
-    let replaced: Vec<String> = text[span_start..span_end]
-        .split('\n')
-        .map(&f)
-        .collect();
+    let replaced: Vec<String> = text[span_start..span_end].split('\n').map(&f).collect();
     let replacement = replaced.join("\n");
 
     let mut out = String::with_capacity(text.len() + replacement.len());

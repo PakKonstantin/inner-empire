@@ -74,15 +74,34 @@ reviewed. Run `xcodegen generate` after pulling.
 
 ## 5. Working on the Rust side without a Mac
 
-Most of the bridge is testable on any platform:
+Run everything CI runs, in the order CI runs it:
 
 ```sh
-cargo test -p ie-ffi                 # bridge, error mapping, record mirrors
-cargo test -p ie-core                # unchanged, must stay green
-cargo test --workspace
-cargo clippy --workspace -- -D warnings
-cargo fmt --check
+pnpm check:all
 ```
+
+That is the one to use before pushing. It exists because running the pieces
+by hand is how a late fix gets pushed unformatted: the format check comes
+first, as it does in CI, so a change made after the last `cargo fmt` cannot
+slip past.
+
+The pieces, when you want one of them:
+
+```sh
+pnpm rust:fmt:check                  # formatting, first for the reason above
+pnpm rust:clippy                     # the whole workspace, deny warnings
+pnpm rust:test:ios                   # core and platform without desktop backends
+pnpm rust:test                       # 477 tests
+pnpm ios:symbols                     # names referenced from Swift resolve
+pnpm ios:bindings                    # regenerate the Swift bindings
+pnpm ios:tokens                      # regenerate the design tokens
+```
+
+`pnpm ios:symbols` is not a type check and does not pretend to be. There is no
+Swift compiler here, so it verifies the one class of error that is mechanical —
+a design token, bridge symbol or service member referenced by a name that does
+not exist. It catches the mistake it was written for and nothing else;
+everything a compiler would catch still waits for a Mac.
 
 The iOS `FileSystem` adapter is tested on the host target against a temp
 directory, with the two callback hooks stubbed — the POSIX paths are identical,
