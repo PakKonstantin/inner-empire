@@ -78,7 +78,7 @@ for (const used of collect(appSource, /DesignTokens\.(\w+)/g)) {
 const bridgeFunctions = collect(generated, /^public func (\w+)\(/gm);
 const declaredBridgeCalls = ['diffText', 'toggleWrap', 'setHeadingLevel', 'toggleQuote',
   'toggleBullet', 'toggleTask', 'insertWikilink', 'insertTag', 'completionAt',
-  'applyCompletion'];
+  'applyCompletion', 'layoutGraph'];
 for (const name of declaredBridgeCalls) {
   if (!bridgeFunctions.has(name)) {
     problems.push(`${name}() is declared as a dependency but the bindings do not export it`);
@@ -102,7 +102,9 @@ const typesUsed = ['HostConfig', 'StorageKind', 'StorageHost', 'VaultHandle', 'O
   'Diagnostic', 'DirectoryListing', 'FolderEntry', 'FileEntry', 'FileKind', 'IndexProgress',
   'ScanReport', 'EventOutcome', 'TrashEntry', 'RenamePlan', 'RenameOutcome', 'RecoveryCandidate',
   'Property', 'OpenOutcome', 'Selection', 'EditResult', 'TextDiff', 'DiffLine', 'DiffHunk',
-  'LineChange', 'DailyNote', 'PropertyKind', 'CompletionTrigger'];
+  'LineChange', 'DailyNote', 'PropertyKind', 'CompletionTrigger',
+  'GraphOptions', 'GraphData', 'GraphNode', 'GraphNodeKind', 'GraphLayout',
+  'NodePosition', 'LayoutOptions'];
 for (const type of typesUsed) {
   if (!bridgeTypes.has(type) && new RegExp(`\\b${type}\\b`).test(appSource)) {
     problems.push(`${type} is referenced but the bindings do not define it`);

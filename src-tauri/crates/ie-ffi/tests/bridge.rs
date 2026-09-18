@@ -1106,3 +1106,142 @@ fn an_attachment_imported_on_ios_is_found_by_a_desktop_reading_the_same_vault() 
         Some(path.as_str())
     );
 }
+
+#[test]
+fn the_graph_shows_the_links_between_notes() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+
+    handle
+        .create_note("Hub.md".into(), "# Hub\n".into(), Collision::Fail)
+        .unwrap();
+    for spoke in ["A", "B", "C"] {
+        handle
+            .create_note(
+                format!("{spoke}.md"),
+                "Points at [[Hub]].\n".into(),
+                Collision::Fail,
+            )
+            .unwrap();
+    }
+    handle.scan(None).unwrap();
+
+    let graph = handle.graph(GraphOptions::default()).unwrap();
+    assert!(!graph.truncated);
+    assert_eq!(graph.nodes.len(), 4);
+    assert_eq!(graph.edges.len(), 3);
+
+    let hub = graph.nodes.iter().find(|n| n.label == "Hub").unwrap();
+    assert_eq!(hub.degree, 3, "the hub should be the busiest node");
+}
+
+#[test]
+fn an_unresolved_link_appears_in_the_graph_rather_than_vanishing() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "Note.md".into(),
+            "See [[Nowhere At All]].\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let graph = handle.graph(GraphOptions::default()).unwrap();
+    assert!(
+        graph
+            .nodes
+            .iter()
+            .any(|n| n.kind == GraphNodeKind::Unresolved),
+        "an unresolved link is a thing to notice, not to hide"
+    );
+
+    let hidden = handle
+        .graph(GraphOptions {
+            include_unresolved: false,
+            ..GraphOptions::default()
+        })
+        .unwrap();
+    assert!(!hidden
+        .nodes
+        .iter()
+        .any(|n| n.kind == GraphNodeKind::Unresolved));
+}
+
+#[test]
+fn a_local_graph_stays_near_the_note_it_centres_on() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+
+    // A chain: centre → near → far → distant.
+    handle
+        .create_note("Centre.md".into(), "To [[Near]].\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Near.md".into(), "To [[Far]].\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Far.md".into(), "To [[Distant]].\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Distant.md".into(), "# Distant\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let one = handle
+        .local_graph("Centre.md".into(), 1, GraphOptions::default())
+        .unwrap();
+    let labels: Vec<&str> = one.nodes.iter().map(|n| n.label.as_str()).collect();
+    assert!(labels.contains(&"Centre"));
+    assert!(labels.contains(&"Near"));
+    assert!(
+        !labels.contains(&"Far"),
+        "depth 1 should stop at the neighbours"
+    );
+
+    let two = handle
+        .local_graph("Centre.md".into(), 2, GraphOptions::default())
+        .unwrap();
+    assert!(two.nodes.len() > one.nodes.len());
+}
+
+#[test]
+fn a_laid_out_graph_puts_linked_notes_near_each_other() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+
+    handle
+        .create_note("A.md".into(), "To [[B]].\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("B.md".into(), "# B\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Lonely.md".into(), "# Lonely\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Alone.md".into(), "# Alone\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let graph = handle.graph(GraphOptions::default()).unwrap();
+    let layout = ie_ffi::layout::layout_graph(graph, ie_ffi::layout::LayoutOptions::default());
+
+    let at = |label: &str| {
+        layout
+            .positions
+            .iter()
+            .find(|p| p.id.contains(label))
+            .unwrap_or_else(|| panic!("no node for {label} in {:?}", layout.positions))
+    };
+    let gap = |a: &str, b: &str| {
+        let (a, b) = (at(a), at(b));
+        ((a.x - b.x).powi(2) + (a.y - b.y).powi(2)).sqrt()
+    };
+
+    assert!(
+        gap("A.md", "B.md") < gap("Lonely.md", "Alone.md"),
+        "the linked pair should sit closer than the unlinked one"
+    );
+}

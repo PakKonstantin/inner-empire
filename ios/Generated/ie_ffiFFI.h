@@ -435,6 +435,11 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_embed_for(uint64_t ptr, RustBuffe
 int64_t uniffi_ie_ffi_fn_method_vaulthandle_force_save_note(uint64_t ptr, RustBuffer path, RustBuffer content, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_GRAPH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_GRAPH
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_graph(uint64_t ptr, RustBuffer options, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_import_attachment(uint64_t ptr, RustBuffer file_name, RustBuffer bytes, RustBuffer note, RustCallStatus *_Nonnull out_status
@@ -458,6 +463,11 @@ void uniffi_ie_ffi_fn_method_vaulthandle_journal_unsaved(uint64_t ptr, RustBuffe
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_LIST_DIRECTORY
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_LIST_DIRECTORY
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_list_directory(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_LOCAL_GRAPH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_LOCAL_GRAPH
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_local_graph(uint64_t ptr, RustBuffer path, uint32_t depth, RustBuffer options, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
@@ -623,6 +633,11 @@ RustBuffer uniffi_ie_ffi_fn_func_toggle_task(RustBuffer text, RustBuffer selecti
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_WRAP
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_WRAP
 RustBuffer uniffi_ie_ffi_fn_func_toggle_wrap(RustBuffer text, RustBuffer selection, RustBuffer marker, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_LAYOUT_GRAPH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_LAYOUT_GRAPH
+RustBuffer uniffi_ie_ffi_fn_func_layout_graph(RustBuffer graph, RustBuffer options, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INFER_PROPERTY_VALUE
@@ -960,6 +975,12 @@ uint16_t uniffi_ie_ffi_checksum_func_toggle_wrap(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_LAYOUT_GRAPH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_LAYOUT_GRAPH
+uint16_t uniffi_ie_ffi_checksum_func_layout_graph(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INFER_PROPERTY_VALUE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INFER_PROPERTY_VALUE
 uint16_t uniffi_ie_ffi_checksum_func_infer_property_value(void
@@ -1056,6 +1077,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_force_save_note(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_GRAPH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_GRAPH
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_graph(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_import_attachment(void
@@ -1083,6 +1110,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_journal_unsaved(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_LIST_DIRECTORY
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_LIST_DIRECTORY
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_list_directory(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_LOCAL_GRAPH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_LOCAL_GRAPH
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_local_graph(void
     
 );
 #endif

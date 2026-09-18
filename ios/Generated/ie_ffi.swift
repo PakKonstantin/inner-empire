@@ -551,6 +551,22 @@ fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
+    typealias FfiType = Float
+    typealias SwiftType = Float
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Float {
+        return try lift(readFloat(&buf))
+    }
+
+    public static func write(_ value: Float, into buf: inout [UInt8]) {
+        writeFloat(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
     typealias FfiType = Double
     typealias SwiftType = Double
@@ -1543,6 +1559,15 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func forceSaveNote(path: String, content: String) throws  -> Int64
     
     /**
+     * The whole vault as a graph.
+     *
+     * Capped by `max_nodes`, so a huge vault degrades into a truncated graph
+     * rather than a frozen screen — and `GraphData::truncated` says so, so the
+     * view can tell the user instead of quietly showing part of their notes.
+     */
+    func graph(options: GraphOptions) throws  -> GraphData
+    
+    /**
      * Write a file into the vault and return where it landed.
      *
      * Where that is comes from the vault's own settings, decided by the core,
@@ -1580,6 +1605,14 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
      * thousand.
      */
     func listDirectory(path: String) throws  -> DirectoryListing
+    
+    /**
+     * The neighbourhood around one note, `depth` links out.
+     *
+     * Undirected: a note you link to and a note that links to you are both
+     * neighbours, because both are things you would want to see from here.
+     */
+    func localGraph(path: String, depth: UInt32, options: GraphOptions) throws  -> GraphData
     
     /**
      * A daily note, creating it from the template if it is not there yet.
@@ -1928,6 +1961,23 @@ open func forceSaveNote(path: String, content: String)throws  -> Int64  {
 }
     
     /**
+     * The whole vault as a graph.
+     *
+     * Capped by `max_nodes`, so a huge vault degrades into a truncated graph
+     * rather than a frozen screen — and `GraphData::truncated` says so, so the
+     * view can tell the user instead of quietly showing part of their notes.
+     */
+open func graph(options: GraphOptions)throws  -> GraphData  {
+    return try  FfiConverterTypeGraphData_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_graph(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeGraphOptions_lower(options),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Write a file into the vault and return where it landed.
      *
      * Where that is comes from the vault's own settings, decided by the core,
@@ -2002,6 +2052,24 @@ open func listDirectory(path: String)throws  -> DirectoryListing  {
     uniffi_ie_ffi_fn_method_vaulthandle_list_directory(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The neighbourhood around one note, `depth` links out.
+     *
+     * Undirected: a note you link to and a note that links to you are both
+     * neighbours, because both are things you would want to see from here.
+     */
+open func localGraph(path: String, depth: UInt32, options: GraphOptions)throws  -> GraphData  {
+    return try  FfiConverterTypeGraphData_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_local_graph(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(path),
+        FfiConverterUInt32.lower(depth),
+        FfiConverterTypeGraphOptions_lower(options),uniffiCallStatus
     )
 })
 }
@@ -3236,6 +3304,92 @@ public func FfiConverterTypeGraphEdge_lower(_ value: GraphEdge) -> RustBuffer {
 }
 
 
+public struct GraphLayout: Equatable, Hashable {
+    public var positions: [NodePosition]
+    /**
+     * The bounding box, so the view can fit the graph without measuring it.
+     */
+    public var minX: Float
+    public var minY: Float
+    public var maxX: Float
+    public var maxY: Float
+    /**
+     * How many passes it took to settle, or the cap if it did not.
+     */
+    public var iterations: UInt32
+    public var settled: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(positions: [NodePosition], 
+        /**
+         * The bounding box, so the view can fit the graph without measuring it.
+         */minX: Float, minY: Float, maxX: Float, maxY: Float, 
+        /**
+         * How many passes it took to settle, or the cap if it did not.
+         */iterations: UInt32, settled: Bool) {
+        self.positions = positions
+        self.minX = minX
+        self.minY = minY
+        self.maxX = maxX
+        self.maxY = maxY
+        self.iterations = iterations
+        self.settled = settled
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GraphLayout: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGraphLayout: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GraphLayout {
+        return
+            try GraphLayout(
+                positions: FfiConverterSequenceTypeNodePosition.read(from: &buf), 
+                minX: FfiConverterFloat.read(from: &buf), 
+                minY: FfiConverterFloat.read(from: &buf), 
+                maxX: FfiConverterFloat.read(from: &buf), 
+                maxY: FfiConverterFloat.read(from: &buf), 
+                iterations: FfiConverterUInt32.read(from: &buf), 
+                settled: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GraphLayout, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeNodePosition.write(value.positions, into: &buf)
+        FfiConverterFloat.write(value.minX, into: &buf)
+        FfiConverterFloat.write(value.minY, into: &buf)
+        FfiConverterFloat.write(value.maxX, into: &buf)
+        FfiConverterFloat.write(value.maxY, into: &buf)
+        FfiConverterUInt32.write(value.iterations, into: &buf)
+        FfiConverterBool.write(value.settled, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphLayout_lift(_ buf: RustBuffer) throws -> GraphLayout {
+    return try FfiConverterTypeGraphLayout.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphLayout_lower(_ value: GraphLayout) -> RustBuffer {
+    return FfiConverterTypeGraphLayout.lower(value)
+}
+
+
 public struct GraphNode: Equatable, Hashable {
     public var id: String
     public var path: VaultPath?
@@ -3313,6 +3467,97 @@ public func FfiConverterTypeGraphNode_lift(_ buf: RustBuffer) throws -> GraphNod
 #endif
 public func FfiConverterTypeGraphNode_lower(_ value: GraphNode) -> RustBuffer {
     return FfiConverterTypeGraphNode.lower(value)
+}
+
+
+/**
+ * What to include in a graph.
+ */
+public struct GraphOptions: Equatable, Hashable {
+    public var includeAttachments: Bool
+    /**
+     * Link targets with no file behind them. On by default: an unresolved
+     * link is a thing to notice, not to hide.
+     */
+    public var includeUnresolved: Bool
+    public var includeTags: Bool
+    /**
+     * Only notes inside this folder, when set.
+     */
+    public var folder: VaultPath?
+    /**
+     * A cap, so a huge vault truncates rather than freezing the screen.
+     * Lower than the desktop's default: this is a phone.
+     */
+    public var maxNodes: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(includeAttachments: Bool = false, 
+        /**
+         * Link targets with no file behind them. On by default: an unresolved
+         * link is a thing to notice, not to hide.
+         */includeUnresolved: Bool = true, includeTags: Bool = false, 
+        /**
+         * Only notes inside this folder, when set.
+         */folder: VaultPath? = nil, 
+        /**
+         * A cap, so a huge vault truncates rather than freezing the screen.
+         * Lower than the desktop's default: this is a phone.
+         */maxNodes: UInt32 = UInt32(800)) {
+        self.includeAttachments = includeAttachments
+        self.includeUnresolved = includeUnresolved
+        self.includeTags = includeTags
+        self.folder = folder
+        self.maxNodes = maxNodes
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GraphOptions: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGraphOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GraphOptions {
+        return
+            try GraphOptions(
+                includeAttachments: FfiConverterBool.read(from: &buf), 
+                includeUnresolved: FfiConverterBool.read(from: &buf), 
+                includeTags: FfiConverterBool.read(from: &buf), 
+                folder: FfiConverterOptionTypeVaultPath.read(from: &buf), 
+                maxNodes: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GraphOptions, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.includeAttachments, into: &buf)
+        FfiConverterBool.write(value.includeUnresolved, into: &buf)
+        FfiConverterBool.write(value.includeTags, into: &buf)
+        FfiConverterOptionTypeVaultPath.write(value.folder, into: &buf)
+        FfiConverterUInt32.write(value.maxNodes, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphOptions_lift(_ buf: RustBuffer) throws -> GraphOptions {
+    return try FfiConverterTypeGraphOptions.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphOptions_lower(_ value: GraphOptions) -> RustBuffer {
+    return FfiConverterTypeGraphOptions.lower(value)
 }
 
 
@@ -3555,6 +3800,84 @@ public func FfiConverterTypeIndexProgress_lower(_ value: IndexProgress) -> RustB
 }
 
 
+public struct LayoutOptions: Equatable, Hashable {
+    /**
+     * Cap on passes. A phone should not spend a second on a graph the user is
+     * about to pan away from.
+     */
+    public var maxIterations: UInt32
+    /**
+     * Stop early once nothing is moving much.
+     */
+    public var settleThreshold: Float
+    /**
+     * Roughly how far apart unconnected nodes want to be.
+     */
+    public var spacing: Float
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Cap on passes. A phone should not spend a second on a graph the user is
+         * about to pan away from.
+         */maxIterations: UInt32 = UInt32(300), 
+        /**
+         * Stop early once nothing is moving much.
+         */settleThreshold: Float = Float(0.01), 
+        /**
+         * Roughly how far apart unconnected nodes want to be.
+         */spacing: Float = Float(60.0)) {
+        self.maxIterations = maxIterations
+        self.settleThreshold = settleThreshold
+        self.spacing = spacing
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LayoutOptions: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLayoutOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LayoutOptions {
+        return
+            try LayoutOptions(
+                maxIterations: FfiConverterUInt32.read(from: &buf), 
+                settleThreshold: FfiConverterFloat.read(from: &buf), 
+                spacing: FfiConverterFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LayoutOptions, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.maxIterations, into: &buf)
+        FfiConverterFloat.write(value.settleThreshold, into: &buf)
+        FfiConverterFloat.write(value.spacing, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLayoutOptions_lift(_ buf: RustBuffer) throws -> LayoutOptions {
+    return try FfiConverterTypeLayoutOptions.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLayoutOptions_lower(_ value: LayoutOptions) -> RustBuffer {
+    return FfiConverterTypeLayoutOptions.lower(value)
+}
+
+
 public struct Link: Equatable, Hashable {
     public var kind: LinkKind
     /**
@@ -3646,6 +3969,79 @@ public func FfiConverterTypeLink_lift(_ buf: RustBuffer) throws -> Link {
 #endif
 public func FfiConverterTypeLink_lower(_ value: Link) -> RustBuffer {
     return FfiConverterTypeLink.lower(value)
+}
+
+
+/**
+ * A node's place on the canvas.
+ */
+public struct NodePosition: Equatable, Hashable {
+    public var id: String
+    public var x: Float
+    public var y: Float
+    /**
+     * Radius, from the node's degree. Carried here so the view does not have
+     * to invent a scale that then differs between platforms.
+     */
+    public var radius: Float
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, x: Float, y: Float, 
+        /**
+         * Radius, from the node's degree. Carried here so the view does not have
+         * to invent a scale that then differs between platforms.
+         */radius: Float) {
+        self.id = id
+        self.x = x
+        self.y = y
+        self.radius = radius
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NodePosition: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNodePosition: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NodePosition {
+        return
+            try NodePosition(
+                id: FfiConverterString.read(from: &buf), 
+                x: FfiConverterFloat.read(from: &buf), 
+                y: FfiConverterFloat.read(from: &buf), 
+                radius: FfiConverterFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NodePosition, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterFloat.write(value.x, into: &buf)
+        FfiConverterFloat.write(value.y, into: &buf)
+        FfiConverterFloat.write(value.radius, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNodePosition_lift(_ buf: RustBuffer) throws -> NodePosition {
+    return try FfiConverterTypeNodePosition.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNodePosition_lower(_ value: NodePosition) -> RustBuffer {
+    return FfiConverterTypeNodePosition.lower(value)
 }
 
 
@@ -6955,6 +7351,31 @@ fileprivate struct FfiConverterSequenceTypeLink: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeNodePosition: FfiConverterRustBuffer {
+    typealias SwiftType = [NodePosition]
+
+    public static func write(_ value: [NodePosition], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeNodePosition.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [NodePosition] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [NodePosition]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeNodePosition.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeProperty: FfiConverterRustBuffer {
     typealias SwiftType = [Property]
 
@@ -7408,6 +7829,23 @@ public func toggleWrap(text: String, selection: Selection, marker: String) -> Ed
 })
 }
 /**
+ * Position a graph's nodes.
+ *
+ * Fruchterman–Reingold: repulsion between every pair, attraction along every
+ * edge, and a temperature that cools so the thing stops rather than
+ * oscillating. Chosen over anything cleverer because it is short enough to
+ * read and its behaviour is easy to state, which is what makes it testable.
+ */
+public func layoutGraph(graph: GraphData, options: LayoutOptions) -> GraphLayout  {
+    return try!  FfiConverterTypeGraphLayout_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_layout_graph(
+        FfiConverterTypeGraphData_lower(graph),
+        FfiConverterTypeLayoutOptions_lower(options),uniffiCallStatus
+    )
+})
+}
+/**
  * Work out what a typed-in property value means.
  *
  * The user types `2026-09-17` into a property field. Is that a date or a
@@ -7493,6 +7931,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_func_toggle_wrap() != 40219) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_func_layout_graph() != 50467) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_func_infer_property_value() != 58661) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7541,6 +7982,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_method_vaulthandle_force_save_note() != 29393) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_graph() != 47834) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_import_attachment() != 58335) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7554,6 +7998,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_list_directory() != 55038) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_local_graph() != 50160) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_open_daily_note() != 41015) {

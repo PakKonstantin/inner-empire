@@ -1078,3 +1078,49 @@ impl From<core_model::PropertyKind> for PropertyKind {
         }
     }
 }
+
+/// What to include in a graph.
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct GraphOptions {
+    #[uniffi(default = false)]
+    pub include_attachments: bool,
+    /// Link targets with no file behind them. On by default: an unresolved
+    /// link is a thing to notice, not to hide.
+    #[uniffi(default = true)]
+    pub include_unresolved: bool,
+    #[uniffi(default = false)]
+    pub include_tags: bool,
+    /// Only notes inside this folder, when set.
+    #[uniffi(default = None)]
+    pub folder: Option<VaultPath>,
+    /// A cap, so a huge vault truncates rather than freezing the screen.
+    /// Lower than the desktop's default: this is a phone.
+    #[uniffi(default = 800)]
+    pub max_nodes: u32,
+}
+
+impl Default for GraphOptions {
+    fn default() -> Self {
+        Self {
+            include_attachments: false,
+            include_unresolved: true,
+            include_tags: false,
+            folder: None,
+            max_nodes: 800,
+        }
+    }
+}
+
+impl TryFrom<GraphOptions> for ie_core::index::queries::GraphOptions {
+    type Error = FfiError;
+
+    fn try_from(options: GraphOptions) -> std::result::Result<Self, Self::Error> {
+        Ok(Self {
+            include_attachments: options.include_attachments,
+            include_unresolved: options.include_unresolved,
+            include_tags: options.include_tags,
+            folder: options.folder,
+            max_nodes: options.max_nodes as usize,
+        })
+    }
+}

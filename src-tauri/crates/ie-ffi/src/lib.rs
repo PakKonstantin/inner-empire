@@ -11,6 +11,7 @@ pub mod editing;
 pub mod error;
 pub mod handle;
 pub mod host;
+pub mod layout;
 pub mod types;
 
 pub use error::{FfiError, Result};

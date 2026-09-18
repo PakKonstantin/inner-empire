@@ -255,6 +255,48 @@ actor VaultService {
         try requireOpen().handle.diagnostics()
     }
 
+    // ------------------------------------------------------------ graph ----
+
+    func graph(options: GraphOptions = GraphOptions()) throws -> GraphData {
+        try requireOpen().handle.graph(options: options)
+    }
+
+    func localGraph(
+        around path: String,
+        depth: UInt32,
+        options: GraphOptions = GraphOptions()
+    ) throws -> GraphData {
+        try requireOpen().handle.localGraph(path: path, depth: depth, options: options)
+    }
+
+    // ------------------------------------------------------ attachments ----
+
+    /// File a document into the vault. Where it goes is the core's decision,
+    /// from the vault's own settings, so a phone and a desktop agree.
+    func importAttachment(
+        named fileName: String,
+        bytes: Data,
+        forNote note: String? = nil
+    ) throws -> String {
+        let (handle, storage) = try requireOpen()
+        return try storage.coordinatingRead {
+            try handle.importAttachment(fileName: fileName, bytes: bytes, note: note)
+        }
+    }
+
+    /// The Markdown that embeds an attachment in a note.
+    func embed(for attachment: String) throws -> String {
+        try requireOpen().handle.embedFor(attachment: attachment)
+    }
+
+    // ----------------------------------------------------------- dailies ----
+
+    /// Today's note, or another day's. Creates it from the template if needed.
+    func dailyNote(dayOffset: Int64 = 0) throws -> DailyNote {
+        let (handle, storage) = try requireOpen()
+        return try storage.coordinatingRead { try handle.openDailyNote(dayOffset: dayOffset) }
+    }
+
     // MARK: - Recovery
 
     /// Record an unsaved buffer so a crash or a termination does not lose it.

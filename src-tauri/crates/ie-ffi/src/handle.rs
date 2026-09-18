@@ -565,6 +565,38 @@ impl VaultHandle {
             .collect())
     }
 
+    // ------------------------------------------------------------ graph ----
+
+    /// The whole vault as a graph.
+    ///
+    /// Capped by `max_nodes`, so a huge vault degrades into a truncated graph
+    /// rather than a frozen screen — and `GraphData::truncated` says so, so the
+    /// view can tell the user instead of quietly showing part of their notes.
+    pub fn graph(&self, options: GraphOptions) -> Result<GraphData> {
+        let session = self.session()?;
+        Ok(queries::graph(session.connection(), &options.try_into()?)?.into())
+    }
+
+    /// The neighbourhood around one note, `depth` links out.
+    ///
+    /// Undirected: a note you link to and a note that links to you are both
+    /// neighbours, because both are things you would want to see from here.
+    pub fn local_graph(
+        &self,
+        path: String,
+        depth: u32,
+        options: GraphOptions,
+    ) -> Result<GraphData> {
+        let session = self.session()?;
+        Ok(queries::local_graph(
+            session.connection(),
+            &Self::path(&path)?,
+            depth as usize,
+            &options.try_into()?,
+        )?
+        .into())
+    }
+
     // ------------------------------------------------------------- tree ----
 
     /// One level of the tree, read on demand.
