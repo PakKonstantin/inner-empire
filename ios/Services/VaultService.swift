@@ -255,6 +255,31 @@ actor VaultService {
         try requireOpen().handle.diagnostics()
     }
 
+    // ---------------------------------------------------------- queries ----
+
+    /// The notes changed most recently, anywhere — a note edited on a desktop
+    /// is recent here too, which a per-device list would get wrong.
+    func recentNotes(limit: UInt32 = 25) throws -> [FileEntry] {
+        try requireOpen().handle.recentNotes(limit: limit)
+    }
+
+    /// A note's headings. Line numbers are zero-based.
+    func outline(of path: String) throws -> [Heading] {
+        try requireOpen().handle.outline(path: path)
+    }
+
+    func notes(withTag tag: String, limit: UInt32 = 200) throws -> [FileEntry] {
+        try requireOpen().handle.notesWithTag(tag: tag, limit: limit)
+    }
+
+    func propertyKeys() throws -> [PropertyKeyCount] {
+        try requireOpen().handle.propertyKeys()
+    }
+
+    func propertyValues(for key: String, limit: UInt32 = 20) throws -> [String] {
+        try requireOpen().handle.propertyValues(key: key, limit: limit)
+    }
+
     // ------------------------------------------------------------ graph ----
 
     func graph(options: GraphOptions = GraphOptions()) throws -> GraphData {

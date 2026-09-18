@@ -7,6 +7,8 @@ struct NoteEditorView: View {
     @State private var buffer: NoteBuffer?
     @State private var loadError: String?
     @State private var showingConflict = false
+    @State private var showingInspector = false
+    @State private var showingProperties = false
     @State private var accessory: UIView?
 
     let path: String
@@ -51,16 +53,18 @@ struct NoteEditorView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    // Backlinks and the outline are about the note you are
+                    // reading, so they belong to this screen rather than
+                    // competing with it in the tab bar.
                     Button {
-                        // Backlinks are about the note you are reading, so
-                        // they belong to this screen rather than competing
-                        // with it in the tab bar.
+                        showingInspector = true
                     } label: {
-                        Label("Backlinks", systemImage: "arrow.turn.up.left")
+                        Label("Connections", systemImage: "arrow.turn.up.left")
                     }
                     Button {
+                        showingProperties = true
                     } label: {
-                        Label("Outline", systemImage: "list.bullet.indent")
+                        Label("Properties", systemImage: "list.bullet.rectangle")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -75,6 +79,12 @@ struct NoteEditorView: View {
             // A conflict is never resolved silently; the sheet is the only way
             // past it, and it shows both versions before anything is written.
             showingConflict = state.isConflicted
+        }
+        .sheet(isPresented: $showingInspector) {
+            NavigationStack { NoteInspector(path: path, presentedModally: true) }
+        }
+        .sheet(isPresented: $showingProperties) {
+            PropertiesView(path: path)
         }
         .sheet(isPresented: $showingConflict) {
             if case .conflicted(let remote) = buffer.state {

@@ -775,7 +775,7 @@ verification steps a Mac needs.
 Written at the end of the iOS work rather than the start, so it says what is
 true rather than what was intended.
 
-**Verified here.** 545 Rust tests run on this machine, including 54 through
+**Verified here.** 552 Rust tests run on this machine, including 61 through
 the bridge and 7 that round-trip a vault between the desktop and iOS
 configurations. The bridge count rose late: an audit of which bridge methods
 no test touched found twelve, and the file-watching pipeline was among them —
@@ -811,7 +811,7 @@ catch, and everything only a device shows, is untested:
 |---|---|
 | Widgets | Phase 12. The App Group and intents it would need are in place. |
 | PhotosPicker, PDFKit viewer, document scanner | Phase 8's UI. The attachment *pipeline* underneath them is done and tested. |
-| Recent and favourites lists | Phase 6. |
+| Favourites | Phase 6. Recent notes are now exposed and tested; favourites are per-user state with nowhere agreed to put them, so they wait for that decision rather than inventing a file. |
 | Drag and drop on iPad | Phase 9. |
 | Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |
 | Plugin runtime | §70 excludes it from iOS deliberately. |

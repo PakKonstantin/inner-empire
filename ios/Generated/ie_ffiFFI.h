@@ -470,6 +470,11 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_list_directory(uint64_t ptr, Rust
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_local_graph(uint64_t ptr, RustBuffer path, uint32_t depth, RustBuffer options, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_NOTES_WITH_TAG
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_NOTES_WITH_TAG
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_notes_with_tag(uint64_t ptr, RustBuffer tag, uint32_t limit, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_open_daily_note(uint64_t ptr, int64_t day_offset, RustCallStatus *_Nonnull out_status
@@ -480,9 +485,24 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_open_daily_note(uint64_t ptr, int
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_outgoing_links(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OUTLINE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OUTLINE
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_outline(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PLAN_RENAME
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PLAN_RENAME
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_plan_rename(uint64_t ptr, RustBuffer from, RustBuffer to, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PROPERTY_KEYS
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PROPERTY_KEYS
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_property_keys(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PROPERTY_VALUES
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PROPERTY_VALUES
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_property_values(uint64_t ptr, RustBuffer key, uint32_t limit, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_PRUNE_JOURNAL
@@ -498,6 +518,11 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_quick_switch(uint64_t ptr, RustBu
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_READ_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_READ_NOTE
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_read_note(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_RECENT_NOTES
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_RECENT_NOTES
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_recent_notes(uint64_t ptr, uint32_t limit, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_RECOVERABLE
@@ -1119,6 +1144,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_local_graph(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_NOTES_WITH_TAG
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_NOTES_WITH_TAG
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_notes_with_tag(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_open_daily_note(void
@@ -1131,9 +1162,27 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_outgoing_links(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_OUTLINE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_OUTLINE
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_outline(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_PLAN_RENAME
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_PLAN_RENAME
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_plan_rename(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_PROPERTY_KEYS
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_PROPERTY_KEYS
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_property_keys(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_PROPERTY_VALUES
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_PROPERTY_VALUES
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_property_values(void
     
 );
 #endif
@@ -1152,6 +1201,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_quick_switch(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_READ_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_READ_NOTE
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_read_note(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_RECENT_NOTES
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_RECENT_NOTES
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_recent_notes(void
     
 );
 #endif

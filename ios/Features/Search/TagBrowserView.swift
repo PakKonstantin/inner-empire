@@ -18,6 +18,11 @@ struct TagBrowserView: View {
             }
         }
         .navigationTitle("Tags")
+        // The rows navigated to a route nothing handled, so tapping a tag did
+        // nothing at all. This is the screen they always implied.
+        .navigationDestination(for: TagRoute.self) { route in
+            TaggedNotesView(tag: route.tag)
+        }
         .searchable(text: $filter, prompt: Text("Filter tags"))
         .overlay {
             if tags.isEmpty {
@@ -68,7 +73,7 @@ private struct TagRow: View {
     }
 
     private func row(for tag: TagSummary, indented: Bool) -> some View {
-        NavigationLink(value: "tag:\(tag.name)") {
+        NavigationLink(value: TagRoute(tag: tag.name)) {
             HStack {
                 Text(indented ? lastComponent(tag.name) : tag.name)
                 Spacer()
@@ -88,5 +93,52 @@ private struct TagRow: View {
 
     private func lastComponent(_ name: String) -> String {
         name.split(separator: "/").last.map(String.init) ?? name
+    }
+}
+
+
+/// Which tag a row leads to.
+struct TagRoute: Hashable {
+    let tag: String
+}
+
+/// The notes carrying one tag.
+struct TaggedNotesView: View {
+    @Environment(AppModel.self) private var model
+    let tag: String
+
+    @State private var notes: [FileEntry] = []
+    @State private var loaded = false
+
+    var body: some View {
+        List(notes, id: \.path) { note in
+            NavigationLink(value: note.path) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(note.title)
+                    Text(note.path)
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.textFaint.color)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .navigationTitle("#\(tag)")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: String.self) { NoteEditorView(path: $0) }
+        .overlay {
+            if notes.isEmpty && loaded {
+                ContentUnavailableView(
+                    "No notes with this tag",
+                    systemImage: "number",
+                    description: Text("It may have been removed since the list was built.")
+                )
+            }
+        }
+        .task {
+            // Nested tags included, because the counts in the browser already
+            // promise that a parent covers its children.
+            notes = (try? await model.service.notes(withTag: tag)) ?? []
+            loaded = true
+        }
     }
 }

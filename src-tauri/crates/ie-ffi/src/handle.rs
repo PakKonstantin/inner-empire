@@ -565,6 +565,71 @@ impl VaultHandle {
             .collect())
     }
 
+    // ---------------------------------------------------------- queries ----
+
+    /// The notes touched most recently.
+    ///
+    /// What "recent" means is the index's modified time, not a list the app
+    /// keeps: a note edited on a desktop is recent on the phone too, which a
+    /// per-device list would get wrong.
+    pub fn recent_notes(&self, limit: u32) -> Result<Vec<FileEntry>> {
+        let session = self.session()?;
+        Ok(queries::recent_files(session.connection(), limit as usize)?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// A note's headings, for the outline.
+    pub fn outline(&self, path: String) -> Result<Vec<Heading>> {
+        let session = self.session()?;
+        Ok(
+            queries::headings(session.connection(), &Self::path(&path)?)?
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        )
+    }
+
+    /// Every note carrying `tag`, or a tag nested under it.
+    ///
+    /// Nested tags are included because `#project` covering `#project/alpha`
+    /// is what the tag browser's counts already promise.
+    pub fn notes_with_tag(&self, tag: String, limit: u32) -> Result<Vec<FileEntry>> {
+        let session = self.session()?;
+        Ok(
+            queries::files_with_tag(session.connection(), &tag, limit as usize)?
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        )
+    }
+
+    /// Property names already used in this vault, most common first.
+    ///
+    /// Offered while typing a new one, so a vault does not accumulate
+    /// `status`, `Status` and `state` meaning the same thing.
+    pub fn property_keys(&self) -> Result<Vec<PropertyKeyCount>> {
+        let session = self.session()?;
+        Ok(queries::property_keys(session.connection())?
+            .into_iter()
+            .map(|(key, count)| PropertyKeyCount {
+                key,
+                count: count as u32,
+            })
+            .collect())
+    }
+
+    /// Values already used for a property, for the same reason.
+    pub fn property_values(&self, key: String, limit: u32) -> Result<Vec<String>> {
+        let session = self.session()?;
+        Ok(queries::property_values(
+            session.connection(),
+            &key,
+            limit as usize,
+        )?)
+    }
+
     // ------------------------------------------------------------ graph ----
 
     /// The whole vault as a graph.

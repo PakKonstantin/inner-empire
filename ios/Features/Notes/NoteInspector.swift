@@ -15,6 +15,7 @@ struct NoteInspector: View {
 
     @State private var backlinks: [Backlink] = []
     @State private var outgoing: [ResolvedLink] = []
+    @State private var outline: [Heading] = []
     @State private var loaded = false
 
     var body: some View {
@@ -37,6 +38,21 @@ struct NoteInspector: View {
                 }
             } header: {
                 Text("Linked from \(backlinks.count)")
+            }
+
+            Section("Outline") {
+                if outline.isEmpty && loaded {
+                    Text("This note has no headings.")
+                        .foregroundStyle(DesignTokens.textMuted.color)
+                }
+                ForEach(Array(outline.enumerated()), id: \.offset) { _, heading in
+                    Text(heading.text)
+                        // Indented by depth, which is what makes an outline
+                        // readable as structure rather than a flat list.
+                        .padding(.leading, CGFloat(heading.level - 1) * DesignTokens.spacingMd)
+                        .font(heading.level <= 2 ? .callout.weight(.medium) : .callout)
+                        .accessibilityLabel(Text("Heading level \(Int(heading.level)), \(heading.text)"))
+                }
             }
 
             Section("Links out") {
@@ -83,6 +99,7 @@ struct NoteInspector: View {
     private func load() async {
         backlinks = (try? await model.service.backlinks(to: path)) ?? []
         outgoing = (try? await model.service.outgoingLinks(from: path)) ?? []
+        outline = (try? await model.service.outline(of: path)) ?? []
         loaded = true
     }
 }

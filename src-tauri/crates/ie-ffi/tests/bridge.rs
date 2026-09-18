@@ -1583,3 +1583,193 @@ fn the_case_sensitivity_of_the_mount_is_reported_rather_than_assumed() {
     let handle = fixture.open();
     let _ = handle.is_case_sensitive().unwrap();
 }
+
+// ------------------------------------------------------------- queries ----
+//
+// These back UI that already promised them: the editor's Outline menu item,
+// the tag browser's rows, and the properties sheet's claim that a name used
+// elsewhere in the vault will be suggested.
+
+#[test]
+fn the_outline_is_the_notes_headings_in_order() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "Structured.md".into(),
+            "# Title\n\nIntro.\n\n## First\n\nBody.\n\n### Deeper\n\n## Second\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let outline = handle.outline("Structured.md".into()).unwrap();
+    let shape: Vec<(u8, &str)> = outline.iter().map(|h| (h.level, h.text.as_str())).collect();
+    assert_eq!(
+        shape,
+        vec![(1, "Title"), (2, "First"), (3, "Deeper"), (2, "Second"),],
+        "the outline must keep document order and depth"
+    );
+
+    // Line numbers are ZERO-based: the first heading of a note that starts
+    // with one is at line 0, not line 1. Worth pinning, because a host that
+    // assumed otherwise would scroll one line short every time, and showing
+    // the raw number as "line 0" to a reader would be wrong as well.
+    assert_eq!(outline[0].line, 0, "{outline:?}");
+    assert!(
+        outline[1].line < outline[3].line,
+        "order must follow the document"
+    );
+}
+
+#[test]
+fn a_note_with_no_headings_has_an_empty_outline_rather_than_an_error() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "Plain.md".into(),
+            "Just a paragraph.\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+    assert!(handle.outline("Plain.md".into()).unwrap().is_empty());
+}
+
+#[test]
+fn a_heading_inside_a_code_fence_is_not_in_the_outline() {
+    // `# not a heading` inside a fence is a shell comment. An outline that
+    // listed it would send the reader to the wrong place.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "Fenced.md".into(),
+            "# Real\n\n```sh\n# not a heading\n```\n\n## Also real\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let texts: Vec<String> = handle
+        .outline("Fenced.md".into())
+        .unwrap()
+        .into_iter()
+        .map(|h| h.text)
+        .collect();
+    assert_eq!(texts, vec!["Real".to_string(), "Also real".to_string()]);
+}
+
+#[test]
+fn recent_notes_are_the_most_recently_changed_ones() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    for name in ["Old.md", "Middle.md", "Newest.md"] {
+        handle
+            .create_note(name.into(), format!("# {name}\n"), Collision::Fail)
+            .unwrap();
+        // The index stores whole milliseconds, so three files created in the
+        // same instant have no order to report.
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    handle.scan(None).unwrap();
+
+    let recent = handle.recent_notes(10).unwrap();
+    assert_eq!(
+        recent.first().map(|f| f.path.as_str()),
+        Some("Newest.md"),
+        "{recent:?}"
+    );
+    assert!(handle.recent_notes(2).unwrap().len() <= 2);
+}
+
+#[test]
+fn a_tag_lists_the_notes_that_carry_it_including_nested_ones() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "Alpha.md".into(),
+            "#project/alpha\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle
+        .create_note("Beta.md".into(), "#project/beta\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Plain.md".into(), "#project\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note("Other.md".into(), "#unrelated\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let notes = handle.notes_with_tag("project".into(), 50).unwrap();
+    let paths: Vec<&str> = notes.iter().map(|f| f.path.as_str()).collect();
+    // The tag browser's counts already promise that a parent covers its
+    // children, so this has to agree with them.
+    assert!(paths.contains(&"Alpha.md"), "{paths:?}");
+    assert!(paths.contains(&"Beta.md"), "{paths:?}");
+    assert!(paths.contains(&"Plain.md"), "{paths:?}");
+    assert!(!paths.contains(&"Other.md"), "{paths:?}");
+
+    let narrower = handle.notes_with_tag("project/alpha".into(), 50).unwrap();
+    assert_eq!(narrower.len(), 1, "{narrower:?}");
+}
+
+#[test]
+fn property_names_and_values_already_in_the_vault_are_offered() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note(
+            "A.md".into(),
+            "---\nstatus: draft\nauthor: Someone\n---\n\n# A\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle
+        .create_note(
+            "B.md".into(),
+            "---\nstatus: published\n---\n\n# B\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let keys = handle.property_keys().unwrap();
+    let status = keys.iter().find(|k| k.key == "status").expect("{keys:?}");
+    assert_eq!(status.count, 2, "two notes carry a status");
+
+    // Alphabetical, which is the core's ordering and deliberately left alone.
+    // Frequency-first would arguably suit a suggestion list better, but it
+    // would also mean the same vault listing its properties in one order on a
+    // phone and another on a desktop, and that is not worth a marginal
+    // improvement to one list. The count travels with each key, so a UI that
+    // wants to lead with the common ones can sort them itself.
+    let names: Vec<&str> = keys.iter().map(|k| k.key.as_str()).collect();
+    let mut sorted = names.clone();
+    sorted.sort_unstable();
+    assert_eq!(names, sorted, "{keys:?}");
+
+    let values = handle.property_values("status".into(), 10).unwrap();
+    assert!(values.contains(&"draft".to_string()), "{values:?}");
+    assert!(values.contains(&"published".to_string()), "{values:?}");
+}
+
+#[test]
+fn asking_about_a_property_nothing_uses_is_empty_rather_than_an_error() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle.scan(None).unwrap();
+    assert!(handle
+        .property_values("nonexistent".into(), 10)
+        .unwrap()
+        .is_empty());
+    assert!(handle
+        .notes_with_tag("nothing".into(), 10)
+        .unwrap()
+        .is_empty());
+}

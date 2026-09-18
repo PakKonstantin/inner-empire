@@ -1615,6 +1615,14 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func localGraph(path: String, depth: UInt32, options: GraphOptions) throws  -> GraphData
     
     /**
+     * Every note carrying `tag`, or a tag nested under it.
+     *
+     * Nested tags are included because `#project` covering `#project/alpha`
+     * is what the tag browser's counts already promise.
+     */
+    func notesWithTag(tag: String, limit: UInt32) throws  -> [FileEntry]
+    
+    /**
      * A daily note, creating it from the template if it is not there yet.
      *
      * `day_offset` is days from today: 0 for today, -1 for yesterday, 1 for
@@ -1631,9 +1639,27 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func outgoingLinks(path: String) throws  -> [ResolvedLink]
     
     /**
+     * A note's headings, for the outline.
+     */
+    func outline(path: String) throws  -> [Heading]
+    
+    /**
      * What a rename would do, before doing it.
      */
     func planRename(from: String, to: String) throws  -> RenamePlan
+    
+    /**
+     * Property names already used in this vault, most common first.
+     *
+     * Offered while typing a new one, so a vault does not accumulate
+     * `status`, `Status` and `state` meaning the same thing.
+     */
+    func propertyKeys() throws  -> [PropertyKeyCount]
+    
+    /**
+     * Values already used for a property, for the same reason.
+     */
+    func propertyValues(key: String, limit: UInt32) throws  -> [String]
     
     func pruneJournal(maxAgeMs: Int64) throws  -> UInt32
     
@@ -1644,6 +1670,15 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func quickSwitch(needle: String, limit: UInt32) throws  -> [FileMatch]
     
     func readNote(path: String) throws  -> Note
+    
+    /**
+     * The notes touched most recently.
+     *
+     * What "recent" means is the index's modified time, not a list the app
+     * keeps: a note edited on a desktop is recent on the phone too, which a
+     * per-device list would get wrong.
+     */
+    func recentNotes(limit: UInt32) throws  -> [FileEntry]
     
     /**
      * Buffers that were never saved, with enough context for the host to say
@@ -2075,6 +2110,23 @@ open func localGraph(path: String, depth: UInt32, options: GraphOptions)throws  
 }
     
     /**
+     * Every note carrying `tag`, or a tag nested under it.
+     *
+     * Nested tags are included because `#project` covering `#project/alpha`
+     * is what the tag browser's counts already promise.
+     */
+open func notesWithTag(tag: String, limit: UInt32)throws  -> [FileEntry]  {
+    return try  FfiConverterSequenceTypeFileEntry.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_notes_with_tag(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(tag),
+        FfiConverterUInt32.lower(limit),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * A daily note, creating it from the template if it is not there yet.
      *
      * `day_offset` is days from today: 0 for today, -1 for yesterday, 1 for
@@ -2107,6 +2159,19 @@ open func outgoingLinks(path: String)throws  -> [ResolvedLink]  {
 }
     
     /**
+     * A note's headings, for the outline.
+     */
+open func outline(path: String)throws  -> [Heading]  {
+    return try  FfiConverterSequenceTypeHeading.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_outline(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * What a rename would do, before doing it.
      */
 open func planRename(from: String, to: String)throws  -> RenamePlan  {
@@ -2116,6 +2181,35 @@ open func planRename(from: String, to: String)throws  -> RenamePlan  {
             self.uniffiCloneHandle(),
         FfiConverterString.lower(from),
         FfiConverterString.lower(to),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Property names already used in this vault, most common first.
+     *
+     * Offered while typing a new one, so a vault does not accumulate
+     * `status`, `Status` and `state` meaning the same thing.
+     */
+open func propertyKeys()throws  -> [PropertyKeyCount]  {
+    return try  FfiConverterSequenceTypePropertyKeyCount.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_property_keys(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Values already used for a property, for the same reason.
+     */
+open func propertyValues(key: String, limit: UInt32)throws  -> [String]  {
+    return try  FfiConverterSequenceString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_property_values(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(key),
+        FfiConverterUInt32.lower(limit),uniffiCallStatus
     )
 })
 }
@@ -2151,6 +2245,23 @@ open func readNote(path: String)throws  -> Note  {
     uniffi_ie_ffi_fn_method_vaulthandle_read_note(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The notes touched most recently.
+     *
+     * What "recent" means is the index's modified time, not a list the app
+     * keeps: a note edited on a desktop is recent on the phone too, which a
+     * per-device list would get wrong.
+     */
+open func recentNotes(limit: UInt32)throws  -> [FileEntry]  {
+    return try  FfiConverterSequenceTypeFileEntry.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_recent_notes(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(limit),uniffiCallStatus
     )
 })
 }
@@ -4348,6 +4459,63 @@ public func FfiConverterTypeProperty_lift(_ buf: RustBuffer) throws -> Property 
 #endif
 public func FfiConverterTypeProperty_lower(_ value: Property) -> RustBuffer {
     return FfiConverterTypeProperty.lower(value)
+}
+
+
+/**
+ * A property name and how many notes use it.
+ */
+public struct PropertyKeyCount: Equatable, Hashable {
+    public var key: String
+    public var count: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(key: String, count: UInt32) {
+        self.key = key
+        self.count = count
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PropertyKeyCount: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePropertyKeyCount: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PropertyKeyCount {
+        return
+            try PropertyKeyCount(
+                key: FfiConverterString.read(from: &buf), 
+                count: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PropertyKeyCount, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.key, into: &buf)
+        FfiConverterUInt32.write(value.count, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyKeyCount_lift(_ buf: RustBuffer) throws -> PropertyKeyCount {
+    return try FfiConverterTypePropertyKeyCount.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyKeyCount_lower(_ value: PropertyKeyCount) -> RustBuffer {
+    return FfiConverterTypePropertyKeyCount.lower(value)
 }
 
 
@@ -7401,6 +7569,31 @@ fileprivate struct FfiConverterSequenceTypeProperty: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypePropertyKeyCount: FfiConverterRustBuffer {
+    typealias SwiftType = [PropertyKeyCount]
+
+    public static func write(_ value: [PropertyKeyCount], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypePropertyKeyCount.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [PropertyKeyCount] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [PropertyKeyCount]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypePropertyKeyCount.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeRecoveryCandidate: FfiConverterRustBuffer {
     typealias SwiftType = [RecoveryCandidate]
 
@@ -8003,13 +8196,25 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_method_vaulthandle_local_graph() != 50160) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_notes_with_tag() != 60747) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_open_daily_note() != 41015) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_outgoing_links() != 29300) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_outline() != 57371) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_plan_rename() != 27654) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_property_keys() != 55722) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_property_values() != 39018) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_prune_journal() != 59931) {
@@ -8019,6 +8224,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_read_note() != 28693) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_recent_notes() != 24923) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_recoverable() != 63100) {

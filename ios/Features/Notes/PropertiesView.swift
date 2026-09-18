@@ -18,6 +18,7 @@ struct PropertiesView: View {
     @State private var saving = false
     @State private var failure: String?
     @State private var addingKey = ""
+    @State private var knownKeys: [PropertyKeyCount] = []
 
     var body: some View {
         NavigationStack {
@@ -45,8 +46,25 @@ struct PropertiesView: View {
                         Button("Add") { add() }
                             .disabled(addingKey.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
+                    // Names already in the vault, so it does not accumulate
+                    // `status`, `Status` and `state` meaning the same thing.
+                    ForEach(suggestions, id: \.key) { suggestion in
+                        Button {
+                            addingKey = suggestion.key
+                            add()
+                        } label: {
+                            HStack {
+                                Text(suggestion.key)
+                                Spacer()
+                                Text("\(Int(suggestion.count))")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(DesignTokens.textMuted.color)
+                            }
+                        }
+                        .accessibilityLabel(Text("Add \(suggestion.key), used in \(Int(suggestion.count)) notes"))
+                    }
                 } footer: {
-                    Text("Names are lowercase by convention, and a name already used elsewhere in the vault will be suggested by the desktop app too.")
+                    Text("Names are lowercase by convention. The ones already used in this vault are listed with how many notes carry them.")
                 }
 
                 if let failure {
@@ -69,6 +87,18 @@ struct PropertiesView: View {
         }
     }
 
+    /// Names the vault already uses that this note does not, narrowed by
+    /// whatever has been typed.
+    private var suggestions: [PropertyKeyCount] {
+        let used = Set(properties.map(\.key))
+        let typed = addingKey.trimmingCharacters(in: .whitespaces).lowercased()
+        return knownKeys
+            .filter { !used.contains($0.key) }
+            .filter { typed.isEmpty || $0.key.lowercased().hasPrefix(typed) }
+            .prefix(6)
+            .map { $0 }
+    }
+
     private func add() {
         let key = addingKey.trimmingCharacters(in: .whitespaces)
         guard !properties.contains(where: { $0.key == key }) else {
@@ -84,6 +114,7 @@ struct PropertiesView: View {
 
     private func load() async {
         properties = (try? await model.service.note(at: path).properties) ?? []
+        knownKeys = (try? await model.service.propertyKeys()) ?? []
         loaded = true
     }
 

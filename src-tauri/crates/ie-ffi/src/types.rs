@@ -1124,3 +1124,10 @@ impl TryFrom<GraphOptions> for ie_core::index::queries::GraphOptions {
         })
     }
 }
+
+/// A property name and how many notes use it.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PropertyKeyCount {
+    pub key: String,
+    pub count: u32,
+}
