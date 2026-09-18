@@ -1511,6 +1511,16 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func clearJournal(path: String) throws 
     
     /**
+     * Make a folder.
+     *
+     * Missing until now, which meant a phone could not organise notes at all
+     * — it could see folders the desktop had made and never create one.
+     * Case collisions are refused by the core, so `Notes` and `notes` cannot
+     * both exist and make the vault unopenable on a case-folding filesystem.
+     */
+    func createFolder(path: String) throws 
+    
+    /**
      * Create a note, returning where it landed and when it was written.
      *
      * The timestamp is returned rather than left for the caller to fetch
@@ -1909,6 +1919,23 @@ open func backlinks(path: String)throws  -> [Backlink]  {
 open func clearJournal(path: String)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
         uniffiCallStatus in
     uniffi_ie_ffi_fn_method_vaulthandle_clear_journal(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(path),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Make a folder.
+     *
+     * Missing until now, which meant a phone could not organise notes at all
+     * — it could see folders the desktop had made and never create one.
+     * Case collisions are refused by the core, so `Notes` and `notes` cannot
+     * both exist and make the vault unopenable on a case-folding filesystem.
+     */
+open func createFolder(path: String)throws   {try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_create_folder(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(path),uniffiCallStatus
     )
@@ -8233,6 +8260,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_clear_journal() != 29484) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_create_folder() != 27015) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_create_note() != 32050) {

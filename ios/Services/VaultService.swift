@@ -280,6 +280,27 @@ actor VaultService {
         try requireOpen().handle.propertyValues(key: key, limit: limit)
     }
 
+    /// Make a folder. Case collisions are refused by the core.
+    func createFolder(at path: String) throws {
+        let (handle, storage) = try requireOpen()
+        try storage.coordinatingRead { try handle.createFolder(path: path) }
+    }
+
+    /// Move a note, rewriting the links that pointed at it.
+    @discardableResult
+    func move(_ path: String, to destination: String) throws -> RenameOutcome {
+        let (handle, storage) = try requireOpen()
+        return try storage.coordinatingRead {
+            try handle.rename(from: path, to: destination)
+        }
+    }
+
+    /// What a move would touch, so "this will edit 43 other notes" can be
+    /// declined before it happens rather than undone after.
+    func planMove(_ path: String, to destination: String) throws -> RenamePlan {
+        try requireOpen().handle.planRename(from: path, to: destination)
+    }
+
     // ------------------------------------------------------- favourites ----
 
     /// Pinned notes, in the order they were pinned, reconciled against disk.

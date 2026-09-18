@@ -713,7 +713,7 @@ features → polish**.
 | 6 | Tags, Properties, recent, favourites | typing, recents and favourites: yes, tested. Views: Swift, so no |
 | 7 | Search over the shared engine | engine: yes. Views: no |
 | 8 | Attachments, PhotosPicker, PDFKit, scanner | placement and byte round-trip: yes, in `ie-core` and the bridge. The pickers and viewer: Swift, so no |
-| 9 | iPad: split view, hardware keyboard | Swift: no. Drag & drop: not built |
+| 9 | iPad: split view, hardware keyboard, drag & drop | move semantics: yes, tested. Views: Swift, so no |
 | 10 | Graph, touch gestures | layout: yes, 12 tests. View: no |
 | 11 | Sync detection, conflict UI, diff | diff: yes, 10 tests. Conflict UI: no |
 | 12 | Share extension, App Intents, widget | Swift: no. The data all three read is exposed and tested |
@@ -805,7 +805,7 @@ verification steps a Mac needs.
 Written at the end of the iOS work rather than the start, so it says what is
 true rather than what was intended.
 
-**Verified here.** 563 Rust tests run on this machine, including 68 through
+**Verified here.** 566 Rust tests run on this machine, including 71 through
 the bridge and 7 that round-trip a vault between the desktop and iOS
 configurations. The bridge count rose late: an audit of which bridge methods
 no test touched found twelve, and the file-watching pipeline was among them —
@@ -839,7 +839,6 @@ catch, and everything only a device shows, is untested:
 
 | | Why not |
 |---|---|
-| Drag and drop on iPad | Phase 9. |
 | Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |
 | Plugin runtime | §70 excludes it from iOS deliberately. |
 | Accessibility audit, performance validation, Release config | Phase 13, which needs a device. |

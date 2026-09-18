@@ -640,6 +640,17 @@ impl VaultHandle {
         )?)
     }
 
+    /// Make a folder.
+    ///
+    /// Missing until now, which meant a phone could not organise notes at all
+    /// — it could see folders the desktop had made and never create one.
+    /// Case collisions are refused by the core, so `Notes` and `notes` cannot
+    /// both exist and make the vault unopenable on a case-folding filesystem.
+    pub fn create_folder(&self, path: String) -> Result<()> {
+        let session = self.session()?;
+        Ok(session.ops().create_folder(&Self::path(&path)?)?)
+    }
+
     // ------------------------------------------------------- favourites ----
 
     /// The notes the user pinned, in the order they pinned them.

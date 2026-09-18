@@ -1895,3 +1895,95 @@ fn pinning_a_path_outside_the_vault_is_refused() {
     let handle = fixture.open();
     assert!(handle.toggle_favourite("../escape.md".into()).is_err());
 }
+
+// --------------------------------------------------------------- moving ---
+//
+// Dragging a note onto a folder is a rename into a different directory, which
+// is not the same case as renaming in place: the name may stay identical while
+// every relative path to it changes.
+
+#[test]
+fn moving_a_note_into_a_folder_keeps_the_links_pointing_at_it() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle
+        .create_note("Target.md".into(), "# Target\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note(
+            "Refers.md".into(),
+            "See [[Target]].\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    handle.create_folder("Archive".into()).unwrap();
+    handle
+        .rename("Target.md".into(), "Archive/Target.md".into())
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let links = handle.outgoing_links("Refers.md".into()).unwrap();
+    let resolved = links
+        .first()
+        .and_then(|l| l.target_path.as_ref().map(|p| p.as_str().to_string()));
+    assert_eq!(
+        resolved.as_deref(),
+        Some("Archive/Target.md"),
+        "the link should follow the note into the folder: {links:?}"
+    );
+}
+
+#[test]
+fn a_move_that_would_collide_is_reported_before_anything_is_written() {
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle.create_folder("Archive".into()).unwrap();
+    handle
+        .create_note("Note.md".into(), "# One\n".into(), Collision::Fail)
+        .unwrap();
+    handle
+        .create_note(
+            "Archive/Note.md".into(),
+            "# Another\n".into(),
+            Collision::Fail,
+        )
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    // A drag onto a folder that already holds that name must not silently
+    // overwrite someone's note.
+    assert!(
+        handle
+            .rename("Note.md".into(), "Archive/Note.md".into())
+            .is_err(),
+        "a colliding move must be refused"
+    );
+
+    // And nothing was written either way.
+    assert_eq!(
+        std::fs::read_to_string(fixture.vault.path().join("Archive/Note.md")).unwrap(),
+        "# Another\n"
+    );
+}
+
+#[test]
+fn moving_a_note_onto_the_folder_it_is_already_in_changes_nothing() {
+    // A drag that ends where it started. It must be a no-op rather than an
+    // error the user has to dismiss.
+    let fixture = Fixture::new();
+    let handle = fixture.open();
+    handle.create_folder("Notes".into()).unwrap();
+    handle
+        .create_note("Notes/Here.md".into(), "# Here\n".into(), Collision::Fail)
+        .unwrap();
+    handle.scan(None).unwrap();
+
+    let outcome = handle.rename("Notes/Here.md".into(), "Notes/Here.md".into());
+    assert!(
+        outcome.is_ok(),
+        "a move to the same place should not be an error: {outcome:?}"
+    );
+    assert!(fixture.vault.path().join("Notes/Here.md").exists());
+}

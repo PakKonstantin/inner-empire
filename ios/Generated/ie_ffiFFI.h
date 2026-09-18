@@ -400,6 +400,11 @@ RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_backlinks(uint64_t ptr, RustBuffe
 void uniffi_ie_ffi_fn_method_vaulthandle_clear_journal(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_CREATE_FOLDER
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_CREATE_FOLDER
+void uniffi_ie_ffi_fn_method_vaulthandle_create_folder(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_CREATE_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_CREATE_NOTE
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_create_note(uint64_t ptr, RustBuffer path, RustBuffer content, RustBuffer collision, RustCallStatus *_Nonnull out_status
@@ -1077,6 +1082,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_backlinks(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_CLEAR_JOURNAL
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_CLEAR_JOURNAL
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_clear_journal(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_CREATE_FOLDER
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_CREATE_FOLDER
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_create_folder(void
     
 );
 #endif
