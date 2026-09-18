@@ -1,0 +1,108 @@
+# iOS testing
+
+## 1. The layers
+
+| Layer | Framework | Runs on |
+|---|---|---|
+| Core semantics | `cargo test -p ie-core` | any host, 385 tests today |
+| Bridge | `cargo test -p ie-ffi` | any host |
+| Cross-platform vault round-trip | `cargo test -p ie-ffi --test roundtrip` | any host |
+| Swift units | XCTest | macOS |
+| UI flows | XCUITest | macOS, Simulator |
+| Device | manual checklist (§5) | physical iPhone + iPad |
+
+The first three are the ones that protect the data model, and they are
+deliberately the ones that need no Apple hardware.
+
+## 2. Bridge tests
+
+For every exported method: a success case, the error case that maps to each
+`FfiError` variant it can raise, and a `VaultPath` rejection case proving Swift
+cannot smuggle `..` past the parser.
+
+For every mirrored record type: a Rust → FFI → Rust round-trip asserting
+equality. A test enumerates `ie-core`'s public model types and fails if one has
+no mirror, so adding a field to `Note` without adding it to the bridge is a
+build failure rather than a silent omission.
+
+## 3. Cross-platform round-trip — the §63 requirement
+
+Two integration tests, both on the host.
+
+**`desktop_vault_opens_identically_through_the_ios_host`**
+
+Build a vault with `StdFileSystem`: 40 notes covering `[[Note]]`,
+`[[Note|Alias]]`, `[[Note#Heading]]`, `[[Note^block]]`, `![[embed]]`, nested
+tags, typed frontmatter (string, number, bool, date, list), an `.md` in a
+subfolder, an attachment, a `.canvas`, a saved `workspace.json`. Reopen it
+through the `ie-ffi` bridge with the iOS `FileSystem`. Assert:
+
+- every file byte-identical
+- the same resolved link set, including the same tie-breaks on ambiguity
+- the same tag counts, including nested-tag rollups
+- the same typed property values
+- the same workspace layout after a load/save cycle
+
+**`ios_vault_opens_identically_on_the_desktop_host`**
+
+The mirror: create notes, links, properties and attachments through the bridge,
+then reopen with `StdFileSystem` and assert the same five properties, plus that
+no absolute path and no backslash reached any JSON file.
+
+Case sensitivity is exercised with `MemoryFileSystem::new(false)` — the same
+technique that already tests NTFS folding behaviour on a Linux runner.
+
+## 4. Markdown conformance across three languages
+
+`tests/fixtures/markdown/` holds 8 fixtures, each a `.md` and an
+`.expected.json`. They are read by:
+
+- `src-tauri/crates/ie-core/tests/conformance.rs` (Rust)
+- `src/markdown/conformance.test.ts` (TypeScript)
+- `ios/Tests/Unit/ConformanceTests.swift` (Swift, through the bridge)
+
+If iOS ever disagrees with the desktop about what a tag is, one of these fails.
+It is the mechanism behind the "one note format" requirement.
+
+## 5. Swift tests
+
+**Unit** — view model state transitions; navigation destinations; bookmark
+resolve/stale/re-save; document lifecycle across all four `scenePhase`
+transitions; the external-modification guard (asserting the write does not
+happen); accessory-bar layout at every Dynamic Type size.
+
+**UI (XCUITest)** — the twelve flows §66 lists: launch, create vault, create
+note, edit, save, search, follow a wikilink, open backlinks, add an attachment,
+background and foreground, external modification while backgrounded, rotate.
+
+## 6. Device checklist
+
+The Simulator is not sufficient (§67) and the following are the reasons, each of
+which has to be checked on hardware:
+
+- [ ] iPhone portrait and landscape, including a notched device's safe area
+- [ ] iPad portrait and landscape, both split-view column counts
+- [ ] Hardware keyboard: ⌘N ⌘S ⌘F ⌘P ⌘W ⌘Z ⌘⇧P, and the software keyboard not appearing
+- [ ] Dynamic Type from xSmall to AX5 — no truncation, no overlap
+- [ ] Dark Mode and Increased Contrast
+- [ ] VoiceOver: every control has a label; nothing is conveyed by colour alone
+- [ ] Reduce Motion: graph and transitions
+- [ ] A real iCloud Drive vault, with a file edited on a Mac while the app is backgrounded
+- [ ] A vault with a non-materialised (`.icloud` placeholder) file
+- [ ] Storage pressure: `Library/Caches` purged, index rebuilds without data loss
+- [ ] Memory: 1000-note vault, scroll the note list, open the graph, no growth across cycles
+- [ ] Battery: a full background index does not drain visibly
+- [ ] Termination mid-write: no truncated note
+
+The iCloud and cache-purge items in particular cannot be simulated meaningfully.
+
+## 7. The test vault
+
+`cargo run -p ie-ffi --example gen-test-vault -- <dir>` produces 1000 notes with
+~4000 wikilinks on a realistic degree distribution, 60 tags including nested
+ones, typed frontmatter on every note, 40 attachments, deliberate case
+collisions and deliberate unresolved links.
+
+The generator is committed, not the vault: 1000 files would bloat the repository
+and diff badly. It is deterministic from a seed, and a manifest hash is asserted
+so "the test vault" means the same thing on every machine.
