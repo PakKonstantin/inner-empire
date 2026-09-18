@@ -392,6 +392,40 @@ pointing at a note that has since been deleted or renamed is a dead entry, and
 (`load_reconciled`). Favourites go through the same reconciliation, so the
 list cannot accumulate entries that open nothing.
 
+### 4.10 The field that disappears when the other platform saves
+
+Adding `favourites` to `Workspace` created a data-loss bug on the desktop, and
+the shape of it is worth recording because it returns every time a field is
+added to a shared record.
+
+The desktop's `workspaceStore.persist()` did not save the workspace it had
+loaded. It *rebuilt* one from the fields it manages — layout, sidebars, the
+active file — and sent that. Anything else in the file was simply not in the
+object. On the way back through serde, `#[serde(default)]` filled the gap with
+an empty list. So:
+
+1. star some notes on a phone; `favourites` is written into the vault
+2. open the desktop, which loads the workspace and ignores the field
+3. move a pane, which triggers a save
+4. the stars are gone, from the vault, on every device
+
+The only clue would have been that it happened after opening the desktop.
+
+The same bug was already there, undiscovered, for `graphState`: the store wrote
+`graphState: null` on every save, so the graph's zoom and pan had never
+persisted on the desktop at all. Nobody had noticed because the symptom — a
+graph that always opens at the default view — reads as "not implemented"
+rather than "silently discarded".
+
+The fix is not to add `favourites` to the list of fields the store copies,
+because the next field added would break the same way. `persist` now carries
+everything it does not manage, computed as the whole record minus the managed
+keys, so a new field is preserved by default and only a deliberate decision
+can drop one.
+
+A regression test in `src/state/workspaceStore.test.ts` loads a workspace with
+both fields set, persists, and asserts they survive.
+
 ### 4.8 The App Group, and why the share extension forced it
 
 A share extension is a separate process with a separate container. Two things

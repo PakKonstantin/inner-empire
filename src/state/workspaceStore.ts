@@ -38,6 +38,20 @@ export const JOURNAL_INTERVAL_MS = 5000;
 /** How often the workspace layout itself is persisted. */
 const LAYOUT_SAVE_DELAY_MS = 1200;
 
+/**
+ * Everything in a workspace this store does not own.
+ *
+ * Written as "all of it, minus the managed keys" rather than a list of the
+ * unmanaged ones: a field added to `Workspace` later is then carried by
+ * default instead of being silently dropped until someone notices.
+ */
+function unmanagedPartsOf(workspace: Workspace): Partial<Workspace> {
+  const managed = new Set(['version', 'layout', 'leftSidebar', 'rightSidebar', 'activeFile']);
+  return Object.fromEntries(
+    Object.entries(workspace).filter(([key]) => !managed.has(key)),
+  ) as Partial<Workspace>;
+}
+
 export interface Buffer {
   path: VaultPath;
   /** What the editor currently shows. */
@@ -60,6 +74,16 @@ interface WorkspaceState {
   /** Files being loaded, so a tab can show a spinner rather than "empty". */
   loading: Record<string, boolean>;
   ready: boolean;
+  /**
+   * The parts of the workspace file this store does not manage.
+   *
+   * Favourites are pinned on a phone; the graph's zoom and pan belong to the
+   * graph view. `persist` rebuilds the workspace from what it knows, so
+   * without carrying these they are replaced by whatever `serde(default)`
+   * gives — an empty list, a null — and the user's stars quietly disappear
+   * the first time the desktop saves a layout.
+   */
+  carried: Partial<Workspace>;
 
   // Lifecycle
   hydrate: () => Promise<void>;
@@ -113,6 +137,7 @@ function defaultSidebar(side: 'left' | 'right'): WorkspaceSidebar {
 }
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
+  carried: {},
   layout: tree.emptyLayout(),
   leftSidebar: defaultSidebar('left'),
   rightSidebar: defaultSidebar('right'),
@@ -127,6 +152,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
         layout: workspace.layout,
         leftSidebar: workspace.leftSidebar,
         rightSidebar: workspace.rightSidebar,
+        carried: unmanagedPartsOf(workspace),
         ready: true,
       });
       if (removed.length > 0) {
@@ -149,15 +175,21 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   async persist() {
-    const { layout, leftSidebar, rightSidebar } = get();
+    const { layout, leftSidebar, rightSidebar, carried } = get();
     const activeTab = activeTabOfLayout(layout);
     const workspace: Workspace = {
+      // Whatever this store does not manage goes back untouched, and is
+      // listed first so the managed fields below always win.
+      ...carried,
       version: 1,
       layout,
       leftSidebar,
       rightSidebar,
       activeFile: activeTab?.path ?? null,
-      graphState: null,
+      // Required by the type, so it cannot come from the spread alone — but
+      // the carried value is what goes back, and null only when there was
+      // none to begin with.
+      graphState: carried.graphState ?? null,
     };
     try {
       await api.saveWorkspace(workspace);
@@ -173,6 +205,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       layout: workspace.layout,
       leftSidebar: workspace.leftSidebar,
       rightSidebar: workspace.rightSidebar,
+      carried: unmanagedPartsOf(workspace),
       buffers: {},
     });
   },

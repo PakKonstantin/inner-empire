@@ -281,6 +281,13 @@ export interface Workspace {
   rightSidebar: WorkspaceSidebar;
   activeFile: VaultPath | null;
   graphState: unknown | null;
+  /**
+   * Notes the user pinned, in the order they pinned them.
+   *
+   * Written by the iOS client today and carried through unchanged here. The
+   * desktop has no favourites UI yet; when it grows one, this is the field.
+   */
+  favourites?: VaultPath[];
 }
 
 export type AttachmentLocation =

@@ -33,8 +33,13 @@ function filesUnder(dir, extensions) {
   return out;
 }
 
+// The frontend is in scope too: the iOS docs describe the shared workspace
+// record, and the code that reads and writes it on the desktop lives in
+// `src/`. Leaving it out produced a false positive on `graphState`, which is
+// exactly the kind of noise that gets a checker switched off.
 const source = filesUnder(join(repoRoot, 'ios'), ['.swift', '.yml', '.sh', '.mjs'])
   .concat(filesUnder(join(repoRoot, 'src-tauri/crates'), ['.rs']))
+  .concat(filesUnder(join(repoRoot, 'src'), ['.ts', '.tsx']))
   .map((f) => readFileSync(f, 'utf8'))
   .join('\n');
 
