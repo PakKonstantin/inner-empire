@@ -23,7 +23,11 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../..');
 const source = resolve(repoRoot, 'src/styles/theme.css');
-const output = resolve(repoRoot, 'ios/Services/DesignTokens.swift');
+// An explicit destination lets the freshness check generate elsewhere and
+// compare, instead of overwriting what it is checking.
+const output = process.argv[2]
+  ? resolve(process.argv[2])
+  : resolve(repoRoot, 'ios/Services/DesignTokens.swift');
 
 const css = readFileSync(source, 'utf8');
 

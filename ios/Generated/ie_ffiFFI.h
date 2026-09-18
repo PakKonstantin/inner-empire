@@ -405,6 +405,11 @@ void uniffi_ie_ffi_fn_method_vaulthandle_clear_journal(uint64_t ptr, RustBuffer 
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_create_note(uint64_t ptr, RustBuffer path, RustBuffer content, RustBuffer collision, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_DAILY_NOTE_PATH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_DAILY_NOTE_PATH
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_daily_note_path(uint64_t ptr, int64_t day_offset, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_DELETE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_DELETE
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_delete(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
@@ -420,9 +425,19 @@ void uniffi_ie_ffi_fn_method_vaulthandle_deliver_events(uint64_t ptr, RustBuffer
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_diagnostics(uint64_t ptr, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_EMBED_FOR
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_EMBED_FOR
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_embed_for(uint64_t ptr, RustBuffer attachment, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 int64_t uniffi_ie_ffi_fn_method_vaulthandle_force_save_note(uint64_t ptr, RustBuffer path, RustBuffer content, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_import_attachment(uint64_t ptr, RustBuffer file_name, RustBuffer bytes, RustBuffer note, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_INDEX_CACHE_PATH
@@ -443,6 +458,11 @@ void uniffi_ie_ffi_fn_method_vaulthandle_journal_unsaved(uint64_t ptr, RustBuffe
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_LIST_DIRECTORY
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_LIST_DIRECTORY
 RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_list_directory(uint64_t ptr, RustBuffer path, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
+RustBuffer uniffi_ie_ffi_fn_method_vaulthandle_open_daily_note(uint64_t ptr, int64_t day_offset, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_METHOD_VAULTHANDLE_OUTGOING_LINKS
@@ -603,6 +623,21 @@ RustBuffer uniffi_ie_ffi_fn_func_toggle_task(RustBuffer text, RustBuffer selecti
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_WRAP
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_WRAP
 RustBuffer uniffi_ie_ffi_fn_func_toggle_wrap(RustBuffer text, RustBuffer selection, RustBuffer marker, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INFER_PROPERTY_VALUE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INFER_PROPERTY_VALUE
+RustBuffer uniffi_ie_ffi_fn_func_infer_property_value(RustBuffer raw, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_PROPERTY_VALUE_AS_TEXT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_PROPERTY_VALUE_AS_TEXT
+RustBuffer uniffi_ie_ffi_fn_func_property_value_as_text(RustBuffer value, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_PROPERTY_VALUE_KIND
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_PROPERTY_VALUE_KIND
+RustBuffer uniffi_ie_ffi_fn_func_property_value_kind(RustBuffer value, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_IE_FFI_RUSTBUFFER_ALLOC
@@ -925,6 +960,24 @@ uint16_t uniffi_ie_ffi_checksum_func_toggle_wrap(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INFER_PROPERTY_VALUE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INFER_PROPERTY_VALUE
+uint16_t uniffi_ie_ffi_checksum_func_infer_property_value(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_PROPERTY_VALUE_AS_TEXT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_PROPERTY_VALUE_AS_TEXT
+uint16_t uniffi_ie_ffi_checksum_func_property_value_as_text(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_PROPERTY_VALUE_KIND
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_PROPERTY_VALUE_KIND
+uint16_t uniffi_ie_ffi_checksum_func_property_value_kind(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_CHANGEOBSERVER_CHANGED
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_CHANGEOBSERVER_CHANGED
 uint16_t uniffi_ie_ffi_checksum_method_changeobserver_changed(void
@@ -967,6 +1020,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_create_note(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_DAILY_NOTE_PATH
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_DAILY_NOTE_PATH
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_daily_note_path(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_DELETE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_DELETE
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_delete(void
@@ -985,9 +1044,21 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_diagnostics(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_EMBED_FOR
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_EMBED_FOR
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_embed_for(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_FORCE_SAVE_NOTE
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_force_save_note(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_IMPORT_ATTACHMENT
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_import_attachment(void
     
 );
 #endif
@@ -1012,6 +1083,12 @@ uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_journal_unsaved(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_LIST_DIRECTORY
 #define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_LIST_DIRECTORY
 uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_list_directory(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_VAULTHANDLE_OPEN_DAILY_NOTE
+uint16_t uniffi_ie_ffi_checksum_method_vaulthandle_open_daily_note(void
     
 );
 #endif

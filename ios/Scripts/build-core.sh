@@ -15,7 +15,9 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CARGO_ROOT="$REPO_ROOT/src-tauri"
-GENERATED="$REPO_ROOT/ios/Generated"
+# Overridable so a freshness check can generate into a temporary directory and
+# compare, rather than overwriting the files it is meant to be checking.
+GENERATED="${IE_BINDINGS_OUT:-$REPO_ROOT/ios/Generated}"
 FRAMEWORKS="$REPO_ROOT/ios/Frameworks"
 XCFRAMEWORK="$FRAMEWORKS/InnerEmpireCore.xcframework"
 

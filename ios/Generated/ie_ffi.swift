@@ -634,6 +634,24 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
 
 
 
@@ -1488,6 +1506,11 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func createNote(path: String, content: String, collision: Collision) throws  -> CreatedNote
     
     /**
+     * Where a daily note would be, without creating it.
+     */
+    func dailyNotePath(dayOffset: Int64) throws  -> VaultPath
+    
+    /**
      * Move to the vault's trash. Recoverable, and never a `remove_file`.
      */
     func delete(path: String) throws  -> TrashEntry
@@ -1505,11 +1528,30 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
     func diagnostics() throws  -> [Diagnostic]
     
     /**
+     * The Markdown that embeds `attachment` in a note.
+     *
+     * An image embeds inline; anything else becomes a link, because a phone
+     * rendering a 40MB video inline is a phone that has stopped responding.
+     */
+    func embedFor(attachment: String) throws  -> String
+    
+    /**
      * Write a note that the user has confirmed should replace whatever is on
      * disk. The only path that skips the external-change check, and it exists
      * so that the check is never skipped by accident.
      */
     func forceSaveNote(path: String, content: String) throws  -> Int64
+    
+    /**
+     * Write a file into the vault and return where it landed.
+     *
+     * Where that is comes from the vault's own settings, decided by the core,
+     * so a screenshot filed on a phone goes where a screenshot filed on a
+     * desktop goes. The name is sanitised there too: an iOS screenshot is
+     * called "Shot 2026-09-17 at 10:30.png", and that colon is legal here and
+     * illegal on Windows.
+     */
+    func importAttachment(fileName: String, bytes: Data, note: String?) throws  -> VaultPath
     
     /**
      * Where the index cache for this vault lives — outside the vault, in the
@@ -1538,6 +1580,20 @@ public protocol VaultHandleProtocol: AnyObject, Sendable {
      * thousand.
      */
     func listDirectory(path: String) throws  -> DirectoryListing
+    
+    /**
+     * A daily note, creating it from the template if it is not there yet.
+     *
+     * `day_offset` is days from today: 0 for today, -1 for yesterday, 1 for
+     * tomorrow. The format and folder come from the vault's settings, so the
+     * note a phone opens is the note a desktop opens rather than a second
+     * file for the same day.
+     *
+     * The clock's offset is the one the host supplied, not one read from the
+     * process — which matters here more than anywhere, because getting it
+     * wrong puts the note on the wrong day.
+     */
+    func openDailyNote(dayOffset: Int64) throws  -> DailyNote
     
     func outgoingLinks(path: String) throws  -> [ResolvedLink]
     
@@ -1788,6 +1844,19 @@ open func createNote(path: String, content: String, collision: Collision)throws 
 }
     
     /**
+     * Where a daily note would be, without creating it.
+     */
+open func dailyNotePath(dayOffset: Int64)throws  -> VaultPath  {
+    return try  FfiConverterTypeVaultPath_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_daily_note_path(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(dayOffset),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Move to the vault's trash. Recoverable, and never a `remove_file`.
      */
 open func delete(path: String)throws  -> TrashEntry  {
@@ -1827,6 +1896,22 @@ open func diagnostics()throws  -> [Diagnostic]  {
 }
     
     /**
+     * The Markdown that embeds `attachment` in a note.
+     *
+     * An image embeds inline; anything else becomes a link, because a phone
+     * rendering a 40MB video inline is a phone that has stopped responding.
+     */
+open func embedFor(attachment: String)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_embed_for(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(attachment),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * Write a note that the user has confirmed should replace whatever is on
      * disk. The only path that skips the external-change check, and it exists
      * so that the check is never skipped by accident.
@@ -1838,6 +1923,27 @@ open func forceSaveNote(path: String, content: String)throws  -> Int64  {
             self.uniffiCloneHandle(),
         FfiConverterString.lower(path),
         FfiConverterString.lower(content),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Write a file into the vault and return where it landed.
+     *
+     * Where that is comes from the vault's own settings, decided by the core,
+     * so a screenshot filed on a phone goes where a screenshot filed on a
+     * desktop goes. The name is sanitised there too: an iOS screenshot is
+     * called "Shot 2026-09-17 at 10:30.png", and that colon is legal here and
+     * illegal on Windows.
+     */
+open func importAttachment(fileName: String, bytes: Data, note: String?)throws  -> VaultPath  {
+    return try  FfiConverterTypeVaultPath_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_import_attachment(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(fileName),
+        FfiConverterData.lower(bytes),
+        FfiConverterOptionString.lower(note),uniffiCallStatus
     )
 })
 }
@@ -1896,6 +2002,28 @@ open func listDirectory(path: String)throws  -> DirectoryListing  {
     uniffi_ie_ffi_fn_method_vaulthandle_list_directory(
             self.uniffiCloneHandle(),
         FfiConverterString.lower(path),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A daily note, creating it from the template if it is not there yet.
+     *
+     * `day_offset` is days from today: 0 for today, -1 for yesterday, 1 for
+     * tomorrow. The format and folder come from the vault's settings, so the
+     * note a phone opens is the note a desktop opens rather than a second
+     * file for the same day.
+     *
+     * The clock's offset is the one the host supplied, not one read from the
+     * process — which matters here more than anywhere, because getting it
+     * wrong puts the note on the wrong day.
+     */
+open func openDailyNote(dayOffset: Int64)throws  -> DailyNote  {
+    return try  FfiConverterTypeDailyNote_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_method_vaulthandle_open_daily_note(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(dayOffset),uniffiCallStatus
     )
 })
 }
@@ -2365,6 +2493,71 @@ public func FfiConverterTypeCreatedNote_lift(_ buf: RustBuffer) throws -> Create
 #endif
 public func FfiConverterTypeCreatedNote_lower(_ value: CreatedNote) -> RustBuffer {
     return FfiConverterTypeCreatedNote.lower(value)
+}
+
+
+/**
+ * A daily note, and whether this call is what brought it into being.
+ */
+public struct DailyNote: Equatable, Hashable {
+    public var path: VaultPath
+    /**
+     * True when it was just created from the template, so the UI can say
+     * "new" rather than silently opening an empty note.
+     */
+    public var created: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(path: VaultPath, 
+        /**
+         * True when it was just created from the template, so the UI can say
+         * "new" rather than silently opening an empty note.
+         */created: Bool) {
+        self.path = path
+        self.created = created
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DailyNote: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDailyNote: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DailyNote {
+        return
+            try DailyNote(
+                path: FfiConverterTypeVaultPath.read(from: &buf), 
+                created: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DailyNote, into buf: inout [UInt8]) {
+        FfiConverterTypeVaultPath.write(value.path, into: &buf)
+        FfiConverterBool.write(value.created, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDailyNote_lift(_ buf: RustBuffer) throws -> DailyNote {
+    return try FfiConverterTypeDailyNote.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDailyNote_lower(_ value: DailyNote) -> RustBuffer {
+    return FfiConverterTypeDailyNote.lower(value)
 }
 
 
@@ -5960,6 +6153,117 @@ public func FfiConverterTypeOpenOutcome_lower(_ value: OpenOutcome) -> RustBuffe
 
 
 /**
+ * The kinds a property value can have.
+ */
+
+public enum PropertyKind: Equatable, Hashable {
+    
+    case text
+    case number
+    case checkbox
+    case date
+    case dateTime
+    case list
+    case object
+    case null
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PropertyKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePropertyKind: FfiConverterRustBuffer {
+    typealias SwiftType = PropertyKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PropertyKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .text
+        
+        case 2: return .number
+        
+        case 3: return .checkbox
+        
+        case 4: return .date
+        
+        case 5: return .dateTime
+        
+        case 6: return .list
+        
+        case 7: return .object
+        
+        case 8: return .null
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PropertyKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .text:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .number:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .checkbox:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .date:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .dateTime:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .list:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .object:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .null:
+            writeInt(&buf, Int32(8))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyKind_lift(_ buf: RustBuffer) throws -> PropertyKind {
+    return try FfiConverterTypePropertyKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePropertyKind_lower(_ value: PropertyKind) -> RustBuffer {
+    return FfiConverterTypePropertyKind.lower(value)
+}
+
+
+
+/**
  * A frontmatter value, with its type preserved.
  *
  * `Object` carries a list of entries rather than a map: the core uses a
@@ -7103,6 +7407,46 @@ public func toggleWrap(text: String, selection: Selection, marker: String) -> Ed
     )
 })
 }
+/**
+ * Work out what a typed-in property value means.
+ *
+ * The user types `2026-09-17` into a property field. Is that a date or a
+ * string? YAML says a date, the desktop already agrees, and iOS must too —
+ * otherwise the same note round-tripping between them would gain and lose
+ * quotes, and a `date:` filter would match on one platform and not the other.
+ *
+ * So the inference is the core's, exposed rather than reimplemented.
+ */
+public func inferPropertyValue(raw: String) -> PropertyValue  {
+    return try!  FfiConverterTypePropertyValue_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_infer_property_value(
+        FfiConverterString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * Render a property value the way it would be typed back in.
+ */
+public func propertyValueAsText(value: PropertyValue) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_property_value_as_text(
+        FfiConverterTypePropertyValue_lower(value),uniffiCallStatus
+    )
+})
+}
+/**
+ * What kind of editor a property needs: a switch, a date picker, a field.
+ */
+public func propertyValueKind(value: PropertyValue) -> PropertyKind  {
+    return try!  FfiConverterTypePropertyKind_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_property_value_kind(
+        FfiConverterTypePropertyValue_lower(value),uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -7149,6 +7493,15 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_func_toggle_wrap() != 40219) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_func_infer_property_value() != 58661) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_property_value_as_text() != 562) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_property_value_kind() != 2764) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_changeobserver_changed() != 61699) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7170,6 +7523,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_method_vaulthandle_create_note() != 32050) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_daily_note_path() != 8009) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_delete() != 30620) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7179,7 +7535,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_ie_ffi_checksum_method_vaulthandle_diagnostics() != 33129) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_embed_for() != 57056) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_force_save_note() != 29393) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_import_attachment() != 58335) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_index_cache_path() != 2365) {
@@ -7192,6 +7554,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_list_directory() != 55038) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_method_vaulthandle_open_daily_note() != 41015) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_vaulthandle_outgoing_links() != 29300) {

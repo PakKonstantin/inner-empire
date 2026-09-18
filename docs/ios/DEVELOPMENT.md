@@ -91,11 +91,18 @@ The pieces, when you want one of them:
 pnpm rust:fmt:check                  # formatting, first for the reason above
 pnpm rust:clippy                     # the whole workspace, deny warnings
 pnpm rust:test:ios                   # core and platform without desktop backends
-pnpm rust:test                       # 477 tests
+pnpm rust:test                       # 515 tests
+pnpm ios:generated                   # bindings and tokens match their sources
 pnpm ios:symbols                     # names referenced from Swift resolve
 pnpm ios:bindings                    # regenerate the Swift bindings
 pnpm ios:tokens                      # regenerate the design tokens
 ```
+
+`pnpm ios:generated` generates into a temporary directory and compares, rather
+than regenerating in place and asking git. Asking git cannot work before a
+commit: the files you just regenerated are exactly the uncommitted changes it
+would complain about, so the check could only ever pass after the commit it was
+meant to gate.
 
 `pnpm ios:symbols` is not a type check and does not pretend to be. There is no
 Swift compiler here, so it verifies the one class of error that is mechanical:
