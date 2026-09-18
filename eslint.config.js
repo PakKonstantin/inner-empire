@@ -7,6 +7,20 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // Build scripts run under Node, not in the app, so they are checked
+    // against Node's globals and without the TypeScript rules.
+    files: ['ios/Scripts/**/*.mjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
+  {
     // The plugin examples are browser modules the app loads at runtime, not
     // part of the build, so they are checked against browser globals and
     // without the TypeScript rules.

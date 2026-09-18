@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The share extension hands captured items to the app. That is the only
+	     reason a group exists; nothing else crosses it.
+
+	     Deliberately absent: an iCloud container (the vault is the user's own
+	     folder, reached through the picker, not a private container we own),
+	     push, keychain sharing, network extensions. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.$(IE_BUNDLE_ID_PREFIX).innerempire</string>
+	</array>
+</dict>
+</plist>

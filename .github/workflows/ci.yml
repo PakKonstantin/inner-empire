@@ -139,6 +139,18 @@ jobs:
             exit 1
           fi
 
+      # §52 asks for one design token system rather than an iOS theme that
+      # drifts from the desktop one. The Swift is generated from the same CSS
+      # the desktop uses, so a colour changed in one place changes in both.
+      - name: Design tokens match the desktop theme
+        run: |
+          node ios/Scripts/generate-tokens.mjs
+          if ! git diff --quiet -- ios/Services/DesignTokens.swift; then
+            echo "::error::ios/Services/DesignTokens.swift is stale. Run node ios/Scripts/generate-tokens.mjs and commit the result."
+            git diff --stat -- ios/Services/DesignTokens.swift
+            exit 1
+          fi
+
       # The core is meant to be hosted, not rewritten. A change to it that the
       # iOS work needed is allowed, but it has to be a deliberate one.
       - name: Core stays free of host concerns

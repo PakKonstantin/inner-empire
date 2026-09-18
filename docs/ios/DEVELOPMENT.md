@@ -35,6 +35,22 @@ Step 4 also runs on Linux, which is how the bindings are kept in review without
 a Mac. They are checked in; CI regenerates and fails on a diff, so the committed
 Swift can never lag the Rust.
 
+## 2a. Design tokens
+
+```sh
+node ios/Scripts/generate-tokens.mjs
+```
+
+Reads `src/styles/theme.css` and writes `ios/Services/DesignTokens.swift`: 42
+colours and 15 dimensions, with the light and dark values the desktop theme
+already defines. Change a colour in the CSS and regenerate; CI fails if the
+committed Swift is stale, which is what stops "the accent colour" becoming two
+values that drift.
+
+Only colours and dimensions cross. Fonts and shadows stay per-platform, because
+iOS has Dynamic Type and system materials and forcing the desktop's answers
+would be worse than not sharing at all.
+
 ## 3. Signing
 
 Never in Git. `ios/Config/Signing.xcconfig` is `.gitignore`d;

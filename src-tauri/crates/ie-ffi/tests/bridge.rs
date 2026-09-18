@@ -830,7 +830,7 @@ fn a_scan_reports_progress_and_then_costs_nothing_to_repeat() {
 fn deleting_the_index_loses_nothing() {
     let fixture = Fixture::new();
 
-    let expected = {
+    let (expected, index) = {
         let handle = fixture.open();
         handle
             .create_note(
@@ -844,15 +844,20 @@ fn deleting_the_index_loses_nothing() {
             .unwrap();
         handle.scan(None).unwrap();
         (
-            handle.backlinks("Other.md".into()).unwrap(),
-            handle.tags().unwrap(),
+            (
+                handle.backlinks("Other.md".into()).unwrap(),
+                handle.tags().unwrap(),
+            ),
+            handle.index_cache_path(),
         )
     };
 
-    // What a cache purge under storage pressure does.
-    let handle = fixture.open();
-    std::fs::remove_file(handle.index_cache_path()).unwrap();
-    drop(handle);
+    // What a cache purge under storage pressure does. The handle is closed
+    // first: SQLite holds the file open, and Windows refuses to unlink a file
+    // that something has open — which is also what a real purge looks like,
+    // since the system reclaims caches when the app is not running.
+    assert!(std::path::Path::new(&index).exists());
+    std::fs::remove_file(&index).unwrap();
 
     let handle = fixture.open();
     handle.scan(None).unwrap();

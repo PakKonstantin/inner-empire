@@ -1,0 +1,112 @@
+# The Xcode project is generated from this file.
+#
+# A checked-in .pbxproj is a three-thousand-line plist of UUID cross-references:
+# unreviewable in a diff and hostile to parallel branches. This says the same
+# thing in eighty lines, and it is what gets reviewed.
+#
+#   xcodegen generate        (after ./Scripts/build-core.sh)
+
+name: InnerEmpire
+options:
+  bundleIdPrefix: $(IE_BUNDLE_ID_PREFIX)
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    # No real credentials in Git: this reads an untracked xcconfig, and
+    # Signing.xcconfig.example shows what it needs.
+    DEVELOPMENT_TEAM: $(IE_DEVELOPMENT_TEAM)
+
+configFiles:
+  Debug: Config/Debug.xcconfig
+  Release: Config/Release.xcconfig
+
+targets:
+  InnerEmpire:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+      - path: Storage
+      - path: Services
+      - path: Features
+      - path: Editor
+      - path: Generated
+      - path: Resources
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
+    dependencies:
+      # Built by Scripts/build-core.sh. Carries the header and module map, so
+      # the target needs no search paths of its own.
+      - framework: Frameworks/InnerEmpireCore.xcframework
+        embed: false
+    info:
+      path: Resources/Info.plist
+    entitlements:
+      path: Resources/InnerEmpire.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: >-
+          UIInterfaceOrientationPortrait
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: >-
+          UIInterfaceOrientationPortrait
+          UIInterfaceOrientationPortraitUpsideDown
+          UIInterfaceOrientationLandscapeLeft
+          UIInterfaceOrientationLandscapeRight
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Belt and braces against a stale library: the script is cheap when
+        # nothing changed, and a mismatched binding is a link error at best.
+        OTHER_LDFLAGS: -ObjC
+
+  InnerEmpireTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests/Unit
+    dependencies:
+      - target: InnerEmpire
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire.tests
+
+  InnerEmpireUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - Tests/UI
+    dependencies:
+      - target: InnerEmpire
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire.uitests
+
+schemes:
+  InnerEmpire:
+    build:
+      targets:
+        InnerEmpire: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - InnerEmpireTests
+        - InnerEmpireUITests
+    archive:
+      config: Release
