@@ -4,6 +4,9 @@
 //! filesystem, so they exercise the same atomic-write and rename paths the
 //! shipped app uses.
 
+// The harness drives a real vault through the desktop adapters.
+#![cfg(feature = "desktop-backends")]
+
 use std::path::Path;
 use std::sync::Arc;
 

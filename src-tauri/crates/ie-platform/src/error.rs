@@ -30,6 +30,13 @@ pub enum PlatformError {
     #[error("filesystem watcher failed: {message}")]
     Watcher { message: String },
 
+    /// The running platform has no meaning for this operation — "reveal in the
+    /// file manager" on a phone, for instance. A typed refusal rather than a
+    /// silent no-op, so the UI can hide the affordance instead of offering
+    /// something that does nothing.
+    #[error("{operation} is not available on this platform")]
+    Unsupported { operation: &'static str },
+
     #[error("{operation} failed for {path}: {source}")]
     Io {
         operation: &'static str,
@@ -74,6 +81,7 @@ impl PlatformError {
             PlatformError::InvalidUtf8 { .. } => "invalid_utf8",
             PlatformError::NoStandardDirectory { .. } => "no_standard_directory",
             PlatformError::Watcher { .. } => "watcher_failed",
+            PlatformError::Unsupported { .. } => "unsupported",
             PlatformError::Io { .. } => "io_error",
         }
     }
@@ -87,6 +95,7 @@ pub enum PlatformKind {
     Linux,
     Windows,
     MacOs,
+    Ios,
 }
 
 impl fmt::Display for PlatformKind {
@@ -95,6 +104,7 @@ impl fmt::Display for PlatformKind {
             PlatformKind::Linux => "linux",
             PlatformKind::Windows => "windows",
             PlatformKind::MacOs => "macos",
+            PlatformKind::Ios => "ios",
         };
         f.write_str(name)
     }

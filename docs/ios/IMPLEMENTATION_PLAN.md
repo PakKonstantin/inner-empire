@@ -307,9 +307,12 @@ index.
 whose callbacks translate `presentedSubitemDidChange`,
 `presentedSubitemDidAppear`, `accommodatePresentedItemDeletion` and
 `presentedSubitemAtURL:didMoveToURL:` into the existing `FsEvent` vocabulary
-(`Created` / `Modified` / `Deleted` / `Renamed` / `Rescan`). The debounce window
-from `WatchOptions` is applied on the Swift side with a coalescing timer, giving
-the same semantics `ie-core::apply_events` already expects.
+(`Created` / `Modified` / `Deleted` / `Renamed` / `Rescan`). Swift only
+translates and pushes; the coalescing that `WatchOptions::debounce` describes
+happens in Rust, so the behaviour that matters — the quiet window, a `Rescan`
+discarding what was queued behind it, a flush on stop — is testable on any
+machine. `ie-core::apply_events` receives the same batched shape it gets from
+the desktop debouncer.
 
 `FsEvent::Rescan` is used for the cases iOS has and the desktop does not: return
 from background after the system suspended the presenter, and a bookmark that

@@ -30,6 +30,45 @@ impl Clock for SystemClock {
     }
 }
 
+/// A real clock whose UTC offset is supplied by the host rather than read from
+/// the C library.
+///
+/// `SystemClock` cannot read the local offset on Unix from a multi-threaded
+/// process — `time` refuses, because `localtime_r` is not thread-safe against a
+/// concurrent `setenv` — and silently falls back to UTC. A host that already
+/// knows the offset (iOS reads `TimeZone.current`, and is told when it changes)
+/// should pass it in instead of accepting that fallback.
+#[derive(Debug)]
+pub struct HostOffsetClock {
+    offset_seconds: std::sync::atomic::AtomicI32,
+}
+
+impl HostOffsetClock {
+    pub fn new(offset_seconds: i32) -> Self {
+        Self {
+            offset_seconds: std::sync::atomic::AtomicI32::new(offset_seconds),
+        }
+    }
+
+    /// Called when the host observes a time-zone change; the daily note's idea
+    /// of "today" must follow the device, not the device at launch.
+    pub fn set_offset_seconds(&self, offset_seconds: i32) {
+        self.offset_seconds
+            .store(offset_seconds, std::sync::atomic::Ordering::Relaxed);
+    }
+}
+
+impl Clock for HostOffsetClock {
+    fn now_ms(&self) -> i64 {
+        SystemClock.now_ms()
+    }
+
+    fn local_offset_seconds(&self) -> i32 {
+        self.offset_seconds
+            .load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
 /// A clock frozen at a fixed instant, for tests.
 #[derive(Debug, Clone, Copy)]
 pub struct FixedClock {

@@ -11,8 +11,15 @@ use std::sync::Arc;
 use crate::dirs::AppDirs;
 use crate::error::{PlatformKind, Result};
 
+// The desktop adapters need `directories` for their standard locations, so
+// they follow the same feature that gates it. iOS derives nothing and is always
+// compiled, which is what lets its adapter be tested on any host.
+#[cfg(feature = "desktop-backends")]
 pub mod linux;
+#[cfg(feature = "desktop-backends")]
 pub mod windows;
+
+pub mod ios;
 
 /// The per-OS behaviours that cannot be expressed portably.
 ///
@@ -44,10 +51,15 @@ pub trait PlatformOps: Send + Sync {
     fn open_external_url(&self, url: &str) -> Result<()>;
 }
 
-/// The adapter for the OS this binary was built for.
+/// The adapter for the desktop OS this binary was built for.
 ///
 /// Adding macOS later means adding a `macos` module and one arm here; nothing
 /// else in the workspace changes.
+///
+/// iOS is deliberately absent. Its adapter cannot be constructed without the
+/// container paths, which only the host knows, so the iOS host builds
+/// [`crate::HostServices`] explicitly instead of asking for a default.
+#[cfg(feature = "desktop-backends")]
 pub fn current() -> Arc<dyn PlatformOps> {
     #[cfg(windows)]
     {

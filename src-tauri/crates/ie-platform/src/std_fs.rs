@@ -36,12 +36,14 @@ impl StdFileSystem {
         }
     }
 
-    /// Convenience constructor using the adapter for the current OS.
+    /// Convenience constructor using the adapter for the current desktop OS.
+    /// iOS constructs `CoordinatedFileSystem` with an explicit adapter instead.
+    #[cfg(feature = "desktop-backends")]
     pub fn for_current_platform() -> Self {
         Self::new(crate::platform::current())
     }
 
-    fn temp_sibling(&self, target: &Path) -> Result<PathBuf> {
+    pub(crate) fn temp_sibling(&self, target: &Path) -> Result<PathBuf> {
         let dir = target
             .parent()
             .ok_or_else(|| PlatformError::NotADirectory {
@@ -220,8 +222,19 @@ impl FileSystem for StdFileSystem {
 mod tests {
     use super::*;
 
+    /// `StdFileSystem` uses `PlatformOps` for exactly two things — fsyncing a
+    /// directory and the case-sensitivity fallback — so any adapter exercises
+    /// the same code. Which one is available depends on the feature set, and
+    /// these tests should run under both.
     fn fs_under_test() -> StdFileSystem {
-        StdFileSystem::for_current_platform()
+        #[cfg(feature = "desktop-backends")]
+        {
+            StdFileSystem::for_current_platform()
+        }
+        #[cfg(not(feature = "desktop-backends"))]
+        {
+            StdFileSystem::new(Arc::new(crate::platform::ios::IosPlatform::new()))
+        }
     }
 
     #[test]

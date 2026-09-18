@@ -154,9 +154,14 @@ Callbacks map to the existing `FsEvent` vocabulary:
 | `presentedSubitem(at:didMoveTo:)` | `Renamed { from, to }` |
 | presenter relinquished for a long time; app resumed; bookmark was stale | `Rescan { root }` |
 
-Debounced on the Swift side with a coalescing timer using the interval from
-`WatchOptions`, so `ie-core::apply_events` receives the same batched shape it
-gets from the desktop debouncer.
+Coalescing is done in Rust, not Swift. The Swift presenter only translates and
+pushes; `PresenterWatcher` holds the events until the vault has been quiet for
+`WatchOptions::debounce` and then delivers one batch, so
+`ie-core::apply_events` receives the same shape it gets from the desktop
+debouncer. It lives in Rust because it is the part with actual behaviour — a
+quiet window, a `Rescan` that discards everything queued behind it, a flush on
+stop so a save made as the app backgrounds is not lost — and that is worth
+having under test on any machine rather than only on a device.
 
 ## 5. Writing a note safely
 

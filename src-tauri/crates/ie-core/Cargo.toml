@@ -7,6 +7,13 @@ rust-version.workspace = true
 license.workspace = true
 authors.workspace = true
 
+[features]
+default = ["desktop-backends"]
+# Propagates to `ie-platform`, whose desktop watcher and directory backends have
+# no iOS implementation. `ie-core` itself contains no conditional code either
+# way — this exists only so an iOS build can stop the dependency at the door.
+desktop-backends = ["ie-platform/desktop-backends"]
+
 [dependencies]
 ie-platform.workspace = true
 serde.workspace = true

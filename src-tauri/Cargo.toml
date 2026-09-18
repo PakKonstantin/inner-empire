@@ -11,8 +11,10 @@ authors = ["Inner Empire contributors"]
 repository = "https://github.com/pakkonstantin/inner-empire"
 
 [workspace.dependencies]
-ie-core = { path = "crates/ie-core" }
-ie-platform = { path = "crates/ie-platform" }
+# Opting in per consumer, so an iOS build can leave the desktop watcher and
+# directory backends out rather than linking code it must never call.
+ie-core = { path = "crates/ie-core", default-features = false }
+ie-platform = { path = "crates/ie-platform", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
@@ -39,8 +41,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-ie-core.workspace = true
-ie-platform.workspace = true
+ie-core = { workspace = true, features = ["desktop-backends"] }
+ie-platform = { workspace = true, features = ["desktop-backends"] }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
