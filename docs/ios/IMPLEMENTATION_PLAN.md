@@ -803,48 +803,84 @@ verification steps a Mac needs.
 ### 9.1 What is actually done, and what is not
 
 Written at the end of the iOS work rather than the start, so it says what is
-true rather than what was intended.
+true rather than what was intended. If you read one section of this document,
+read this one.
 
-**Verified here.** 566 Rust tests run on this machine, including 71 through
-the bridge and 7 that round-trip a vault between the desktop and iOS
-configurations. The bridge count rose late: an audit of which bridge methods
-no test touched found twelve, and the file-watching pipeline was among them —
-the path by which a change made outside the app reaches the index, which on
-iOS is the normal case rather than the exception. Everything in the "yes" column above is in that number.
+**Verified on this machine.** 566 Rust tests, including 71 through the bridge
+and 7 that round-trip a vault between the desktop and iOS configurations, plus
+two scale tests run explicitly (`--ignored`) against 1,000 and 10,000 notes.
+Everything in the "yes" column of the phase table is in that number.
 
-The share of the app's *logic* that ended up in Rust is larger than originally
-planned, and that was a deliberate response to the constraint: there is no
-Swift toolchain here, so logic written in Swift is logic nobody has run. The
-editing actions, completion triggers, graph layout, diff and property typing
-are all Rust for that reason. It also means the desktop and iOS cannot
-disagree about what "toggle bold" does, which is worth having regardless.
+The bridge count rose late and for a reason worth repeating: an audit of which
+bridge methods no test touched found twelve, and the file-watching pipeline was
+among them — the path by which a change made *outside* the app reaches the
+index, which on iOS is the normal case rather than the exception, because
+iCloud writes, the Files app writes, other devices write.
+
+More of the app's logic ended up in Rust than first planned. That was a
+deliberate response to the constraint: with no Swift toolchain here, logic
+written in Swift is logic nobody has run. The editing actions, completion
+triggers, graph layout, diff, property typing and attachment placement are all
+Rust for that reason. It also means the two platforms cannot disagree about
+what "toggle bold" does, which is worth having regardless of where it was
+written.
 
 **Written but never compiled.** Every `.swift` file. There is no `swiftc` or
-`xcodebuild` in this container. Four kinds of mistake are caught by
-`pnpm ios:symbols` and `pnpm ios:appgroup` — a missing design token, a missing
-`VaultService` member, a missing `VaultHandle` method, a missing bridge symbol,
-and an App Group that two targets disagree about — and each of those checks
-was added after the mistake it catches was made. Everything a compiler would
-catch, and everything only a device shows, is untested:
+`xcodebuild` in this container, and no amount of care substitutes for a
+compiler.
 
-- types, generics, protocol conformance, actor isolation, exhaustive switches
+Six classes of mistake are caught locally, by `pnpm check:all`:
+
+| Check | Catches |
+|---|---|
+| `ios:generated` | bindings or design tokens stale against their sources |
+| `ios:symbols` | a design token, `VaultService` member, `VaultHandle` method or bridge symbol that does not exist |
+| `ios:appgroup` | targets that disagree about their App Group |
+| `ios:docs` | documentation naming code that does not exist |
+| `ios:a11y` | icon-only buttons with no label; hardcoded font sizes |
+| `rust:test:ios` | the core or platform failing to build without desktop backends |
+
+Every one of those except `ios:a11y` was added *after* the mistake it catches
+had already been made and shipped. That is the honest pattern of this work:
+the checks are scar tissue, not foresight.
+
+What none of them catch, and what remains untested:
+
+- everything a compiler would say: types, generics, protocol conformance,
+  actor isolation, exhaustive switches
+- field access on a bridge record — `results.files` for `results.hits` was a
+  real bug, and a check for it measured nine false positives out of nine
+  candidates, so it is documented in `DEVELOPMENT.md` rather than built
 - whether the layout survives Dynamic Type at its largest setting
-- whether VoiceOver reads the editor and the graph usefully
+- whether VoiceOver's reading order makes sense, and whether every gesture has
+  a reachable alternative
 - whether the security-scoped access and coordination brackets behave against
-  a real iCloud Drive vault with evicted files
-- whether a 10,000-note vault opens acceptably *on a phone* (the indexing half is now measured — see below — but on container hardware in a debug build)
-- whether the share extension stays inside its memory limit
+  a real iCloud Drive vault holding evicted files
+- whether a large vault opens acceptably *on a phone*. The indexing half is
+  measured — see the table in `TESTING.md` — but on container hardware in a
+  debug build, which says nothing certain about an A-series chip and flash
+  storage
+- whether the share extension and the widget stay inside their memory limits,
+  which are far tighter than the app's
 
 **Not built at all.** Named here rather than left to be discovered:
 
 | | Why not |
 |---|---|
-| Canvas | The desktop has it; §31 does not ask for it on iOS and it was not built. |
+| Canvas | The desktop has it; §31 does not ask for it on iOS. |
 | Plugin runtime | §70 excludes it from iOS deliberately. |
-| Accessibility audit, performance validation, Release config | Phase 13, which needs a device. |
+| Accessibility audit, performance validation, Release configuration | Phase 13. All three need a Mac and a device. |
 
 **The honest summary.** The shared core and the bridge are finished and
-tested. The iOS app is written in full for the features listed as done above,
-and none of that Swift has been compiled. The next step is not more features:
-it is opening `ios/InnerEmpire.xcodeproj` on a Mac, fixing what the compiler
-says, and running the device checks in `TESTING.md`.
+tested, and three changes to `ie-core` were needed along the way — the index
+path (§4.5), attachment placement (§4.7) and favourites (§4.9) — each argued
+here before the code was touched. The iOS app is written in full for
+everything the phase table lists as done, and none of that Swift has been
+compiled.
+
+The next step is not more features. It is opening the project on a Mac, fixing
+what the compiler says, and working through `TESTING.md` in the order it gives
+— compile, then the Swift-side bridge tests, then a real iCloud vault rather
+than a local folder, because the local case exercises none of the coordination
+or placeholder handling, and that is where the data-integrity risk actually
+lives.
