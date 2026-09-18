@@ -1,0 +1,13 @@
+// Settings common to both configurations.
+//
+// Signing.xcconfig is untracked and holds the team and bundle prefix; see
+// Signing.xcconfig.example. Including it optionally means a fresh clone builds
+// for the simulator without anyone having to create it first.
+#include? "Signing.xcconfig"
+
+IE_BUNDLE_ID_PREFIX = $(IE_BUNDLE_ID_PREFIX:default=com.example)
+IE_DEVELOPMENT_TEAM = $(IE_DEVELOPMENT_TEAM:default=)
+
+CLANG_ENABLE_MODULES = YES
+SWIFT_EMIT_LOC_STRINGS = YES
+ENABLE_BITCODE = NO

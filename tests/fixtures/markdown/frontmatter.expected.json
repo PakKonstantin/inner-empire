@@ -1,0 +1,8 @@
+{
+  "links": [
+    { "kind": "wikiLink", "target": "Link", "heading": null, "blockId": null, "alias": null }
+  ],
+  "tags": ["tag"],
+  "headings": [{ "level": 1, "text": "Real Heading", "slug": "real-heading" }],
+  "blocks": []
+}

@@ -1,0 +1,294 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A new push supersedes an in-flight run on the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Everything that is platform-independent runs once rather than twice.
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` here on purpose. package.json's `packageManager` field
+      # pins pnpm, and specifying it in both places makes action-setup refuse
+      # to start rather than risk a mismatch.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  # The Rust suite runs on both targets, because the things it checks —
+  # atomic writes, case sensitivity, path handling, filesystem watching —
+  # are exactly the things that differ between them.
+  rust:
+    name: Rust on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf
+
+      - name: Formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check
+
+      # The core must stay free of Tauri and of platform conditionals. Both
+      # are checkable, so both are checked rather than left to review.
+      - name: Core has no platform conditionals
+        shell: bash
+        run: |
+          if grep -rnE '#\[cfg\((target_os|windows|unix)' src-tauri/crates/ie-core/src; then
+            echo "::error::ie-core must not contain platform conditionals; they belong in ie-platform/src/platform."
+            exit 1
+          fi
+          if grep -rn 'tauri' src-tauri/crates/ie-core/Cargo.toml; then
+            echo "::error::ie-core must not depend on Tauri."
+            exit 1
+          fi
+
+      - name: Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --workspace
+
+  # The bridge to the iOS client. The Rust half is fully checkable here; the
+  # Swift half needs a Mac, which is stated plainly in docs/ios/DEVELOPMENT.md
+  # rather than faked with a job that does not really build anything.
+  bridge:
+    name: iOS bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # The point of the feature gate is that an iOS build links neither
+      # `notify` nor `directories`. If that ever stops being true the desktop
+      # build would still pass, so it is checked on its own.
+      - name: Core and platform build without the desktop backends
+        run: |
+          cargo clippy --manifest-path src-tauri/Cargo.toml \
+            -p ie-platform -p ie-core --no-default-features --all-targets -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml \
+            -p ie-platform --no-default-features
+
+      - name: Bridge tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p ie-ffi
+
+      # The committed Swift must not lag the Rust it was generated from. The
+      # generator is pure Rust, so this runs without Xcode.
+      - name: Generated bindings are up to date
+        run: |
+          ./ios/Scripts/build-core.sh --bindings
+          if ! git diff --quiet -- ios/Generated; then
+            echo "::error::ios/Generated is stale. Run ./ios/Scripts/build-core.sh --bindings and commit the result."
+            git diff --stat -- ios/Generated
+            exit 1
+          fi
+
+      # §52 asks for one design token system rather than an iOS theme that
+      # drifts from the desktop one. The Swift is generated from the same CSS
+      # the desktop uses, so a colour changed in one place changes in both.
+      - name: Design tokens match the desktop theme
+        run: |
+          node ios/Scripts/generate-tokens.mjs
+          if ! git diff --quiet -- ios/Services/DesignTokens.swift; then
+            echo "::error::ios/Services/DesignTokens.swift is stale. Run node ios/Scripts/generate-tokens.mjs and commit the result."
+            git diff --stat -- ios/Services/DesignTokens.swift
+            exit 1
+          fi
+
+      # Not a substitute for compiling the app, which needs a Mac. It checks
+      # the one class of error that is mechanical — a name that does not
+      # exist — and it caught two real ones the day it was written.
+      - name: Swift references resolve
+        run: node ios/Scripts/check-symbols.mjs
+
+      # Neither a compiler nor the symbol check can see this one: the files
+      # are plists and a build-setting template, each individually valid. When
+      # they disagree every share fails with "choose your vault first".
+      - name: App and extension share an App Group
+        run: node ios/Scripts/check-app-group.mjs
+
+      # The docs were written before the code, which is the right order and
+      # also how they end up naming functions that were renamed since. A doc
+      # that names something nobody can find is worse than no doc.
+      - name: The docs name things that exist
+        run: node ios/Scripts/check-docs.mjs
+
+      # The mechanical subset of §53: an icon-only button VoiceOver would read
+      # as just "button", and a font size that ignores Dynamic Type. The rest
+      # of accessibility needs a device and a person.
+      - name: Accessibility problems a machine can see
+        run: node ios/Scripts/check-accessibility.mjs
+
+      # The core is meant to be hosted, not rewritten. A change to it that the
+      # iOS work needed is allowed, but it has to be a deliberate one.
+      - name: Core stays free of host concerns
+        shell: bash
+        run: |
+          if grep -rn 'uniffi' src-tauri/crates/ie-core/; then
+            echo "::error::ie-core must not know about the FFI bridge; mirrors belong in ie-ffi/src/types.rs."
+            exit 1
+          fi
+          if grep -rnE '(UIKit|SwiftUI|objc|NSFileCoordinator)' src-tauri/crates/ie-core/src; then
+            echo "::error::ie-core must not know about Apple frameworks."
+            exit 1
+          fi
+
+  # The conformance corpus is what keeps the Rust and TypeScript Markdown
+  # implementations from drifting, so it gets its own visible job.
+  conformance:
+    name: Markdown conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` here on purpose. package.json's `packageManager` field
+      # pins pnpm, and specifying it in both places makes action-setup refuse
+      # to start rather than risk a mismatch.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Rust half
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p ie-core --test conformance
+
+      - name: TypeScript half
+        run: pnpm test src/markdown/conformance.test.ts
+
+  # A desktop build on both targets, so a change that breaks packaging is
+  # caught on the branch rather than at release time.
+  desktop:
+    name: Desktop build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` here on purpose. package.json's `packageManager` field
+      # pins pnpm, and specifying it in both places makes action-setup refuse
+      # to start rather than risk a mismatch.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build the application
+        run: pnpm build && cargo build --manifest-path src-tauri/Cargo.toml --release
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No `version:` here on purpose. package.json's `packageManager` field
+      # pins pnpm, and specifying it in both places makes action-setup refuse
+      # to start rather than risk a mismatch.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install the browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

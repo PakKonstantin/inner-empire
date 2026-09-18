@@ -1,0 +1,6 @@
+// Copy to Signing.xcconfig and fill in. That file is gitignored: §72 says no
+// real signing credentials in the repository, and a template plus an ignore
+// rule is a stronger guarantee than a note asking people to be careful.
+
+IE_DEVELOPMENT_TEAM = ABCDE12345
+IE_BUNDLE_ID_PREFIX = com.example

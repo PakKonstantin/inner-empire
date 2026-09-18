@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The same group as the app. Without it the widget cannot find the vault
+	     and every refresh shows "choose your vault". -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.$(IE_BUNDLE_ID_PREFIX).innerempire</string>
+	</array>
+</dict>
+</plist>

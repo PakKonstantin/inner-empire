@@ -1,0 +1,9 @@
+{
+  "links": [
+    { "kind": "wikiLink", "target": "Yes", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "AlsoYes", "heading": null, "blockId": null, "alias": null }
+  ],
+  "tags": ["RealTag", "AlsoReal"],
+  "headings": [{ "level": 1, "text": "Code is not prose", "slug": "code-is-not-prose" }],
+  "blocks": []
+}
