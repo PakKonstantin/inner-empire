@@ -33,7 +33,7 @@ function swiftFiles(dir) {
   return out;
 }
 
-const appDirs = ['App', 'Features', 'Editor', 'Storage', 'Services', 'Tests']
+const appDirs = ['App', 'Features', 'Editor', 'Storage', 'Services', 'Tests', 'ShareExtension']
   .map((d) => join(iosRoot, d))
   .filter((d) => {
     try { return statSync(d).isDirectory(); } catch { return false; }
@@ -108,6 +108,32 @@ const typesUsed = ['HostConfig', 'StorageKind', 'StorageHost', 'VaultHandle', 'O
 for (const type of typesUsed) {
   if (!bridgeTypes.has(type) && new RegExp(`\\b${type}\\b`).test(appSource)) {
     problems.push(`${type} is referenced but the bindings do not define it`);
+  }
+}
+
+// --- VaultHandle methods ------------------------------------------------
+//
+// Added after six invented method names went in at once — `note`, `close`,
+// `saveNoteOverwriting` and others that read plausibly and do not exist. This
+// class is checkable where general calls are not, because the receiver is
+// always named `handle`: that is specific enough to have no false positives,
+// unlike guessing at bare calls.
+const handleMethods = new Set(
+  [...(generated.match(/public protocol VaultHandleProtocol[\s\S]*?\n}/) || [''])[0]
+    .matchAll(/func (\w+)/g)].map((m) => m[1])
+);
+if (handleMethods.size === 0) {
+  problems.push('could not read VaultHandleProtocol from the bindings — this check is not running');
+}
+const staticConstructors = collect(generated, /public static func (\w+)\(config:/g);
+for (const used of collect(appSource, /\bhandle\.(\w+)\s*\(/g)) {
+  if (!handleMethods.has(used)) {
+    problems.push(`VaultHandle has no method '${used}'`);
+  }
+}
+for (const used of collect(appSource, /\bVaultHandle\.(\w+)\s*\(/g)) {
+  if (!staticConstructors.has(used)) {
+    problems.push(`VaultHandle has no constructor '${used}'`);
   }
 }
 

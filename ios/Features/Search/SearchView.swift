@@ -46,7 +46,7 @@ struct SearchView: View {
             }
         }
         .navigationTitle("Search")
-        .navigationDestination(for: String.self) { NoteDetailPlaceholder(path: $0) }
+        .navigationDestination(for: String.self) { NoteEditorView(path: $0) }
         .searchable(text: $query, prompt: Text("Search notes, tags and properties"))
         .onChange(of: query) { _, text in
             // Debounced rather than per-keystroke: the index is fast, but a

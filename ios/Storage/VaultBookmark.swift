@@ -32,7 +32,10 @@ actor VaultBookmarkStore {
     private let key = "vault.bookmarks.v1"
     private let log = Logger(subsystem: Logging.subsystem, category: "bookmarks")
 
-    init(defaults: UserDefaults = .standard) {
+    /// Shared by default: a share extension cannot read the app's own
+    /// `UserDefaults.standard`, so a bookmark stored there would leave it
+    /// unable to find the vault at all.
+    init(defaults: UserDefaults = AppGroup.defaults) {
         self.defaults = defaults
     }
 

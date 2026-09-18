@@ -157,6 +157,12 @@ jobs:
       - name: Swift references resolve
         run: node ios/Scripts/check-symbols.mjs
 
+      # Neither a compiler nor the symbol check can see this one: the files
+      # are plists and a build-setting template, each individually valid. When
+      # they disagree every share fails with "choose your vault first".
+      - name: App and extension share an App Group
+        run: node ios/Scripts/check-app-group.mjs
+
       # The core is meant to be hosted, not rewritten. A change to it that the
       # iOS work needed is allowed, but it has to be a deliberate one.
       - name: Core stays free of host concerns

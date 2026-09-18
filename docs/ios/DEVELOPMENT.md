@@ -94,6 +94,7 @@ pnpm rust:test:ios                   # core and platform without desktop backend
 pnpm rust:test                       # 515 tests
 pnpm ios:generated                   # bindings and tokens match their sources
 pnpm ios:symbols                     # names referenced from Swift resolve
+pnpm ios:appgroup                    # app and extension share an App Group
 pnpm ios:bindings                    # regenerate the Swift bindings
 pnpm ios:tokens                      # regenerate the design tokens
 ```
@@ -116,6 +117,7 @@ What it covers, and how:
 | `VaultService` members | the service's own source | none |
 | Bridge types | a declared list, checked against the bindings | a new type used but not listed |
 | Bridge functions | a declared list, checked both ways | a new call added but not listed |
+| `VaultHandle` methods | the generated protocol | none, for calls on `handle` |
 
 The two declared lists are declared on purpose. Telling a function call from an
 enum case or a closure invocation needs a Swift parser; a regex that guesses

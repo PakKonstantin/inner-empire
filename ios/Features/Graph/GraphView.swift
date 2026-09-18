@@ -242,7 +242,7 @@ private struct GraphNodeSheet: View {
             }
             .navigationTitle(graphNode?.label ?? "Note")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: String.self) { NoteDetailPlaceholder(path: $0) }
+            .navigationDestination(for: String.self) { NoteEditorView(path: $0) }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

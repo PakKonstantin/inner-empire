@@ -14,5 +14,8 @@ struct InnerEmpireApp: App {
         .onChange(of: scenePhase) { _, phase in
             Task { await model.scenePhaseChanged(to: phase) }
         }
+        // On iPad this is both the menu bar and the overlay you get by holding
+        // ⌘, which is how anyone discovers these exist.
+        .commands { AppCommands() }
     }
 }

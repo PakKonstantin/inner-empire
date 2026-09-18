@@ -364,6 +364,34 @@ launch is a directory walk and a handful of reads. A purged cache is detected by
 `OpenOutcome::Created` and triggers a background rebuild with progress, exactly
 as the desktop does after a schema change.
 
+### 4.8 The App Group, and why the share extension forced it
+
+A share extension is a separate process with a separate container. Two things
+have to cross that boundary, and neither does by default:
+
+- **The vault bookmark.** It was in `UserDefaults.standard`, which the
+  extension cannot read. Without a shared suite the extension has no way to
+  find the vault at all, and every share fails with "choose your vault first".
+- **The index.** Each process has its own Library directory, so an extension
+  using its own would build a *second* index — pointless work for a share
+  sheet that lives three seconds.
+
+Both now live in an App Group, and `hostConfig` and `storageKind` stopped being
+private so the extension reaches the same verdict through the same code rather
+than a second copy that drifts. One process coordinating its reads while the
+other did not would be a data race nobody could reproduce.
+
+The identifier itself is worth a note. It was written in three places — both
+entitlements files and a Swift constant — and they disagreed within minutes of
+the second one being written: the app's was a build-setting template, the
+extension's a literal, and the Swift a third value. Nothing catches that. It is
+not a type error, both plists are valid, and the only symptom is every share
+failing with a message pointing nowhere near the cause.
+
+So the Swift derives the group from the bundle identifier, the entitlements use
+the same template, and `ios/Scripts/check-app-group.mjs` fails the build if
+they stop agreeing or if the Swift goes back to a literal.
+
 ### 4.7 Attachment placement belongs in the core
 
 **Change 2 of 2 to `ie-core`.** Where a new attachment goes — a vault-wide

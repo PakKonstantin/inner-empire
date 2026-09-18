@@ -69,7 +69,7 @@ struct NotesView: View {
             case .folder(let path):
                 NotesView(selection: $selection).task { await load(path) }
             case .note(let path):
-                NoteDetailPlaceholder(path: path)
+                NoteEditorView(path: path)
             }
         }
         .task { await load(folder) }

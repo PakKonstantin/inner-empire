@@ -95,6 +95,7 @@ private extension PhoneShell.Tab {
 /// backlinks can be visible at once — which is the actual reason to use an
 /// iPad for this rather than a phone.
 private struct PadShell: View {
+    @Environment(AppModel.self) private var model
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var selectedNote: String?
 
@@ -104,10 +105,18 @@ private struct PadShell: View {
                 NotesView(selection: $selectedNote)
                     .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 420)
             } content: {
-                NoteDetailPlaceholder(path: selectedNote)
+                if let selectedNote {
+                    NavigationStack { NoteEditorView(path: selectedNote) }
+                } else {
+                    ContentUnavailableView(
+                        "No note selected",
+                        systemImage: "doc.text",
+                        description: Text("Pick a note from the list.")
+                    )
+                }
             } detail: {
                 if geometry.size.width >= 1000, let selectedNote {
-                    InspectorView(path: selectedNote)
+                    NavigationStack { NoteInspector(path: selectedNote) }
                 } else {
                     // Under three columns the inspector is a sheet from the
                     // note instead, so it is never simply missing.
@@ -115,6 +124,17 @@ private struct PadShell: View {
                 }
             }
             .navigationSplitViewStyle(.balanced)
+            .onCommand(.toggleSidebar) {
+                withAnimation {
+                    columnVisibility = columnVisibility == .all ? .detailOnly : .all
+                }
+            }
+            .onCommand(.dailyNote) {
+                Task {
+                    guard let daily = try? await model.service.dailyNote() else { return }
+                    selectedNote = daily.path
+                }
+            }
         }
     }
 }
@@ -160,35 +180,6 @@ private struct FailureView: View {
             Button("Choose another vault") {
                 Task { await model.start() }
             }
-        }
-    }
-}
-
-/// Filled in in the editor phase; here so the navigation compiles and can be
-/// walked end to end.
-struct NoteDetailPlaceholder: View {
-    let path: String?
-
-    var body: some View {
-        if let path {
-            Text(path).font(.body.monospaced())
-        } else {
-            ContentUnavailableView(
-                "No note selected",
-                systemImage: "doc.text",
-                description: Text("Pick a note from the list.")
-            )
-        }
-    }
-}
-
-struct InspectorView: View {
-    let path: String
-
-    var body: some View {
-        List {
-            Section("Backlinks") { Text("…") }
-            Section("Outline") { Text("…") }
         }
     }
 }

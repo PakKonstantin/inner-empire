@@ -96,6 +96,43 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire.uitests
 
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+      # Shared rather than duplicated: the extension reaches the vault the
+      # same way the app does, and two copies of that would drift.
+      - path: Storage
+      - path: Services
+      - path: Generated
+    dependencies:
+      - target: InnerEmpire
+        embed: false
+      - framework: Frameworks/libie_ffi.a
+        embed: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(IE_BUNDLE_ID_PREFIX).innerempire.share
+        INFOPLIST_KEY_CFBundleDisplayName: Save to Vault
+        SWIFT_OBJC_BRIDGING_HEADER: Generated/ie_ffiFFI.h
+    entitlements:
+      path: Resources/ShareExtension.entitlements
+    info:
+      path: Resources/ShareExtension-Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            # What the sheet offers to accept. Narrow on purpose: offering to
+            # take anything and then failing is worse than not appearing.
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 10
+              NSExtensionActivationSupportsFileWithMaxCount: 10
+
 schemes:
   InnerEmpire:
     build:

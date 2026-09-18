@@ -381,7 +381,10 @@ actor VaultService {
 
     /// A vault behind a File Provider needs coordination and can hold evicted
     /// files; one in the app's own container needs neither.
-    private static func storageKind(for url: URL) -> StorageKind {
+    /// Not private, for the same reason as `hostConfig`: the share extension
+    /// has to reach the same verdict, and a second copy that drifted would
+    /// have one process coordinating its reads and the other not.
+    static func storageKind(for url: URL) -> StorageKind {
         let values = try? url.resourceValues(forKeys: [.isUbiquitousItemKey])
         if values?.isUbiquitousItem == true { return .fileProvider }
         // Anything outside our container arrived through the document picker,
@@ -395,9 +398,16 @@ actor VaultService {
             : .fileProvider
     }
 
-    private static func hostConfig(kind: StorageKind) throws -> HostConfig {
-        guard let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
-        else {
+    /// Not private: the share extension builds the same config, and two
+    /// copies of this would eventually disagree about the index location or
+    /// the UTC offset — the second of which would file a shared note on the
+    /// wrong day.
+    static func hostConfig(kind: StorageKind) throws -> HostConfig {
+        // The shared container first, so the app and its extensions use one
+        // index rather than building one each.
+        let library = AppGroup.libraryURL
+            ?? FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first
+        guard let library else {
             throw VaultStorageError.underlying("the app container has no Library directory")
         }
         return HostConfig(
