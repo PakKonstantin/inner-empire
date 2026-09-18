@@ -555,6 +555,46 @@ void uniffi_ie_ffi_fn_method_storagehost_ensure_materialized(uint64_t ptr, RustB
 void uniffi_ie_ffi_fn_method_storagehost_replace_item(uint64_t ptr, RustBuffer relative_target, RustBuffer relative_source, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_DIFF_TEXT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_DIFF_TEXT
+RustBuffer uniffi_ie_ffi_fn_func_diff_text(RustBuffer local, RustBuffer remote, uint32_t context_lines, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INSERT_TAG
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INSERT_TAG
+RustBuffer uniffi_ie_ffi_fn_func_insert_tag(RustBuffer text, RustBuffer selection, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INSERT_WIKILINK
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_INSERT_WIKILINK
+RustBuffer uniffi_ie_ffi_fn_func_insert_wikilink(RustBuffer text, RustBuffer selection, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_SET_HEADING_LEVEL
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_SET_HEADING_LEVEL
+RustBuffer uniffi_ie_ffi_fn_func_set_heading_level(RustBuffer text, RustBuffer selection, uint8_t level, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_BULLET
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_BULLET
+RustBuffer uniffi_ie_ffi_fn_func_toggle_bullet(RustBuffer text, RustBuffer selection, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_QUOTE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_QUOTE
+RustBuffer uniffi_ie_ffi_fn_func_toggle_quote(RustBuffer text, RustBuffer selection, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_TASK
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_TASK
+RustBuffer uniffi_ie_ffi_fn_func_toggle_task(RustBuffer text, RustBuffer selection, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_WRAP
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_FN_FUNC_TOGGLE_WRAP
+RustBuffer uniffi_ie_ffi_fn_func_toggle_wrap(RustBuffer text, RustBuffer selection, RustBuffer marker, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_FFI_IE_FFI_RUSTBUFFER_ALLOC
 #define UNIFFI_FFIDEF_FFI_IE_FFI_RUSTBUFFER_ALLOC
 RustBuffer ffi_ie_ffi_rustbuffer_alloc(uint64_t size, RustCallStatus *_Nonnull out_status
@@ -813,6 +853,54 @@ void ffi_ie_ffi_rust_future_free_void(uint64_t handle
 #ifndef UNIFFI_FFIDEF_FFI_IE_FFI_RUST_FUTURE_COMPLETE_VOID
 #define UNIFFI_FFIDEF_FFI_IE_FFI_RUST_FUTURE_COMPLETE_VOID
 void ffi_ie_ffi_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_DIFF_TEXT
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_DIFF_TEXT
+uint16_t uniffi_ie_ffi_checksum_func_diff_text(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INSERT_TAG
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INSERT_TAG
+uint16_t uniffi_ie_ffi_checksum_func_insert_tag(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INSERT_WIKILINK
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_INSERT_WIKILINK
+uint16_t uniffi_ie_ffi_checksum_func_insert_wikilink(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_SET_HEADING_LEVEL
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_SET_HEADING_LEVEL
+uint16_t uniffi_ie_ffi_checksum_func_set_heading_level(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_BULLET
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_BULLET
+uint16_t uniffi_ie_ffi_checksum_func_toggle_bullet(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_QUOTE
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_QUOTE
+uint16_t uniffi_ie_ffi_checksum_func_toggle_quote(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_TASK
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_TASK
+uint16_t uniffi_ie_ffi_checksum_func_toggle_task(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_WRAP
+#define UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_FUNC_TOGGLE_WRAP
+uint16_t uniffi_ie_ffi_checksum_func_toggle_wrap(void
+    
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_IE_FFI_CHECKSUM_METHOD_CHANGEOBSERVER_CHANGED

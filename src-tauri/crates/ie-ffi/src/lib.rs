@@ -5,6 +5,8 @@
 //! and this is the third host.
 uniffi::setup_scaffolding!();
 
+pub mod diff;
+pub mod editing;
 pub mod error;
 pub mod handle;
 pub mod host;

@@ -151,6 +151,12 @@ jobs:
             exit 1
           fi
 
+      # Not a substitute for compiling the app, which needs a Mac. It checks
+      # the one class of error that is mechanical — a name that does not
+      # exist — and it caught two real ones the day it was written.
+      - name: Swift references resolve
+        run: node ios/Scripts/check-symbols.mjs
+
       # The core is meant to be hosted, not rewritten. A change to it that the
       # iOS work needed is allowed, but it has to be a deliberate one.
       - name: Core stays free of host concerns

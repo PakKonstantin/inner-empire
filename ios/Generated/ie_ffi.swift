@@ -2368,6 +2368,150 @@ public func FfiConverterTypeCreatedNote_lower(_ value: CreatedNote) -> RustBuffe
 }
 
 
+/**
+ * A run of changed lines, with the unchanged context either side.
+ *
+ * Hunks rather than a flat list because that is the unit a person resolves:
+ * "keep mine here, theirs there" is a decision per hunk, and offering it per
+ * line would be unusable on a phone.
+ */
+public struct DiffHunk: Equatable, Hashable {
+    public var lines: [DiffLine]
+    /**
+     * False for a run of context between changes.
+     */
+    public var hasChanges: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(lines: [DiffLine], 
+        /**
+         * False for a run of context between changes.
+         */hasChanges: Bool) {
+        self.lines = lines
+        self.hasChanges = hasChanges
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DiffHunk: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDiffHunk: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DiffHunk {
+        return
+            try DiffHunk(
+                lines: FfiConverterSequenceTypeDiffLine.read(from: &buf), 
+                hasChanges: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DiffHunk, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeDiffLine.write(value.lines, into: &buf)
+        FfiConverterBool.write(value.hasChanges, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDiffHunk_lift(_ buf: RustBuffer) throws -> DiffHunk {
+    return try FfiConverterTypeDiffHunk.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDiffHunk_lower(_ value: DiffHunk) -> RustBuffer {
+    return FfiConverterTypeDiffHunk.lower(value)
+}
+
+
+/**
+ * One line of the comparison.
+ */
+public struct DiffLine: Equatable, Hashable {
+    public var change: LineChange
+    public var text: String
+    /**
+     * 1-based line number in the local text, when the line is in it.
+     */
+    public var localLine: UInt32?
+    /**
+     * 1-based line number in the text on disk, when the line is in it.
+     */
+    public var remoteLine: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(change: LineChange, text: String, 
+        /**
+         * 1-based line number in the local text, when the line is in it.
+         */localLine: UInt32?, 
+        /**
+         * 1-based line number in the text on disk, when the line is in it.
+         */remoteLine: UInt32?) {
+        self.change = change
+        self.text = text
+        self.localLine = localLine
+        self.remoteLine = remoteLine
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension DiffLine: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeDiffLine: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DiffLine {
+        return
+            try DiffLine(
+                change: FfiConverterTypeLineChange.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf), 
+                localLine: FfiConverterOptionUInt32.read(from: &buf), 
+                remoteLine: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DiffLine, into buf: inout [UInt8]) {
+        FfiConverterTypeLineChange.write(value.change, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterOptionUInt32.write(value.localLine, into: &buf)
+        FfiConverterOptionUInt32.write(value.remoteLine, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDiffLine_lift(_ buf: RustBuffer) throws -> DiffLine {
+    return try FfiConverterTypeDiffLine.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeDiffLine_lower(_ value: DiffLine) -> RustBuffer {
+    return FfiConverterTypeDiffLine.lower(value)
+}
+
+
 public struct DirectoryListing: Equatable, Hashable {
     public var path: VaultPath
     public var folders: [FolderEntry]
@@ -2423,6 +2567,73 @@ public func FfiConverterTypeDirectoryListing_lift(_ buf: RustBuffer) throws -> D
 #endif
 public func FfiConverterTypeDirectoryListing_lower(_ value: DirectoryListing) -> RustBuffer {
     return FfiConverterTypeDirectoryListing.lower(value)
+}
+
+
+/**
+ * The result of an editing action.
+ */
+public struct EditResult: Equatable, Hashable {
+    public var text: String
+    /**
+     * UTF-16 offsets, ready to hand back to a text view.
+     */
+    public var selectionStart: UInt32
+    public var selectionEnd: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(text: String, 
+        /**
+         * UTF-16 offsets, ready to hand back to a text view.
+         */selectionStart: UInt32, selectionEnd: UInt32) {
+        self.text = text
+        self.selectionStart = selectionStart
+        self.selectionEnd = selectionEnd
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EditResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEditResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EditResult {
+        return
+            try EditResult(
+                text: FfiConverterString.read(from: &buf), 
+                selectionStart: FfiConverterUInt32.read(from: &buf), 
+                selectionEnd: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EditResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterUInt32.write(value.selectionStart, into: &buf)
+        FfiConverterUInt32.write(value.selectionEnd, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditResult_lift(_ buf: RustBuffer) throws -> EditResult {
+    return try FfiConverterTypeEditResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEditResult_lower(_ value: EditResult) -> RustBuffer {
+    return FfiConverterTypeEditResult.lower(value)
 }
 
 
@@ -4197,6 +4408,63 @@ public func FfiConverterTypeSearchResults_lower(_ value: SearchResults) -> RustB
 }
 
 
+/**
+ * A selection, in the units the host speaks.
+ */
+public struct Selection: Equatable, Hashable {
+    public var start: UInt32
+    public var end: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(start: UInt32, end: UInt32) {
+        self.start = start
+        self.end = end
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension Selection: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSelection: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Selection {
+        return
+            try Selection(
+                start: FfiConverterUInt32.read(from: &buf), 
+                end: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Selection, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.start, into: &buf)
+        FfiConverterUInt32.write(value.end, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSelection_lift(_ buf: RustBuffer) throws -> Selection {
+    return try FfiConverterTypeSelection.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSelection_lower(_ value: Selection) -> RustBuffer {
+    return FfiConverterTypeSelection.lower(value)
+}
+
+
 public struct Tag: Equatable, Hashable {
     /**
      * Without the leading `#`. Nested tags are stored whole.
@@ -4326,6 +4594,76 @@ public func FfiConverterTypeTagSummary_lift(_ buf: RustBuffer) throws -> TagSumm
 #endif
 public func FfiConverterTypeTagSummary_lower(_ value: TagSummary) -> RustBuffer {
     return FfiConverterTypeTagSummary.lower(value)
+}
+
+
+public struct TextDiff: Equatable, Hashable {
+    public var hunks: [DiffHunk]
+    public var added: UInt32
+    public var removed: UInt32
+    /**
+     * The two texts are the same. The UI says so rather than showing an empty
+     * comparison, which looks like a failure.
+     */
+    public var identical: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(hunks: [DiffHunk], added: UInt32, removed: UInt32, 
+        /**
+         * The two texts are the same. The UI says so rather than showing an empty
+         * comparison, which looks like a failure.
+         */identical: Bool) {
+        self.hunks = hunks
+        self.added = added
+        self.removed = removed
+        self.identical = identical
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TextDiff: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTextDiff: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TextDiff {
+        return
+            try TextDiff(
+                hunks: FfiConverterSequenceTypeDiffHunk.read(from: &buf), 
+                added: FfiConverterUInt32.read(from: &buf), 
+                removed: FfiConverterUInt32.read(from: &buf), 
+                identical: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TextDiff, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeDiffHunk.write(value.hunks, into: &buf)
+        FfiConverterUInt32.write(value.added, into: &buf)
+        FfiConverterUInt32.write(value.removed, into: &buf)
+        FfiConverterBool.write(value.identical, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextDiff_lift(_ buf: RustBuffer) throws -> TextDiff {
+    return try FfiConverterTypeTextDiff.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTextDiff_lower(_ value: TextDiff) -> RustBuffer {
+    return FfiConverterTypeTextDiff.lower(value)
 }
 
 
@@ -5263,6 +5601,91 @@ public func FfiConverterTypeGraphNodeKind_lower(_ value: GraphNodeKind) -> RustB
 
 
 
+/**
+ * What happened to one line.
+ */
+
+public enum LineChange: Equatable, Hashable {
+    
+    /**
+     * Present in both, unchanged.
+     */
+    case same
+    /**
+     * Only in the local version.
+     */
+    case added
+    /**
+     * Only in the version on disk.
+     */
+    case removed
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LineChange: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLineChange: FfiConverterRustBuffer {
+    typealias SwiftType = LineChange
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LineChange {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .same
+        
+        case 2: return .added
+        
+        case 3: return .removed
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LineChange, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .same:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .added:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .removed:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineChange_lift(_ buf: RustBuffer) throws -> LineChange {
+    return try FfiConverterTypeLineChange.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineChange_lower(_ value: LineChange) -> RustBuffer {
+    return FfiConverterTypeLineChange.lower(value)
+}
+
+
+
 
 public enum LinkKind: Equatable, Hashable {
     
@@ -5900,6 +6323,56 @@ fileprivate struct FfiConverterSequenceTypeBlock: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeDiffHunk: FfiConverterRustBuffer {
+    typealias SwiftType = [DiffHunk]
+
+    public static func write(_ value: [DiffHunk], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDiffHunk.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DiffHunk] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DiffHunk]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDiffHunk.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeDiffLine: FfiConverterRustBuffer {
+    typealias SwiftType = [DiffLine]
+
+    public static func write(_ value: [DiffLine], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeDiffLine.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [DiffLine] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [DiffLine]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeDiffLine.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeFileEntry: FfiConverterRustBuffer {
     typealias SwiftType = [FileEntry]
 
@@ -6386,6 +6859,118 @@ public func FfiConverterTypeVaultPath_lower(_ value: VaultPath) -> RustBuffer {
     return FfiConverterTypeVaultPath.lower(value)
 }
 
+/**
+ * Compare two versions of a note.
+ *
+ * `local` is what the user has typed; `remote` is what is on disk now.
+ */
+public func diffText(local: String, remote: String, contextLines: UInt32) -> TextDiff  {
+    return try!  FfiConverterTypeTextDiff_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_diff_text(
+        FfiConverterString.lower(local),
+        FfiConverterString.lower(remote),
+        FfiConverterUInt32.lower(contextLines),uniffiCallStatus
+    )
+})
+}
+/**
+ * Insert a `#` at the cursor, ready for a tag name.
+ */
+public func insertTag(text: String, selection: Selection) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_insert_tag(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),uniffiCallStatus
+    )
+})
+}
+/**
+ * Insert `[[]]` and put the cursor between the brackets, or wrap a selection.
+ */
+public func insertWikilink(text: String, selection: Selection) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_insert_wikilink(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),uniffiCallStatus
+    )
+})
+}
+/**
+ * Set, change or remove the heading level of the lines the selection touches.
+ *
+ * Choosing the level a line already has removes it, so the same button
+ * toggles. Level 0 always removes.
+ */
+public func setHeadingLevel(text: String, selection: Selection, level: UInt8) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_set_heading_level(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),
+        FfiConverterUInt8.lower(level),uniffiCallStatus
+    )
+})
+}
+/**
+ * Add or remove a `- ` bullet on the lines the selection touches.
+ */
+public func toggleBullet(text: String, selection: Selection) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_toggle_bullet(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),uniffiCallStatus
+    )
+})
+}
+/**
+ * Add or remove a `> ` quote marker on the lines the selection touches.
+ */
+public func toggleQuote(text: String, selection: Selection) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_toggle_quote(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),uniffiCallStatus
+    )
+})
+}
+/**
+ * Add, tick or remove a `- [ ] ` task marker.
+ *
+ * Three states rather than two, because that is what a checklist is: not a
+ * task, an unticked task, a ticked one. Pressing the button walks them.
+ */
+public func toggleTask(text: String, selection: Selection) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_toggle_task(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),uniffiCallStatus
+    )
+})
+}
+/**
+ * Wrap or unwrap the selection with `marker` — bold, italic, code.
+ *
+ * Three cases, in the order a person expects: markers just outside the
+ * selection are removed, a selection that is itself wrapped is unwrapped, and
+ * anything else is wrapped. With nothing selected the cursor lands between
+ * the markers so typing continues inside them.
+ */
+public func toggleWrap(text: String, selection: Selection, marker: String) -> EditResult  {
+    return try!  FfiConverterTypeEditResult_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_ie_ffi_fn_func_toggle_wrap(
+        FfiConverterString.lower(text),
+        FfiConverterTypeSelection_lower(selection),
+        FfiConverterString.lower(marker),uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -6401,6 +6986,30 @@ private let initializationResult: InitializationResult = {
     let scaffolding_contract_version = ffi_ie_ffi_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_diff_text() != 16900) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_insert_tag() != 27537) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_insert_wikilink() != 49910) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_set_heading_level() != 29824) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_toggle_bullet() != 7235) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_toggle_quote() != 8257) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_toggle_task() != 35299) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ie_ffi_checksum_func_toggle_wrap() != 40219) {
+        return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ie_ffi_checksum_method_changeobserver_changed() != 61699) {
         return InitializationResult.apiChecksumMismatch
