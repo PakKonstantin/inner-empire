@@ -11,7 +11,6 @@
 
 ```sh
 rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
-cargo install uniffi-bindgen-cli --version 0.32
 brew install xcodegen
 ```
 

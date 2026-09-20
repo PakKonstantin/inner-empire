@@ -508,8 +508,9 @@ Resolved by `ie-platform::AppDirs`, which wraps the `directories` crate.
 Per-vault state that must travel with the vault (workspace layout, canvas,
 templates config, index) lives in `<vault>/.inner-empire/` instead.
 
-A `portable` marker file next to the executable redirects all four to
-`./data/` for portable Windows use.
+A `portable.txt` marker file next to the executable redirects all four to
+`./data/`, so the app can run from a USB stick and leave nothing behind. It is
+not Windows-specific.
 
 ---
 
@@ -518,7 +519,7 @@ A `portable` marker file next to the executable redirects all four to
 | Target | Artifact | Toolchain |
 |---|---|---|
 | Linux x86_64 | `.AppImage`, `.deb`, `.rpm`, `.desktop` entry | `ubuntu-22.04` runner (oldest glibc we support), `libwebkit2gtk-4.1`, `libgtk-3` |
-| Windows x86_64 | NSIS `.exe` installer, `.msi`, portable zip | `windows-latest`, WebView2 bootstrapper (evergreen) |
+| Windows x86_64 | NSIS `.exe` installer, `.msi` | `windows-latest`, WebView2 bootstrapper (evergreen) |
 
 CI runs a matrix of `ubuntu-latest` and `windows-latest` for
 `cargo test --workspace`, `pnpm test`, `pnpm typecheck`, `pnpm lint` and
