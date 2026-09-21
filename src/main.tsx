@@ -25,8 +25,13 @@ import {
   useWorkspaceStore,
 } from '@/state/workspaceStore';
 
+// Order matters: the themeable values, then the scale layer that refers to
+// them, then the reset, then the design system, then the application's own
+// layout — so a later rule can override an earlier one without `!important`.
 import '@/styles/theme.css';
+import '@/styles/tokens.css';
 import '@/styles/base.css';
+import '@/styles/components.css';
 import '@/styles/layout.css';
 
 async function start(): Promise<void> {

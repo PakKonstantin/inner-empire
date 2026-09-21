@@ -46,14 +46,23 @@ export function useContextMenu(): ContextMenuApi {
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const surface = useRef<HTMLDivElement | null>(null);
+  // Where focus was before the menu took it, so closing puts it back on the
+  // row the user was standing on rather than at the top of the document.
+  const returnFocusTo = useRef<HTMLElement | null>(null);
 
   const api = useMemo<ContextMenuApi>(
     () => ({
       open: (event, entries) => {
         if (entries.length === 0) return;
+        returnFocusTo.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setMenu({ x: event.clientX, y: event.clientY, entries });
       },
-      close: () => setMenu(null),
+      close: () => {
+        setMenu(null);
+        returnFocusTo.current?.focus();
+        returnFocusTo.current = null;
+      },
     }),
     [],
   );
@@ -65,10 +74,10 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
       // would unmount the button before its click handler ran, so the item
       // would light up and do nothing.
       if (event.target instanceof Node && surface.current?.contains(event.target)) return;
-      setMenu(null);
+      api.close();
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenu(null);
+      if (event.key === 'Escape') api.close();
     };
     // Capture phase, so a press that also does something else still closes the
     // menu first.
@@ -80,7 +89,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('resize', dismiss);
       window.removeEventListener('keydown', onKey);
     };
-  }, [menu]);
+  }, [menu, api]);
 
   return (
     <ContextMenuContext.Provider value={api}>
@@ -110,16 +119,46 @@ function ContextMenuSurface({
     const left = rect.right > window.innerWidth ? Math.max(4, window.innerWidth - rect.width - 4) : rect.left;
     const top = rect.bottom > window.innerHeight ? Math.max(4, window.innerHeight - rect.height - 4) : rect.top;
       setPosition({ left, top });
+
+      // Focus the first item, so the arrow keys work without a click first.
+      element.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
     },
     [surfaceRef],
   );
+
+  /**
+   * Keyboard navigation inside the menu.
+   *
+   * A menu that can only be driven by the mouse is a menu half the brief's
+   * users cannot reach: the context menu is opened by Shift+F10 and the menu
+   * key as well as by right-clicking, and both leave the hand on the keyboard.
+   */
+  const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'),
+    );
+    if (items.length === 0) return;
+    const current = items.indexOf(document.activeElement as HTMLButtonElement);
+
+    let next: number | null = null;
+    if (event.key === 'ArrowDown') next = (current + 1) % items.length;
+    else if (event.key === 'ArrowUp') next = (current - 1 + items.length) % items.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = items.length - 1;
+    if (next === null) return;
+
+    event.preventDefault();
+    items[next]?.focus();
+  }, []);
 
   return (
     <div
       className="ie-context-menu"
       role="menu"
       ref={measure}
+      tabIndex={-1}
       style={{ left: position.left, top: position.top }}
+      onKeyDown={onKeyDown}
       onPointerDown={(event) => event.stopPropagation()}
     >
       {menu.entries.map((entry) =>
