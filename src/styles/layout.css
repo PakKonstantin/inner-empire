@@ -305,8 +305,9 @@
   flex: none;
 }
 
+/* Which pane is active is state, not decoration, so it has to be visible. */
 .ie-tabbar.is-active-pane {
-  border-bottom-color: var(--border-strong);
+  border-bottom-color: var(--interactive-border);
 }
 
 .ie-tabbar__tabs {

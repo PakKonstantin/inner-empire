@@ -9,7 +9,7 @@ export default tseslint.config(
   {
     // Build scripts run under Node, not in the app, so they are checked
     // against Node's globals and without the TypeScript rules.
-    files: ['ios/Scripts/**/*.mjs'],
+    files: ['ios/Scripts/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',

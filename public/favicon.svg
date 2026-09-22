@@ -1,0 +1,29 @@
+<!--
+  The tab icon.
+
+  The same vault mark the interface uses, drawn from the same 24×24 grid and
+  the same stroke rules as `src/ui/icons.tsx` so the tab and the application
+  do not disagree about what this thing looks like.
+
+  An SVG rather than an .ico: it needs no build step, stays sharp at any size,
+  and can answer the reader's colour scheme — which a bitmap cannot.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+  <style>
+    :root { color-scheme: light dark; }
+    .mark { stroke: #3b6fd4; }
+    @media (prefers-color-scheme: dark) {
+      .mark { stroke: #7aa2f7; }
+    }
+  </style>
+  <g
+    class="mark"
+    fill="none"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M12 3l9 4.8v8.4L12 21l-9-4.8V7.8z" />
+    <path d="M3.3 7.6L12 12.3l8.7-4.7M12 12.3V21" />
+  </g>
+</svg>

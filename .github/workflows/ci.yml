@@ -40,6 +40,12 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # Colour choices fail silently: nothing breaks, nothing warns, and a
+      # theme that looked fine to whoever picked it is unreadable to someone
+      # else. A ratio is the part of that a machine can settle.
+      - name: Contrast
+        run: pnpm check:contrast
+
       - name: Unit tests
         run: pnpm test
 

@@ -565,3 +565,160 @@ declare global {
     };
   }
 }
+
+/**
+ * Nothing should reach the console.
+ *
+ * A React key warning, a failed fetch, an unhandled rejection: none of them
+ * stop the app, all of them mean something is wrong, and every one is
+ * invisible unless someone happens to have the console open. Installed on
+ * every page this suite opens, and asserted at the end of the walk-through
+ * below.
+ *
+ * Errors are collected rather than thrown at once, so a test reports what
+ * broke rather than dying at the first message.
+ */
+function watchConsole(page: Page): string[] {
+  const noise: string[] = [];
+
+  page.on('console', (message) => {
+    if (message.type() !== 'error' && message.type() !== 'warning') return;
+    const text = message.text();
+    // Vite's preview server and Chromium itself say things that are not the
+    // application's doing.
+    if (/favicon|DevTools|Download the React DevTools/i.test(text)) return;
+    noise.push(`console.${message.type()}: ${text}`);
+  });
+
+  page.on('pageerror', (error) => noise.push(`uncaught: ${error.message}`));
+  page.on('requestfailed', (request) => {
+    const failure = request.failure()?.errorText ?? 'failed';
+    // A cancelled request is normal when a view unmounts mid-flight.
+    if (/ABORTED/i.test(failure)) return;
+    noise.push(`request failed: ${request.url()} — ${failure}`);
+  });
+
+  // Chromium's own console message for a bad status does not name the URL,
+  // which makes it useless to whoever has to fix it. This does.
+  page.on('response', (response) => {
+    if (response.status() < 400) return;
+    noise.push(`${response.status()} for ${response.url()}`);
+  });
+
+  return noise;
+}
+
+test.describe('the console', () => {
+  test('stays quiet through a full walk of the application', async ({ page }) => {
+    const noise = watchConsole(page);
+
+    await openApp(page);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+    await openNote(page, 'Statistics');
+
+    // Type, so the editor, the autosave and the index all run.
+    await page.locator('.ie-editor .cm-content').click();
+    await page.keyboard.type(' and a note about variance.');
+
+    // Every panel on both sides. The order starts away from whichever panel
+    // is already showing, because choosing the active one collapses the
+    // sidebar — which is the rail's job, not a fault.
+    for (const panel of ['Search', 'Tags', 'Files']) {
+      await openPanel(page, 'left', panel);
+    }
+    for (const panel of ['Outline', 'Properties', 'Local graph', 'Backlinks']) {
+      await openPanel(page, 'right', panel);
+    }
+
+    // Reading view, the graph, a split, the palette and the settings.
+    await page.keyboard.press('Control+Shift+R');
+    await expect(page.locator('.ie-reading__body')).toBeVisible();
+    await page.keyboard.press('Control+Shift+R');
+
+    await page.keyboard.press('Control+g');
+    await expect(page.locator('.ie-graph__canvas')).toBeVisible();
+
+    await page.keyboard.press('Control+p');
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    await page.keyboard.press('Control+,');
+    await expect(page.getByRole('dialog', { name: 'Settings' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Joined rather than compared as an array: a failed array comparison
+    // shows only the first entry, and the whole list is what tells you what
+    // went wrong.
+    expect(noise.join('\n')).toBe('');
+  });
+});
+
+test.describe('scale', () => {
+  /**
+   * A vault big enough that rendering every row would show.
+   *
+   * 4,000 notes in one folder is the shape that hurts: a flat list defeats
+   * the "load a level at a time" strategy entirely, so the windowing is the
+   * only thing standing between the user and four thousand DOM nodes.
+   */
+  const MANY = Array.from({ length: 4000 }, (_, index) => ({
+    path: `Notes/Note ${String(index).padStart(4, '0')}.md`,
+    content: `# Note ${index}\n\nBody text for note ${index}.\n`,
+  }));
+
+  test('the explorer renders a constant number of rows however large the vault', async ({
+    page,
+  }) => {
+    await openApp(page, MANY);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+
+    // Windowed: what is in the DOM is what fits on screen plus the overscan,
+    // not what is in the vault. The exact number depends on the viewport, so
+    // what is asserted is the order of magnitude.
+    await expect(page.locator('.ie-tree-row--file').first()).toBeVisible();
+    const rendered = await page.locator('.ie-tree-row').count();
+    expect(rendered).toBeLessThan(120);
+
+    // The scrollbar still reflects the whole list, so the user can reach the
+    // end — a windowed list that forgets its own height cannot be scrolled.
+    const spacer = await page
+      .locator('.ie-explorer__list > div')
+      .first()
+      .evaluate((element) => element.getBoundingClientRect().height);
+    expect(spacer).toBeGreaterThan(4000 * 20);
+  });
+
+  test('scrolling four thousand rows stays responsive', async ({ page }) => {
+    await openApp(page, MANY);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+    await expect(page.locator('.ie-tree-row--file').first()).toBeVisible();
+
+    const list = page.locator('.ie-explorer__list');
+    const started = Date.now();
+    for (let step = 1; step <= 20; step += 1) {
+      await list.evaluate((element, offset) => {
+        element.scrollTop = offset;
+      }, step * 2000);
+    }
+    const elapsed = Date.now() - started;
+
+    // Generous on purpose: this is a shared CI runner, and the point is to
+    // catch a list that has started rendering everything, not to police
+    // milliseconds.
+    expect(elapsed).toBeLessThan(6000);
+
+    // Still windowed at the far end of the list.
+    expect(await page.locator('.ie-tree-row').count()).toBeLessThan(120);
+  });
+
+  test('the quick switcher stays usable in a large vault', async ({ page }) => {
+    await openApp(page, MANY);
+
+    await page.keyboard.press('Control+o');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    await page.keyboard.type('Note 3999');
+    await expect(dialog.locator('.ie-palette__item').first()).toContainText('Note 3999');
+  });
+});
