@@ -1,0 +1,173 @@
+/*
+ * The scale layer.
+ *
+ * `theme.css` holds what a *theme* changes — the colours, the type sizes, the
+ * handful of dimensions a user redefines to make the app look like theirs.
+ * This file holds what a theme does not change: the spacing rhythm, the
+ * heading scale, the stacking order, the sizes controls agree on.
+ *
+ * Keeping them apart matters for two reasons. A user theme stays a short file
+ * about colour rather than a fork of the layout. And `theme.css` is read by
+ * `ios/Scripts/generate-tokens.mjs`, which turns every colour and length in it
+ * into Swift — so aliases that exist only to give the same value a second name
+ * belong here, where they do not double the size of a generated file on
+ * another platform.
+ *
+ * Both vocabularies are live. `--background-primary` is the name the existing
+ * 1800 lines of CSS and every user theme already use; `--color-bg-primary` is
+ * the name the design system uses. They are the same value, and `var()`
+ * resolves lazily, so a theme that redefines one changes both.
+ */
+
+:root {
+  /* ---------- Colour aliases ---------- */
+
+  --color-bg-primary: var(--background-primary);
+  --color-bg-secondary: var(--background-secondary);
+  --color-bg-tertiary: var(--background-secondary-alt);
+  --color-bg-hover: var(--background-modifier-hover);
+  --color-bg-active: var(--background-modifier-active);
+
+  --color-text-primary: var(--text-normal);
+  --color-text-secondary: var(--text-muted);
+  --color-text-muted: var(--text-faint);
+  --color-text-on-accent: var(--text-on-accent);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-danger: var(--text-error);
+  --color-success: var(--text-success);
+  --color-warning: var(--text-warning);
+
+  --border-color: var(--border);
+  --border-color-strong: var(--border-strong);
+
+  /* ---------- Typography ---------- */
+
+  --font-ui: var(--font-interface);
+  --font-editor: var(--font-text);
+  /* --font-monospace is already themeable and keeps its name. */
+
+  --font-size-xs: 11px;
+  --font-size-sm: var(--font-size-smaller);
+  --font-size-md: var(--font-size-small);
+  --font-size-lg: var(--font-size-normal);
+
+  /*
+   * A heading scale with a ratio rather than six arbitrary numbers, so a
+   * document has a rhythm instead of six weights of bold.
+   */
+  --font-size-h1: 2rem;
+  --font-size-h2: 1.5rem;
+  --font-size-h3: 1.25rem;
+  --font-size-h4: 1.0625rem;
+  --font-size-h5: 0.9375rem;
+  --font-size-h6: 0.875rem;
+
+  /*
+   * The same ratios again, relative rather than absolute.
+   *
+   * Document headings have to scale with the size the *reader* chose, not
+   * with the interface: a `rem` heading above a 20px body would shrink as the
+   * reader made the text larger. The interface's own headings keep the `rem`
+   * scale above, because the interface does not resize with a note.
+   */
+  --doc-size-h1: 2em;
+  --doc-size-h2: 1.5em;
+  --doc-size-h3: 1.25em;
+  --doc-size-h4: 1.0625em;
+  --doc-size-h5: 0.9375em;
+  --doc-size-h6: 0.875em;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-heading: 1.25;
+  /* A shade tighter than the interface's, because a document's measure is
+     narrower and the eye has less distance to travel back. */
+  --line-height-body: 1.65;
+  --letter-spacing-tight: -0.011em;
+  --letter-spacing-caps: 0.04em;
+
+  /* The measure a document is comfortable at. Wider than this and the eye
+     loses the start of the next line. */
+  --measure: 68ch;
+
+  /* ---------- Spacing ---------- */
+
+  --space-xs: var(--space-1);
+  --space-sm: var(--space-2);
+  --space-md: var(--space-3);
+  --space-lg: var(--space-4);
+  --space-xl: var(--space-5);
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* ---------- Radius ---------- */
+
+  --radius-sm: var(--radius-s);
+  --radius-md: var(--radius-m);
+  --radius-lg: var(--radius-l);
+  --radius-full: 999px;
+
+  /* ---------- Elevation ---------- */
+
+  /* Three steps, because a fourth is never distinguishable. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.16);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.24);
+  --shadow-lg: var(--shadow-popover);
+
+  /* ---------- Stacking ---------- */
+
+  /*
+   * Every z-index in the application comes from here. A magic number in a
+   * component is how a tooltip ends up behind a modal.
+   */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-dropdown: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+  --z-tooltip: 500;
+
+  /* ---------- Dimensions ---------- */
+
+  --toolbar-height: 40px;
+  --rail-width: 44px;
+  --sidebar-width-min: 180px;
+  --sidebar-width-default: 260px;
+  --sidebar-width-max: 640px;
+
+  --control-height-sm: 24px;
+  --control-height-md: 30px;
+  --control-height-lg: 36px;
+
+  --icon-size-sm: 14px;
+  --icon-size-md: 16px;
+  --icon-size-lg: 20px;
+  --icon-stroke: 1.6;
+
+  /* ---------- Motion ---------- */
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 90ms;
+  --duration-medium: 160ms;
+  --duration-slow: 240ms;
+}
+
+/*
+ * Reduced motion is already handled in theme.css by zeroing the transition
+ * tokens; the durations here follow the same rule so a component that reaches
+ * for `--duration-medium` in an animation gets the same answer.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-medium: 0ms;
+    --duration-slow: 0ms;
+  }
+}

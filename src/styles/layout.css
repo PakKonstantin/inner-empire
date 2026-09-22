@@ -1,0 +1,2382 @@
+/* The application's own layout and components. */
+
+.ie-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ie-app__main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  /* The anchor for a sidebar that overlays the editor on a narrow window. */
+  position: relative;
+}
+
+.ie-app__panes {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  background: var(--background-primary);
+}
+
+/* ---------- Toolbar ---------- */
+
+/* One row, and it must stay one row: the centre section is the only part
+   allowed to give up space, because a breadcrumb can be truncated and a
+   button cannot. */
+.ie-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: none;
+  height: var(--toolbar-height);
+  padding: 0 var(--space-sm);
+  border-bottom: 1px solid var(--border);
+  background: var(--background-secondary);
+  /* The bar is a drag surface on frameless windows; the controls inside opt
+     back out below. */
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.ie-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.ie-toolbar__group--start,
+.ie-toolbar__group--end {
+  flex: none;
+}
+
+.ie-toolbar__group--center {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ie-toolbar__history {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-xs);
+}
+
+.ie-toolbar__search {
+  width: 200px;
+  margin-right: var(--space-xs);
+  transition: width var(--duration-fast) var(--easing-standard);
+}
+
+.ie-toolbar__search:focus-within {
+  width: 280px;
+}
+
+/* ---------- Sidebars ---------- */
+
+.ie-sidebar {
+  display: flex;
+  flex: none;
+  background: var(--background-secondary);
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+
+.ie-sidebar--right {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+.ie-sidebar__content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A wide invisible grab area over a hairline, so the divider is easy to hit
+   without being visually heavy. */
+.ie-sidebar__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 9px;
+  cursor: col-resize;
+  z-index: 3;
+}
+
+.ie-sidebar--left .ie-sidebar__handle {
+  right: -4px;
+}
+
+.ie-sidebar--right .ie-sidebar__handle {
+  left: -4px;
+}
+
+.ie-sidebar__handle:hover,
+.ie-sidebar__handle:focus-visible {
+  background: var(--accent-muted);
+}
+
+/* ---------- Panels ---------- */
+
+.ie-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: var(--space-4);
+}
+
+.ie-panel-header--sub {
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+  margin-top: var(--space-3);
+}
+
+.ie-disclosure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+/* ---------- Explorer ---------- */
+
+.ie-explorer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-explorer__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ie-explorer__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-2) var(--space-3);
+  flex: none;
+}
+
+.ie-explorer__controls .ie-field,
+.ie-explorer__controls .ie-search-input {
+  min-width: 0;
+}
+
+/* The search box takes what the sort control leaves. */
+.ie-explorer__controls .ie-search-input {
+  flex: 1;
+}
+
+.ie-explorer__controls .ie-select {
+  max-width: 116px;
+}
+
+.ie-explorer__list {
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-tree-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 26px;
+  padding-right: var(--space-2);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  cursor: default;
+  white-space: nowrap;
+}
+
+.ie-tree-row:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.ie-tree-row.is-active {
+  background: var(--background-modifier-active);
+  color: var(--text-normal);
+}
+
+.ie-tree-row.is-drop-target {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.ie-tree-row--folder {
+  font-weight: 550;
+  color: var(--text-normal);
+}
+
+.ie-tree-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex: none;
+  color: var(--text-faint);
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.ie-tree-icon {
+  flex: none;
+  color: var(--text-faint);
+}
+
+.ie-tree-row.is-active .ie-tree-icon,
+.ie-tree-row--folder .ie-tree-icon {
+  color: var(--text-muted);
+}
+
+/* Focus lives on the scroller, not on a row, so the row the keyboard is on
+   has to draw its own ring — the browser cannot draw one for it. */
+.ie-explorer__list:focus-visible {
+  outline: none;
+}
+
+.ie-tree-row.is-focused {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.ie-explorer__list:focus-visible .ie-tree-row.is-focused {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* A revealed row is not the open note, so it gets a ring rather than the
+   selected background — two different states should not look the same. */
+.ie-tree-row.is-revealed {
+  outline: 1px solid var(--accent-muted);
+  outline-offset: -1px;
+  color: var(--text-normal);
+}
+
+.ie-tree-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.ie-tree-chevron--placeholder {
+  visibility: hidden;
+}
+
+.ie-tree-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.ie-tree-count {
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+}
+
+/* ---------- Tabs ---------- */
+
+.ie-tabbar {
+  display: flex;
+  align-items: stretch;
+  height: var(--tabbar-height);
+  background: var(--background-secondary);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+/* Which pane is active is state, not decoration, so it has to be visible. */
+.ie-tabbar.is-active-pane {
+  border-bottom-color: var(--interactive-border);
+}
+
+.ie-tabbar__tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ie-tabbar__tabs::-webkit-scrollbar {
+  height: 0;
+}
+
+.ie-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  max-width: 220px;
+  min-width: 90px;
+  border-right: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+  cursor: default;
+  position: relative;
+}
+
+.ie-tab:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ie-tab.is-active {
+  background: var(--background-primary);
+  color: var(--text-normal);
+}
+
+/* A line along the top of the active tab, drawn inside so it does not shift
+   the tab's height. */
+.ie-tab.is-active::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--accent);
+}
+
+.ie-tab.is-drop-before::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+}
+
+.ie-tab__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.ie-tab__pin {
+  flex: none;
+  color: var(--accent);
+}
+
+.ie-tab__mode {
+  color: var(--text-faint);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ie-tab__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-s);
+  color: var(--text-faint);
+  flex: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.ie-tab:hover .ie-tab__close,
+.ie-tab.is-active .ie-tab__close,
+.ie-tab.is-dirty .ie-tab__close {
+  opacity: 1;
+}
+
+/* A dot at this size has to be a filled mark; drawn as a stroke it reads as
+   an empty ring, which says the opposite of "there is something here". */
+.ie-tab__dirty {
+  color: var(--accent);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+/* The dirty mark and the cross occupy the same spot: the dot is what you see
+   until you point at the tab, and the cross is what you click. */
+.ie-tab__dirty + .ie-tab__cross {
+  display: none;
+}
+
+.ie-tab__close:hover .ie-tab__dirty {
+  display: none;
+}
+
+.ie-tab__close:hover .ie-tab__dirty + .ie-tab__cross,
+.ie-tab__close:focus-visible .ie-tab__dirty + .ie-tab__cross {
+  display: block;
+}
+
+.ie-tab__close:focus-visible .ie-tab__dirty {
+  display: none;
+}
+
+.ie-tab.is-dirty .ie-tab__close {
+  color: var(--accent);
+}
+
+.ie-tab__close:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.ie-tabbar__actions {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  gap: 2px;
+  flex: none;
+}
+
+/* ---------- Panes and splits ---------- */
+
+.ie-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  background: var(--background-primary);
+}
+
+.ie-pane__body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ie-pane__loading {
+  padding: var(--space-5);
+  color: var(--text-faint);
+}
+
+.ie-split {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ie-split--vertical {
+  flex-direction: row;
+}
+
+.ie-split--horizontal {
+  flex-direction: column;
+}
+
+.ie-split__side {
+  display: flex;
+  flex-grow: 0;
+  flex-shrink: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ie-split__divider {
+  flex: none;
+  background: var(--border);
+  position: relative;
+  z-index: 2;
+}
+
+/* The visible line is one pixel; the grab area is nine, extended with a
+   pseudo-element so the pointer target is comfortable. */
+.ie-split__divider--vertical {
+  width: 1px;
+  cursor: col-resize;
+}
+
+.ie-split__divider--horizontal {
+  height: 1px;
+  cursor: row-resize;
+}
+
+.ie-split__divider::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.ie-split__divider:hover,
+.ie-split__divider:focus-visible {
+  background: var(--accent);
+}
+
+/* ---------- Editor and reading view ---------- */
+
+.ie-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ie-reading {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-4) 40vh;
+}
+
+.ie-reading__body {
+  /* A measure in `ch` tracks the font the reader actually chose, which a
+     fixed rem width does not: raise the size and a 46rem column silently
+     becomes a 90-character line. */
+  max-width: var(--measure);
+  margin: 0 auto;
+  font-family: var(--font-editor);
+  font-size: var(--font-size-editor);
+  line-height: var(--line-height-body);
+}
+
+/*
+ * The heading rhythm.
+ *
+ * Space above a heading belongs to the heading, not to the paragraph before
+ * it — which is why the top margin is large and the bottom one small. That
+ * gap is what tells a reader where a section starts, without a rule or a
+ * colour doing the work.
+ */
+.ie-reading__body h1,
+.ie-reading__body h2,
+.ie-reading__body h3,
+.ie-reading__body h4,
+.ie-reading__body h5,
+.ie-reading__body h6 {
+  font-family: var(--font-ui);
+  line-height: var(--line-height-heading);
+  margin-top: 1.8em;
+  margin-bottom: 0.5em;
+  text-wrap: balance;
+}
+
+/* The first heading has nothing above it to be separated from. */
+.ie-reading__body > :first-child {
+  margin-top: 0;
+}
+
+.ie-reading__body h1 {
+  font-size: var(--doc-size-h1);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+}
+
+.ie-reading__body h2 {
+  font-size: var(--doc-size-h2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.ie-reading__body h3 {
+  font-size: var(--doc-size-h3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ie-reading__body h4 {
+  font-size: var(--doc-size-h4);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* H5 and H6 are too close to body size to be told apart by size alone, so
+   they are distinguished the way small headings have always been. */
+.ie-reading__body h5 {
+  font-size: var(--doc-size-h5);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.ie-reading__body h6 {
+  font-size: var(--doc-size-h6);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.ie-reading__body p {
+  margin: 0 0 1em;
+}
+
+.ie-reading__body ul,
+.ie-reading__body ol {
+  margin: 0 0 1em;
+  padding-left: 1.5em;
+}
+
+.ie-reading__body li + li {
+  margin-top: 0.25em;
+}
+
+.ie-reading__body blockquote {
+  margin: 1em 0;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--border);
+  color: var(--text-muted);
+}
+
+.ie-reading__body img {
+  max-width: 100%;
+  border-radius: var(--radius-m);
+}
+
+.ie-reading__body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+
+.ie-inline-code {
+  background: var(--code-background);
+  color: var(--code-text);
+  border-radius: var(--radius-s);
+  padding: 0.1em 0.35em;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+}
+
+.ie-code-block {
+  background: var(--code-background);
+  border-radius: var(--radius-m);
+  padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  line-height: 1.55;
+}
+
+.ie-raw-html {
+  background: var(--background-modifier-error);
+  color: var(--text-muted);
+  border-radius: var(--radius-s);
+  padding: 0.1em 0.35em;
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+}
+
+.ie-table-wrapper {
+  overflow-x: auto;
+  margin: 1em 0;
+}
+
+.ie-reading__body table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.ie-reading__body th,
+.ie-reading__body td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.ie-task-item {
+  list-style: none;
+  margin-left: -1.4em;
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.ie-wikilink {
+  color: var(--link-color);
+  font: inherit;
+  text-decoration: none;
+}
+
+.ie-wikilink:hover {
+  text-decoration: underline;
+}
+
+.ie-tag {
+  background: var(--tag-background);
+  color: var(--tag-color);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.88em;
+}
+
+.ie-missing-asset,
+.ie-embed-placeholder {
+  color: var(--text-faint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-s);
+  padding: 0 6px;
+  font-size: 0.9em;
+}
+
+.ie-embedded-pdf,
+.ie-embedded-video {
+  width: 100%;
+  height: 60vh;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--border);
+}
+
+.ie-footnote {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+/* ---------- Viewers ---------- */
+
+.ie-viewer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--background-secondary);
+  flex: none;
+  font-size: var(--font-size-small);
+}
+
+.ie-viewer__spacer {
+  flex: 1;
+}
+
+.ie-viewer__page .ie-input {
+  width: 72px;
+}
+
+.ie-viewer__surface {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.ie-viewer__surface img {
+  transform-origin: center;
+  transition: transform var(--transition-fast);
+}
+
+.ie-viewer__pdf {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: none;
+}
+
+/* ---------- Backlinks, outline, tags ---------- */
+
+.ie-backlink-group {
+  padding: var(--space-1) 0;
+}
+
+.ie-backlink-group__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) var(--space-3);
+  color: var(--text-normal);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-align: left;
+}
+
+.ie-backlink-group__title:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ie-backlink {
+  display: block;
+  width: 100%;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-5);
+  text-align: left;
+  color: var(--text-muted);
+  font-size: var(--font-size-smaller);
+  line-height: 1.45;
+  border-left: 2px solid var(--border);
+  margin-left: var(--space-3);
+}
+
+.ie-backlink:hover {
+  background: var(--background-modifier-hover);
+  border-left-color: var(--accent);
+  color: var(--text-normal);
+}
+
+.ie-backlink__source {
+  display: block;
+  color: var(--text-normal);
+  font-weight: 550;
+}
+
+.ie-backlink__context {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ie-outline__item {
+  display: block;
+  width: 100%;
+  padding: 3px var(--space-3);
+  text-align: left;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-outline__item:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.ie-outline__item.is-active {
+  color: var(--accent);
+  background: var(--background-modifier-active);
+}
+
+.ie-tag-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 26px;
+  padding-right: var(--space-3);
+  font-size: var(--font-size-small);
+}
+
+.ie-tag-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ie-tag-row__name {
+  flex: 1;
+  text-align: left;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-tag-row:hover .ie-tag-row__name {
+  color: var(--text-normal);
+}
+
+/* ---------- Properties ---------- */
+
+.ie-property {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.ie-property__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.ie-property__key {
+  flex: 1;
+  font-size: var(--font-size-smaller);
+  font-weight: 600;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The type switcher sits in a tight header row beside the key, so it is kept
+   narrow; the rest of its look comes from the shared select. */
+.ie-property__type {
+  max-width: 116px;
+  font-size: var(--font-size-smaller);
+}
+
+.ie-property__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ie-property__list-item {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.ie-property__readonly {
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+}
+
+/* ---------- Search ---------- */
+
+.ie-search__results {
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-search__summary {
+  padding: var(--space-1) var(--space-3);
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+  flex: none;
+}
+
+/* One chip per clause of the query, so the search is legible as a set of
+   conditions rather than as a string the user has to re-read. */
+.ie-search__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: 0 var(--space-3) var(--space-2);
+  flex: none;
+}
+
+/* The error state brings its own colour and border; this only places it. */
+.ie-search__error {
+  margin: var(--space-2) var(--space-3);
+  flex: none;
+}
+
+.ie-search__help {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px var(--space-3);
+  font-size: var(--font-size-smaller);
+  background: var(--background-primary-alt);
+  border-bottom: 1px solid var(--border);
+}
+
+.ie-search__help dt {
+  font-family: var(--font-monospace);
+  color: var(--accent);
+}
+
+.ie-search__help dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.ie-search-result {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.ie-search-result:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ie-search-result__title {
+  display: block;
+  color: var(--text-normal);
+  font-size: var(--font-size-small);
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-search-result__path {
+  display: block;
+  color: var(--text-faint);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-search-result__snippet {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--font-size-smaller);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Palette ---------- */
+
+.ie-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.ie-palette-backdrop {
+  align-items: flex-start;
+  padding-top: 12vh;
+}
+
+.ie-palette {
+  width: min(640px, 92vw);
+  max-height: 64vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-popover);
+  overflow: hidden;
+}
+
+.ie-palette__input {
+  padding: var(--space-4);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 15px;
+}
+
+.ie-palette__input:focus {
+  outline: none;
+}
+
+.ie-palette__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ie-palette__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  cursor: default;
+  font-size: var(--font-size-small);
+}
+
+.ie-palette__item.is-selected {
+  background: var(--background-modifier-active);
+}
+
+.ie-palette__category {
+  color: var(--text-faint);
+  font-size: 11px;
+  min-width: 68px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ie-palette__label {
+  flex: 1;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-palette__path {
+  color: var(--text-faint);
+  font-size: 11px;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.ie-palette__hotkey,
+.ie-palette__footer kbd {
+  background: var(--background-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  padding: 1px 5px;
+  color: var(--text-muted);
+  font-family: var(--font-interface);
+  font-size: 11px;
+}
+
+.ie-palette__footer {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+/* ---------- Modal ---------- */
+
+.ie-modal {
+  display: flex;
+  flex-direction: column;
+  max-height: 84vh;
+  background: var(--background-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-popover);
+  overflow: hidden;
+}
+
+.ie-modal--small { width: min(420px, 92vw); }
+.ie-modal--medium { width: min(640px, 92vw); }
+.ie-modal--large { width: min(940px, 94vw); height: min(680px, 88vh); }
+
+.ie-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+.ie-modal__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ie-modal__description {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) 0;
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.ie-modal__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+}
+
+.ie-modal__message {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.ie-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+  flex: none;
+}
+
+/* ---------- Context menu ---------- */
+
+.ie-context-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 190px;
+  padding: var(--space-1);
+  background: var(--background-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-popover);
+}
+
+.ie-context-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-s);
+  color: var(--text-normal);
+  font-size: var(--font-size-small);
+  text-align: left;
+}
+
+.ie-context-menu__item:hover:not(:disabled) {
+  background: var(--background-modifier-active);
+}
+
+.ie-context-menu__item:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.ie-context-menu__item--danger {
+  color: var(--text-error);
+}
+
+.ie-context-menu__hint {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.ie-context-menu__separator {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-1) 0;
+}
+
+/* ---------- Notifications ---------- */
+
+.ie-notifications {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--statusbar-height) + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 300;
+  max-width: min(420px, 60vw);
+}
+
+.ie-notification {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-popover);
+  font-size: var(--font-size-small);
+  animation: ie-slide-in var(--transition-medium);
+}
+
+@keyframes ie-slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.ie-notification--success { border-left: 3px solid var(--text-success); }
+.ie-notification--warning { border-left: 3px solid var(--text-warning); }
+.ie-notification--error { border-left: 3px solid var(--text-error); }
+.ie-notification--info { border-left: 3px solid var(--accent); }
+
+.ie-notification__message {
+  flex: 1;
+  line-height: 1.45;
+}
+
+/* ---------- Status bar ---------- */
+
+.ie-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  height: var(--statusbar-height);
+  padding: 0 var(--space-3);
+  border-top: 1px solid var(--border);
+  background: var(--background-secondary);
+  color: var(--text-faint);
+  font-size: 11px;
+  flex: none;
+}
+
+.ie-statusbar__left,
+.ie-statusbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.ie-statusbar__center {
+  flex: 1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-statusbar__warning {
+  color: var(--text-warning);
+  font-size: 11px;
+}
+
+.ie-statusbar__save {
+  color: var(--text-muted);
+}
+
+/* ---------- Welcome ---------- */
+
+.ie-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-5);
+  background: var(--background-primary);
+}
+
+.ie-welcome__panel {
+  width: min(520px, 100%);
+}
+
+.ie-welcome__title {
+  margin: 0 0 var(--space-2);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ie-welcome__subtitle {
+  margin: 0 0 var(--space-5);
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.ie-welcome__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.ie-welcome__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--background-modifier-error);
+  color: var(--text-error);
+  font-size: var(--font-size-small);
+  margin-bottom: var(--space-4);
+}
+
+.ie-welcome__section {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--font-size-smaller);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.ie-welcome__recents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ie-welcome__recents li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ie-welcome__recent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-m);
+  text-align: left;
+}
+
+.ie-welcome__recent:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ie-welcome__recent-name {
+  color: var(--text-normal);
+  font-weight: 550;
+}
+
+.ie-welcome__recent-path {
+  color: var(--text-faint);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Settings ---------- */
+
+.ie-settings {
+  display: flex;
+  gap: var(--space-4);
+  height: 100%;
+  min-height: 0;
+}
+
+.ie-settings__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 180px;
+  flex: none;
+  border-right: 1px solid var(--border);
+  padding-right: var(--space-3);
+}
+
+.ie-settings__nav-item {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-m);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  text-align: left;
+}
+
+.ie-settings__nav-item:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.ie-settings__nav-item.is-active {
+  background: var(--background-modifier-active);
+  color: var(--accent);
+}
+
+.ie-settings__body {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.ie-settings__body h3 {
+  margin: 0 0 var(--space-3);
+  font-size: 16px;
+}
+
+.ie-settings__body h4 {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+}
+
+.ie-settings__note {
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  line-height: 1.55;
+  margin: 0 0 var(--space-4);
+}
+
+/* The row is a <label>, so the control inside it is named without an id. */
+.ie-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ie-field__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ie-field__hint {
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+  line-height: 1.4;
+}
+
+.ie-field__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  max-width: 320px;
+}
+
+.ie-field__suffix {
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+}
+
+.ie-hotkeys {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-small);
+}
+
+.ie-hotkeys td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ie-hotkeys__category {
+  color: var(--text-faint);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  width: 90px;
+}
+
+.ie-hotkeys__binding {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.is-capturing {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ie-about {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px var(--space-4);
+  font-size: var(--font-size-small);
+  margin: 0 0 var(--space-4);
+}
+
+.ie-about dt {
+  color: var(--text-faint);
+}
+
+.ie-about dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ie-log {
+  max-height: 260px;
+  overflow: auto;
+  background: var(--code-background);
+  border-radius: var(--radius-m);
+  padding: var(--space-3);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ie-trash-list,
+.ie-template-list,
+.ie-diagnostics {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ie-trash-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-small);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ie-trash-list__path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-trash-list__date {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.ie-diagnostic {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-m);
+  background: var(--background-primary-alt);
+  border-left: 3px solid var(--text-warning);
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+}
+
+.ie-diagnostic--unreadableFile {
+  border-left-color: var(--text-error);
+}
+
+/* ---------- Graph ---------- */
+
+.ie-graph {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+}
+
+.ie-graph__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.ie-canvas__zoom-level {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-smaller);
+  color: var(--text-muted);
+  min-width: 3.5ch;
+  text-align: center;
+}
+
+/* The zoom controls sit apart from the filters, on the opposite side: one
+   is about what you are looking at, the other about how closely. */
+.ie-graph__zoom {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-xs);
+  background: var(--background-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+}
+
+.ie-graph__zoom-level {
+  /* Tabular figures, so the readout does not jiggle as the number changes. */
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-smaller);
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.ie-graph__controls {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  width: 236px;
+  max-height: calc(100% - var(--space-3) * 2);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--background-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-popover);
+  font-size: var(--font-size-smaller);
+}
+
+/* Inside the panel the sections are the structure, so they do not need the
+   border a standalone section carries. */
+.ie-graph__controls .ie-section {
+  border: none;
+  padding: 0;
+}
+
+.ie-graph__controls .ie-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-top: var(--space-xs);
+}
+
+.ie-graph__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
+.ie-graph__slider {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-muted);
+}
+
+.ie-graph__status {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  color: var(--text-faint);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+/* ---------- Canvas ---------- */
+
+.ie-canvas {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.ie-canvas__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--background-secondary);
+  flex: none;
+  font-size: var(--font-size-small);
+}
+
+.ie-canvas__surface {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+  cursor: default;
+  outline: none;
+}
+
+/* The grid is a background pattern rather than elements, so panning a large
+   board costs nothing. */
+.ie-canvas__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--background-modifier-border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--background-modifier-border) 1px, transparent 1px);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.ie-canvas__world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.ie-canvas__edges {
+  position: absolute;
+  left: -10000px;
+  top: -10000px;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.ie-canvas__edge path:last-of-type {
+  pointer-events: stroke;
+}
+
+.ie-canvas__marquee {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: var(--accent-muted);
+  pointer-events: none;
+}
+
+.ie-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  overflow: hidden;
+  cursor: grab;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.ie-card.is-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.ie-card--group {
+  background: var(--background-modifier-hover);
+  border-style: dashed;
+  z-index: 0;
+  align-items: flex-start;
+  justify-content: flex-start;
+  box-shadow: none;
+}
+
+.ie-card--text,
+.ie-card--file,
+.ie-card--link {
+  z-index: 1;
+}
+
+.ie-card__text,
+.ie-card__preview {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3);
+  font-size: var(--font-size-small);
+  line-height: 1.55;
+}
+
+.ie-card__text p:first-child,
+.ie-card__preview p:first-child {
+  margin-top: 0;
+}
+
+.ie-card__editor {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-normal);
+  padding: var(--space-3);
+  font-family: var(--font-text);
+  font-size: var(--font-size-small);
+  line-height: 1.55;
+  resize: none;
+}
+
+.ie-card__editor:focus {
+  outline: none;
+}
+
+.ie-card__placeholder {
+  color: var(--text-faint);
+}
+
+.ie-card__title {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-normal);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-align: left;
+  flex: none;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-card__title:hover {
+  color: var(--accent);
+}
+
+.ie-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--background-primary);
+}
+
+.ie-card__missing {
+  padding: var(--space-3);
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+}
+
+.ie-card__link {
+  padding: var(--space-3);
+  word-break: break-all;
+  font-size: var(--font-size-small);
+}
+
+.ie-card__group-label {
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  background: transparent;
+  border: none;
+}
+
+.ie-card__port {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--background-primary);
+  border: 2px solid var(--accent);
+  cursor: crosshair;
+  z-index: 2;
+}
+
+.ie-card__port--top { top: -6px; left: 50%; margin-left: -5px; }
+.ie-card__port--bottom { bottom: -6px; left: 50%; margin-left: -5px; }
+.ie-card__port--left { left: -6px; top: 50%; margin-top: -5px; }
+.ie-card__port--right { right: -6px; top: 50%; margin-top: -5px; }
+
+.ie-card__resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    var(--accent) 50%,
+    var(--accent) 60%,
+    transparent 60%
+  );
+}
+
+/* ---------- Recovery ---------- */
+
+.ie-recovery {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ie-recovery__item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: var(--space-3);
+  background: var(--background-primary-alt);
+}
+
+.ie-recovery__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.ie-recovery__path {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ie-recovery__when {
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+  flex: none;
+}
+
+.ie-recovery__warning {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-error);
+  color: var(--text-warning);
+  font-size: var(--font-size-smaller);
+}
+
+.ie-recovery__preview {
+  max-height: 160px;
+  overflow: auto;
+  margin: 0 0 var(--space-2);
+  padding: var(--space-2);
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-family: var(--font-monospace);
+  font-size: var(--font-size-smaller);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.ie-recovery__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ---------- Settings search ---------- */
+
+.ie-settings__search {
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+/* A section with nothing matching is dimmed rather than removed: a list that
+   jumps about as you type costs more than the empty rows save. */
+.ie-settings__nav-item.is-dimmed {
+  opacity: 0.4;
+}
+
+.ie-settings__results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ie-settings__result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  text-align: left;
+  color: var(--text-normal);
+}
+
+.ie-settings__result:hover,
+.ie-settings__result:focus-visible {
+  background: var(--background-modifier-hover);
+}
+
+.ie-settings__result-section {
+  flex: none;
+  color: var(--text-faint);
+  font-size: var(--font-size-smaller);
+}
+
+/*
+ * Where the search sent you.
+ *
+ * A signpost rather than a state: it says "this one" for a moment and then
+ * gets out of the way, because a setting that stays highlighted starts to
+ * look like a setting that is wrong.
+ */
+.ie-field.is-highlighted {
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 2px var(--accent);
+  animation: ie-settle 2.4s var(--easing-standard) forwards;
+}
+
+@keyframes ie-settle {
+  0%,
+  70% {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ie-field.is-highlighted {
+    animation: none;
+  }
+}
+
+/* ---------- Callouts and figures ---------- */
+
+/*
+ * A callout is a blockquote the reader is meant to stop at.
+ *
+ * The colour is carried on one custom property per kind, so the shape is
+ * written once and an unknown kind still gets a callout rather than an error
+ * — a vault written against another editor's list of types still reads well.
+ */
+.ie-callout {
+  --callout-colour: var(--accent);
+  margin: 1.2em 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--callout-colour);
+  background: color-mix(in srgb, var(--callout-colour) 8%, transparent);
+}
+
+.ie-callout__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--callout-colour);
+  cursor: default;
+}
+
+.ie-callout__icon {
+  flex: none;
+}
+
+.ie-callout__body > :first-child {
+  margin-top: var(--space-sm);
+}
+
+.ie-callout__body > :last-child {
+  margin-bottom: 0;
+}
+
+/* A collapsible callout's title is the control, so it has to look like one. */
+details.ie-callout > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details.ie-callout > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.ie-callout > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-inline-start: auto;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+details.ie-callout[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.ie-callout--note { --callout-colour: var(--accent); }
+.ie-callout--info { --callout-colour: var(--accent); }
+.ie-callout--abstract { --callout-colour: var(--accent); }
+.ie-callout--tip { --callout-colour: var(--text-success); }
+.ie-callout--success { --callout-colour: var(--text-success); }
+.ie-callout--todo { --callout-colour: var(--text-success); }
+.ie-callout--question { --callout-colour: var(--text-warning); }
+.ie-callout--warning { --callout-colour: var(--text-warning); }
+.ie-callout--danger { --callout-colour: var(--text-error); }
+.ie-callout--error { --callout-colour: var(--text-error); }
+.ie-callout--bug { --callout-colour: var(--text-error); }
+.ie-callout--example { --callout-colour: var(--text-muted); }
+.ie-callout--quote { --callout-colour: var(--text-muted); }
+
+/* An image with alt text gets that text as its caption too: the same words
+   describe the picture to someone who cannot see it and to someone who can. */
+.ie-figure {
+  margin: 1.5em 0;
+  text-align: center;
+}
+
+.ie-figure img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.ie-figure figcaption {
+  margin-top: var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
+/* ---------- Responsive ---------- */
+
+/*
+ * Three layouts, and the rails are in all of them.
+ *
+ * Wide: both sidebars take their own column. Medium: they are capped so the
+ * editor keeps a readable measure. Narrow: a sidebar stops being a column and
+ * slides over the editor instead — hiding it outright would mean the user's
+ * own choice of panel silently stopped working when they resized the window.
+ *
+ * Nothing here writes to the workspace, so a window that widens again shows
+ * exactly the sidebars the user had open.
+ */
+
+@media (max-width: 1280px) {
+  .ie-sidebar {
+    max-width: 32vw;
+  }
+
+  .ie-toolbar__search {
+    width: 160px;
+  }
+
+  .ie-toolbar__search:focus-within {
+    width: 220px;
+  }
+}
+
+@media (max-width: 960px) {
+  .ie-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: var(--z-dropdown);
+    max-width: 78vw;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ie-sidebar--left {
+    left: 0;
+  }
+
+  .ie-sidebar--right {
+    right: 0;
+  }
+
+  /* The drag handle would sit under the editor's own scrollbar and is the
+     wrong gesture for a drawer anyway. */
+  .ie-sidebar__handle {
+    display: none;
+  }
+
+  /* Tapping the editor puts the drawer away, the way a drawer should behave. */
+  .ie-app__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: calc(var(--z-dropdown) - 1);
+    background: rgba(0, 0, 0, 0.32);
+    border: none;
+    padding: 0;
+  }
+
+  .ie-toolbar__group--center {
+    display: none;
+  }
+
+  .ie-toolbar__search {
+    width: 140px;
+  }
+
+  .ie-toolbar__search:focus-within {
+    width: 180px;
+  }
+}
+
+/* Above the narrow breakpoint the scrim has nothing to dismiss. */
+@media (min-width: 961px) {
+  .ie-app__scrim {
+    display: none;
+  }
+}
+
+/* ---------- Print ---------- */
+
+/*
+ * Printing a note, and saving one as a PDF, are the same operation to the
+ * browser — which is how the export-to-PDF command works. So this is not a
+ * courtesy for people with printers: it is the layout of a file the user
+ * keeps.
+ *
+ * Everything that helps you navigate is gone, because a page you cannot
+ * click is not helped by a sidebar. What is left is the note.
+ */
+@media print {
+  .ie-toolbar,
+  .ie-rail,
+  .ie-sidebar,
+  .ie-tabbar,
+  .ie-statusbar,
+  .ie-app__scrim,
+  .ie-notifications,
+  .ie-context-menu {
+    display: none !important;
+  }
+
+  html,
+  body,
+  .ie-app,
+  .ie-app__main,
+  .ie-app__panes,
+  .ie-pane,
+  .ie-pane__body {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Paper is white whatever the screen was, and ink is expensive. */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .ie-reading {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .ie-reading__body {
+    max-width: none;
+    font-size: 11pt;
+    color: #000;
+  }
+
+  /* A heading at the foot of a page, with its section overleaf, is the one
+     break that always looks like a mistake. */
+  .ie-reading__body h1,
+  .ie-reading__body h2,
+  .ie-reading__body h3,
+  .ie-reading__body h4,
+  .ie-reading__body h5,
+  .ie-reading__body h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+    color: #000;
+  }
+
+  .ie-reading__body p,
+  .ie-reading__body li,
+  .ie-reading__body blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .ie-figure,
+  .ie-callout,
+  .ie-code-block,
+  .ie-table-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* A tint that is invisible on paper leaves the callout looking like a
+     stray paragraph, so on print it keeps its rule and loses its fill. */
+  .ie-callout {
+    background: none;
+    border: 1px solid #999;
+    border-inline-start-width: 3px;
+  }
+
+  .ie-code-block,
+  .ie-inline-code {
+    background: none;
+    border: 1px solid #ccc;
+    color: #000;
+  }
+
+  /* A collapsed callout would print as a heading with nothing under it. */
+  details.ie-callout > .ie-callout__body {
+    display: block !important;
+  }
+
+  /* The destination of a link cannot be clicked on paper, so it is written
+     out — but only for links that lead somewhere outside the vault. */
+  .ie-external-link::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    color: #555;
+    word-break: break-all;
+  }
+
+  .ie-wikilink,
+  .ie-internal-link {
+    color: #000;
+    text-decoration: underline;
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "link-audit",
+  "name": "Link Audit",
+  "version": "1.0.0",
+  "description": "Records how well connected each note is, in its frontmatter.",
+  "permissions": ["vault:read", "vault:write", "metadata:read", "workspace", "commands", "ui"]
+}

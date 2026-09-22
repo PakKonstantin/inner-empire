@@ -1,0 +1,203 @@
+# Building a release.
+#
+# Fires on a version tag, builds every artifact on the platform that can
+# produce it, checksums the lot and opens a **draft** release. Publishing is
+# a human action: nothing here makes anything public, and nothing is pushed
+# to any store.
+#
+# Signing is optional throughout. A fork, or this repository before anyone
+# has set up certificates, produces unsigned artifacts and a note saying so,
+# rather than a failed build. Certificates never live in the repository.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'nightly-*'
+
+# The tag is the input; nothing here writes back to a branch.
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # The same checks a branch gets. A tag that would not have passed CI is not
+  # a tag worth building.
+  verify:
+    name: Verify
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The tag and package.json must agree, or the release is named one
+      # thing and contains another.
+      - name: The tag matches the version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          if [ "${tag%%-*}" = "nightly" ]; then
+            echo "Nightly tag; version is $version."
+            exit 0
+          fi
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version."
+            echo "Run pnpm version:sync after editing package.json, and tag v$version."
+            exit 1
+          fi
+          echo "Tag and version agree: $version"
+
+      - run: pnpm version:check
+      - run: pnpm check:contrast
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  build:
+    name: Build on ${{ matrix.os }}
+    needs: verify
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            bundles: deb,rpm,appimage
+          - os: windows-latest
+            bundles: nsis,msi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # Built on the oldest runner available, so the glibc floor is as low as
+      # the runners allow.
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
+            libayatana-appindicator3-dev patchelf
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Report whether signing is configured
+        shell: bash
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ] && [ -z "$WINDOWS_CERTIFICATE" ]; then
+            echo "::notice::No WINDOWS_CERTIFICATE secret; the installer will be unsigned."
+            echo "### Unsigned Windows build" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No signing certificate is configured, so SmartScreen will warn on first run." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Build
+        env:
+          # Tauri reads these only when they are set; absent, it does not sign.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm tauri build --bundles ${{ matrix.bundles }}
+
+      - name: Portable zip
+        if: runner.os == 'Windows'
+        run: node scripts/package-portable.mjs
+
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p dist-release
+          # -print0/-0 rather than a glob: a bundle name contains spaces.
+          find src-tauri/target/release/bundle -type f \
+            \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \
+               -o -name '*.exe' -o -name '*.msi' \) \
+            -print0 | xargs -0 -I{} cp {} dist-release/ || true
+          # The portable zip is written straight to dist-release.
+          ls -la dist-release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ matrix.os }}
+          path: dist-release/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Draft release
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: collected
+
+      - name: Gather into one directory
+        run: |
+          mkdir -p dist-release
+          find collected -type f -exec cp {} dist-release/ \;
+          ls -la dist-release
+
+      - name: Checksums
+        run: node scripts/checksums.mjs dist-release
+
+      # Signed when a key exists; the release happens either way, because a
+      # missing signature is a smaller problem than no release at all.
+      - name: Sign the checksums
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::notice::No GPG_PRIVATE_KEY secret; SHA256SUMS will not be signed."
+            exit 0
+          fi
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$GPG_PASSPHRASE" \
+            --detach-sign --armor \
+            --output dist-release/SHA256SUMS.asc \
+            dist-release/SHA256SUMS
+          echo "SHA256SUMS.asc written."
+
+      # Draft, and pre-release for anything that is not a plain vX.Y.Z.
+      - name: Draft the release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref_name, '-') || startsWith(github.ref_name, 'nightly-') }}
+          files: dist-release/*
+          fail_on_unmatched_files: true
+          body: |
+            Draft. Check the artifacts, then write the notes and publish.
+
+            **Verifying a download**
+
+            ```
+            sha256sum -c SHA256SUMS
+            ```
+
+            When `SHA256SUMS.asc` is present, the list itself can be checked
+            against the project's public key before trusting it.

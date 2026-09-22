@@ -1,0 +1,6 @@
+{
+  "links": [],
+  "tags": [],
+  "headings": [{ "level": 1, "text": "Blocks", "slug": "blocks" }],
+  "blocks": ["trailing-marker", "standalone-marker"]
+}

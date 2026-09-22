@@ -1,0 +1,18 @@
+{
+  "links": [
+    { "kind": "wikiLink", "target": "Machine Learning", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "Statistics", "heading": null, "blockId": null, "alias": "stats" },
+    { "kind": "wikiLink", "target": "Neural Networks", "heading": "Architecture", "blockId": null, "alias": null },
+    { "kind": "embed", "target": "diagram.png", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "Context", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "In Table", "heading": null, "blockId": null, "alias": null },
+    { "kind": "external", "target": "https://example.org", "heading": null, "blockId": null, "alias": null },
+    { "kind": "markdown", "target": "Other.md", "heading": null, "blockId": null, "alias": null }
+  ],
+  "tags": ["AI/Research", "quoted"],
+  "headings": [
+    { "level": 1, "text": "Project Notes", "slug": "project-notes" },
+    { "level": 2, "text": "Tasks", "slug": "tasks" }
+  ],
+  "blocks": ["key-insight"]
+}

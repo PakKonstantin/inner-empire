@@ -1,0 +1,63 @@
+[workspace]
+members = [".", "crates/ie-core", "crates/ie-ffi", "crates/ie-platform"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "MIT"
+authors = ["Inner Empire contributors"]
+repository = "https://github.com/pakkonstantin/inner-empire"
+
+[workspace.dependencies]
+# Opting in per consumer, so an iOS build can leave the desktop watcher and
+# directory backends out rather than linking code it must never call.
+ie-core = { path = "crates/ie-core", default-features = false }
+ie-ffi = { path = "crates/ie-ffi" }
+ie-platform = { path = "crates/ie-platform", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tempfile = "3"
+
+[package]
+name = "inner-empire"
+description = "Inner Empire — local-first knowledge management platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+default-run = "inner-empire"
+
+[lib]
+name = "inner_empire_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+ie-core = { workspace = true, features = ["desktop-backends"] }
+ie-platform = { workspace = true, features = ["desktop-backends"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+
+[features]
+default = []
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

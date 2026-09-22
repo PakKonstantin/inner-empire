@@ -1,0 +1,7 @@
+{
+  "id": "text-tools",
+  "name": "Text Tools",
+  "version": "1.0.0",
+  "description": "Transformations over the note being edited.",
+  "permissions": ["vault:read", "vault:write", "workspace", "commands", "ui"]
+}

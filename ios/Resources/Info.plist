@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Inner Empire</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+
+	<!-- The vault is reachable from Files.app and editable in place. Without
+	     these the user could pick a folder but never see their notes anywhere
+	     else, which defeats the premise that a vault is just a folder. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<!-- Off: this app is folder-scoped with its own navigation, not a
+	     document browser rooted in one. -->
+	<key>UISupportsDocumentBrowser</key>
+	<false/>
+
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Markdown Note</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>net.daringfireball.markdown</string>
+				<string>public.plain-text</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Canvas</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.innerempire.canvas</string>
+			</array>
+		</dict>
+	</array>
+
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.innerempire.canvas</string>
+			<key>UTTypeDescription</key>
+			<string>Inner Empire Canvas</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.json</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>canvas</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>$(IE_BUNDLE_ID_PREFIX).innerempire</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>innerempire</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Indexing and sync only, checkpointed so the system can stop it at any
+	     point. No background fetch, no audio, no location. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(IE_BUNDLE_ID_PREFIX).innerempire.index</string>
+	</array>
+
+	<!-- Requested at the moment of use, not at launch, and only these two.
+	     §73: no permission the app does not need. -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Inner Empire adds the photos you choose to your vault's attachments folder.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Inner Empire uses the camera only when you take a photo or scan a document into a note.</string>
+</dict>
+</plist>

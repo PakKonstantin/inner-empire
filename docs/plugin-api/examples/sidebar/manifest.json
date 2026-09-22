@@ -1,0 +1,7 @@
+{
+  "id": "tag-browser",
+  "name": "Tag Browser",
+  "version": "1.0.0",
+  "description": "A sidebar panel listing the notes under a chosen tag.",
+  "permissions": ["metadata:read", "workspace", "ui", "settings"]
+}

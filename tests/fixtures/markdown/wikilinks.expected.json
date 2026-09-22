@@ -1,0 +1,16 @@
+{
+  "links": [
+    { "kind": "wikiLink", "target": "Note", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "Note", "heading": null, "blockId": null, "alias": "Display text" },
+    { "kind": "wikiLink", "target": "Note", "heading": "Heading", "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "Note", "heading": "Heading", "blockId": null, "alias": "Display text" },
+    { "kind": "wikiLink", "target": "Note", "heading": null, "blockId": "block-id", "alias": null },
+    { "kind": "embed", "target": "Other Note", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "", "heading": "Local Heading", "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "Folder/Sub/Deep Note", "heading": null, "blockId": null, "alias": null },
+    { "kind": "wikiLink", "target": "Folder/Deep", "heading": null, "blockId": null, "alias": "shown" }
+  ],
+  "tags": [],
+  "headings": [{ "level": 1, "text": "Wiki links", "slug": "wiki-links" }],
+  "blocks": []
+}

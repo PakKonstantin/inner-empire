@@ -1,0 +1,172 @@
+/*
+ * The theme system.
+ *
+ * Every colour and every dimension the interface uses is a custom property on
+ * :root. A theme — built in or dropped into the vault by the user — redefines
+ * these and nothing else, which is what makes a user theme a short file rather
+ * than a fork of the stylesheet.
+ */
+
+:root {
+  /* Surfaces, from the furthest back to the nearest front. */
+  --background-primary: #16181d;
+  --background-primary-alt: #1a1d23;
+  --background-secondary: #1d2027;
+  --background-secondary-alt: #23262e;
+  --background-modifier-hover: rgba(255, 255, 255, 0.05);
+  --background-modifier-active: rgba(122, 162, 247, 0.16);
+  --background-modifier-border: #2b2f38;
+  --background-modifier-error: rgba(233, 106, 116, 0.15);
+  --background-modifier-success: rgba(126, 200, 149, 0.15);
+
+  /* Text, from the most prominent to the least. */
+  --text-normal: #e6e8eb;
+  --text-muted: #9aa3ae;
+  --text-faint: #6b727d;
+  --text-on-accent: #0f1115;
+  --text-error: #e96a74;
+  --text-success: #7ec895;
+  --text-warning: #e2b569;
+
+  /* Accent and semantic colours. */
+  --accent: #7aa2f7;
+  --accent-hover: #93b4ff;
+  --accent-muted: rgba(122, 162, 247, 0.22);
+  --border: #2b2f38;
+  --border-strong: #3a3f4b;
+  /*
+   * For anything that has to be *seen* rather than merely suggested.
+   *
+   * `--border-strong` is a container edge — the outline of a modal that the
+   * backdrop and the shadow already separate from the page. This one is for
+   * the scrollbar thumb, the active pane's marker and a control's boundary:
+   * things a reader has to find, and which WCAG 1.4.11 therefore holds to
+   * 3:1. Both clear it against every surface they can land on, which
+   * `scripts/check-contrast.mjs` verifies.
+   */
+  --interactive-border: #6b6f77;
+
+  /* Editor-specific. */
+  --code-background: #21252d;
+  --code-text: #d7dbe0;
+  --selection-background: rgba(122, 162, 247, 0.28);
+  --cursor-color: #7aa2f7;
+  --link-color: #7aa2f7;
+  --link-unresolved-color: #b07a9a;
+  --tag-background: rgba(122, 162, 247, 0.16);
+  --tag-color: #a9c1ff;
+  --highlight-background: rgba(226, 181, 105, 0.32);
+
+  /* Headings get their own scale so a theme can tint them as a group. */
+  --h1-color: var(--text-normal);
+  --h2-color: var(--text-normal);
+  --h3-color: var(--text-normal);
+  --h4-color: var(--text-muted);
+  --h5-color: var(--text-muted);
+  --h6-color: var(--text-faint);
+
+  /* Graph. */
+  --graph-node: #7aa2f7;
+  --graph-node-unresolved: #6b727d;
+  --graph-node-attachment: #7ec895;
+  --graph-node-tag: #e2b569;
+  --graph-edge: rgba(154, 163, 174, 0.35);
+  --graph-highlight: #e2b569;
+
+  /* Typography. */
+  --font-interface: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-text: var(--font-interface);
+  --font-monospace: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-size-normal: 15px;
+  --font-size-small: 13px;
+  --font-size-smaller: 12px;
+  --font-size-editor: 16px;
+  --line-height-normal: 1.6;
+  --line-height-tight: 1.3;
+
+  /* Layout. */
+  --radius-s: 4px;
+  --radius-m: 6px;
+  --radius-l: 10px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --titlebar-height: 38px;
+  --tabbar-height: 36px;
+  --statusbar-height: 26px;
+  --shadow-popover: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --transition-fast: 90ms ease;
+  --transition-medium: 160ms ease;
+}
+
+:root[data-theme='light'] {
+  --background-primary: #ffffff;
+  --background-primary-alt: #fafbfc;
+  --background-secondary: #f4f5f7;
+  --background-secondary-alt: #eceef1;
+  --background-modifier-hover: rgba(0, 0, 0, 0.045);
+  --background-modifier-active: rgba(59, 111, 212, 0.12);
+  --background-modifier-border: #e2e5ea;
+  --background-modifier-error: rgba(200, 55, 66, 0.1);
+  --background-modifier-success: rgba(34, 134, 78, 0.12);
+
+  --text-normal: #1f2328;
+  --text-muted: #5c6672;
+  --text-faint: #7d8690;
+  --text-on-accent: #ffffff;
+  --text-error: #c83742;
+  --text-success: #22864e;
+  --text-warning: #9a6a13;
+
+  --accent: #3b6fd4;
+  --accent-hover: #2f5cb5;
+  --accent-muted: rgba(59, 111, 212, 0.16);
+  --border: #e2e5ea;
+  --border-strong: #cbd1d9;
+  --interactive-border: #858991;
+
+  --code-background: #f2f4f7;
+  --code-text: #24292f;
+  --selection-background: rgba(59, 111, 212, 0.2);
+  --cursor-color: #3b6fd4;
+  --link-color: #3b6fd4;
+  --link-unresolved-color: #9a5f80;
+  --tag-background: rgba(59, 111, 212, 0.12);
+  --tag-color: #2f5cb5;
+  --highlight-background: rgba(240, 190, 90, 0.5);
+
+  --h4-color: var(--text-muted);
+  --h5-color: var(--text-muted);
+  --h6-color: var(--text-faint);
+
+  --graph-node: #3b6fd4;
+  --graph-node-unresolved: #a4adb8;
+  --graph-node-attachment: #22864e;
+  --graph-node-tag: #9a6a13;
+  --graph-edge: rgba(92, 102, 114, 0.3);
+  --graph-highlight: #d98324;
+
+  --shadow-popover: 0 10px 30px rgba(15, 20, 30, 0.14);
+}
+
+/*
+ * A reader who has asked their system not to animate gets no animation. This
+ * is a stylesheet-level switch rather than a setting, so it also covers
+ * anything a user theme adds.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --transition-fast: 0ms;
+    --transition-medium: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
