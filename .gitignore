@@ -20,3 +20,4 @@ ios/Frameworks/
 ios/Config/Signing.xcconfig
 ios/*.xcodeproj/
 ios/DerivedData/
+dist-release/

@@ -1,0 +1,16 @@
+# Installed to /usr/share/applications. Why MimeType is an advertisement
+# rather than a claim is explained in docs/RELEASE_IMPLEMENTATION_PLAN.md §4.2.
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Inner Empire
+GenericName=Knowledge Base
+Comment={{comment}}
+Exec={{exec}} %F
+Icon={{icon}}
+Terminal=false
+Categories=Office;Utility;TextEditor;
+MimeType=text/markdown;text/x-markdown;text/plain;
+Keywords=markdown;notes;wiki;knowledge;vault;zettelkasten;
+StartupWMClass=Inner Empire
+StartupNotify=true

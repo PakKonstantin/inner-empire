@@ -272,7 +272,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build the application
+        if: matrix.os == 'windows-latest'
         run: pnpm build && cargo build --manifest-path src-tauri/Cargo.toml --release
+
+      # On Linux, go the whole way to a package. A bundle configuration that
+      # does not assemble — a missing desktop template, a bad dependency
+      # name, an icon that is not where the config says — is invisible to
+      # `cargo build`, and finding it at release time means finding it with a
+      # tag already pushed.
+      - name: Build and package
+        if: matrix.os == 'ubuntu-22.04'
+        run: pnpm tauri build --bundles deb
+
+      - name: The package contains what it should
+        if: matrix.os == 'ubuntu-22.04'
+        run: node scripts/check-package.mjs
 
   e2e:
     name: End-to-end
