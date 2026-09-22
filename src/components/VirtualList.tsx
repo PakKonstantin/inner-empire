@@ -10,8 +10,28 @@
  * arithmetically rather than measured.
  */
 
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+/**
+ * Attributes for the scrolling element itself.
+ *
+ * A list that is really a tree or a listbox has to carry its role on the
+ * element the user focuses, and that element is the scroller — not a wrapper
+ * around it, because an intervening generic element breaks the relationship
+ * between the role and its items.
+ */
+export type VirtualListContainer = Pick<
+  HTMLAttributes<HTMLDivElement>,
+  | 'role'
+  | 'tabIndex'
+  | 'onKeyDown'
+  | 'onFocus'
+  | 'onBlur'
+  | 'aria-label'
+  | 'aria-activedescendant'
+  | 'aria-multiselectable'
+>;
 
 export interface VirtualListProps<T> {
   items: T[];
@@ -24,6 +44,8 @@ export interface VirtualListProps<T> {
   emptyState?: ReactNode;
   /** Scroll this index into view when it changes. */
   scrollToIndex?: number;
+  /** Role and keyboard attributes for the scrolling element. */
+  container?: VirtualListContainer;
 }
 
 export function VirtualList<T>({
@@ -35,6 +57,7 @@ export function VirtualList<T>({
   className,
   emptyState,
   scrollToIndex,
+  container,
 }: VirtualListProps<T>) {
   const viewport = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -82,13 +105,21 @@ export function VirtualList<T>({
   const visible = items.slice(first, last);
 
   return (
-    <div className={className} ref={viewport} onScroll={onScroll} style={{ overflowY: 'auto' }}>
+    <div
+      className={className}
+      ref={viewport}
+      onScroll={onScroll}
+      style={{ overflowY: 'auto' }}
+      {...container}
+    >
       {/* A spacer of the full height gives the scrollbar the right size while
-          only the visible rows exist in the DOM. */}
-      <div style={{ height: items.length * rowHeight, position: 'relative' }}>
-        <div style={{ transform: `translateY(${first * rowHeight}px)` }}>
+          only the visible rows exist in the DOM. The two wrappers exist for
+          the scrollbar and the offset, and carry no meaning — saying so keeps
+          them out of the way of a role on the scroller above. */}
+      <div style={{ height: items.length * rowHeight, position: 'relative' }} role="presentation">
+        <div style={{ transform: `translateY(${first * rowHeight}px)` }} role="presentation">
           {visible.map((item, offset) => (
-            <div key={keyOf(item, first + offset)} style={{ height: rowHeight }}>
+            <div key={keyOf(item, first + offset)} style={{ height: rowHeight }} role="presentation">
               {renderRow(item, first + offset)}
             </div>
           ))}

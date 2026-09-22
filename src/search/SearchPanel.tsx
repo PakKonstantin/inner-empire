@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { VirtualList } from '@/components/VirtualList';
 import { api } from '@/services/api';
 import type { SearchHit, SearchResults, VaultPath } from '@/types/domain';
+import { EmptyState, ErrorState, IconButton, SearchInput, Skeleton, Tooltip } from '@/ui';
 
 const ROW_HEIGHT = 62;
 const DEBOUNCE_MS = 180;
@@ -72,26 +73,24 @@ export function SearchPanel({ initialQuery, onOpen }: SearchPanelProps) {
     <div className="ie-panel ie-search">
       <div className="ie-panel-header">
         <span>Search</span>
-        <button
-          type="button"
-          className="ie-icon-button"
-          aria-label="Query syntax"
-          aria-pressed={showHelp}
-          title="Query syntax"
-          onClick={() => setShowHelp((current) => !current)}
-        >
-          ?
-        </button>
+        <Tooltip content="Query syntax">
+          <IconButton
+            icon="help"
+            label="Query syntax"
+            size="sm"
+            pressed={showHelp}
+            onClick={() => setShowHelp((current) => !current)}
+          />
+        </Tooltip>
       </div>
 
-      <div className="ie-explorer__filter">
-        <input
+      <div className="ie-explorer__controls">
+        <SearchInput
           ref={input}
-          className="ie-input"
-          type="search"
+          label="Search notes"
           placeholder="Search notes"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onValueChange={setQuery}
           aria-invalid={error !== null}
         />
       </div>
@@ -119,7 +118,16 @@ export function SearchPanel({ initialQuery, onOpen }: SearchPanelProps) {
         </dl>
       ) : null}
 
-      {error ? <div className="ie-search__error">{error}</div> : null}
+      {error ? (
+        <div className="ie-search__error">
+          <ErrorState
+            compact
+            title="That query could not be read"
+            description="Fix the part below and the search runs again as you type."
+            detail={error}
+          />
+        </div>
+      ) : null}
 
       {results ? (
         <div className="ie-search__summary">
@@ -138,12 +146,30 @@ export function SearchPanel({ initialQuery, onOpen }: SearchPanelProps) {
         keyOf={(hit) => hit.path}
         renderRow={(hit) => <SearchResultRow hit={hit} onOpen={onOpen} />}
         emptyState={
-          query.trim() && !searching && !error ? (
-            <div className="ie-empty">No notes match that search.</div>
-          ) : (
-            <div className="ie-empty">
-              Type to search the whole vault. Press the question mark for the query syntax.
+          searching ? (
+            <div className="ie-panel__loading" aria-busy="true" aria-live="polite">
+              <span className="sr-only">Searching</span>
+              <Skeleton height={16} width="60%" />
+              <Skeleton height={12} width="85%" />
+              <Skeleton height={16} width="45%" />
+              <Skeleton height={12} width="75%" />
             </div>
+          ) : error ? null : query.trim() ? (
+            <EmptyState
+              compact
+              icon="search"
+              title="No matches"
+              description="No note in this vault matches that query."
+              action={{ label: 'Show the query syntax', onClick: () => setShowHelp(true) }}
+            />
+          ) : (
+            <EmptyState
+              compact
+              icon="search"
+              title="Search the vault"
+              description={'Type to search every note. Words, "exact phrases", tag:, path: and property comparisons all work.'}
+              action={{ label: 'Show the query syntax', onClick: () => setShowHelp(true) }}
+            />
           )
         }
       />

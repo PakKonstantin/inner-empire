@@ -11,6 +11,22 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '@/services/api';
 import type { Property, PropertyKind, PropertyValue, VaultPath } from '@/types/domain';
+import { EmptyState, IconButton, Select, Tooltip } from '@/ui';
+
+/**
+ * The property types a value can be switched between.
+ *
+ * The order goes from the most common to the least, not alphabetically —
+ * this list is read while choosing, not looked up.
+ */
+const PROPERTY_KINDS = [
+  { value: 'text', label: 'Text' },
+  { value: 'number', label: 'Number' },
+  { value: 'checkbox', label: 'Checkbox' },
+  { value: 'date', label: 'Date' },
+  { value: 'datetime', label: 'Date and time' },
+  { value: 'list', label: 'List' },
+];
 
 export interface PropertiesPanelProps {
   path: VaultPath | null;
@@ -86,7 +102,12 @@ export function PropertiesPanel({ path, properties, onChanged }: PropertiesPanel
         <div className="ie-panel-header">
           <span>Properties</span>
         </div>
-        <div className="ie-empty">Open a note to edit its properties.</div>
+        <EmptyState
+          compact
+          icon="settings"
+          title="No note open"
+          description="Open a note to read and edit the properties in its frontmatter."
+        />
       </div>
     );
   }
@@ -95,20 +116,20 @@ export function PropertiesPanel({ path, properties, onChanged }: PropertiesPanel
     <div className="ie-panel ie-properties">
       <div className="ie-panel-header">
         <span>Properties</span>
-        <button
-          type="button"
-          className="ie-icon-button"
-          title="Add a property"
-          aria-label="Add a property"
-          onClick={() => setAdding(true)}
-        >
-          ＋
-        </button>
+        <Tooltip content="Add a property">
+          <IconButton icon="plus" label="Add a property" size="sm" onClick={() => setAdding(true)} />
+        </Tooltip>
       </div>
 
       <div className="ie-panel__body">
         {draft.length === 0 && !adding ? (
-          <div className="ie-empty">This note has no properties.</div>
+          <EmptyState
+            compact
+            icon="settings"
+            title="No properties"
+            description="Properties are the typed key–value pairs in a note's frontmatter."
+            action={{ label: 'Add a property', onClick: () => setAdding(true) }}
+          />
         ) : null}
 
         {draft.map((property) => (
@@ -117,29 +138,21 @@ export function PropertiesPanel({ path, properties, onChanged }: PropertiesPanel
               <label className="ie-property__key" htmlFor={`property-${property.key}`}>
                 {property.key}
               </label>
-              <select
+              <Select
                 className="ie-property__type"
                 aria-label={`Type of ${property.key}`}
                 value={property.value.kind}
                 onChange={(event) =>
                   updateValue(property.key, convert(property.value, event.target.value as PropertyKind))
                 }
-              >
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="checkbox">Checkbox</option>
-                <option value="date">Date</option>
-                <option value="datetime">Date and time</option>
-                <option value="list">List</option>
-              </select>
-              <button
-                type="button"
-                className="ie-icon-button"
-                aria-label={`Remove ${property.key}`}
+                options={PROPERTY_KINDS}
+              />
+              <IconButton
+                icon="close"
+                label={`Remove ${property.key}`}
+                size="sm"
                 onClick={() => removeProperty(property.key)}
-              >
-                ✕
-              </button>
+              />
             </div>
             <PropertyEditor
               id={`property-${property.key}`}
@@ -245,16 +258,14 @@ function PropertyEditor({ id, value, onChange }: PropertyEditorProps) {
                   onChange({ kind: 'list', value: next });
                 }}
               />
-              <button
-                type="button"
-                className="ie-icon-button"
-                aria-label="Remove item"
+              <IconButton
+                icon="close"
+                label="Remove item"
+                size="sm"
                 onClick={() =>
                   onChange({ kind: 'list', value: value.value.filter((_, i) => i !== index) })
                 }
-              >
-                ✕
-              </button>
+              />
             </div>
           ))}
           <button

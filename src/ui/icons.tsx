@@ -80,6 +80,12 @@ const paths = {
   'chevron-down': <path d="M5.5 9.5L12 16l6.5-6.5" />,
   'chevron-up': <path d="M18.5 14.5L12 8l-6.5 6.5" />,
   'chevrons-up': <path d="M18 17l-6-6-6 6M18 11l-6-6-6 6" />,
+  help: (
+    <>
+      <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" />
+      <path d="M9.6 9.5a2.4 2.4 0 1 1 3.2 2.3c-.5.2-.8.7-.8 1.2v.5M12 16.8v.01" />
+    </>
+  ),
   'arrow-left': <path d="M19 12H5M11 6l-6 6 6 6" />,
   'arrow-right': <path d="M5 12h14M13 6l6 6-6 6" />,
   'corner-down-left': <path d="M20 4v7a4 4 0 0 1-4 4H5M9 11l-4 4 4 4" />,

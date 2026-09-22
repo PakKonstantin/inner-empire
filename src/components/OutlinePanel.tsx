@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import { events } from '@/services/events';
 import type { Heading, VaultPath } from '@/types/domain';
+import { Badge, EmptyState } from '@/ui';
 
 export interface OutlinePanelProps {
   path: VaultPath | null;
@@ -59,13 +60,23 @@ export function OutlinePanel({ path, currentLine, onJump }: OutlinePanelProps) {
     <div className="ie-panel ie-outline">
       <div className="ie-panel-header">
         <span>Outline</span>
-        <span className="ie-count-badge">{headings.length}</span>
+        <Badge>{headings.length}</Badge>
       </div>
       <div className="ie-panel__body">
         {!path ? (
-          <div className="ie-empty">Open a note to see its outline.</div>
+          <EmptyState
+            compact
+            icon="list"
+            title="No note open"
+            description="Open a note to see its headings."
+          />
         ) : headings.length === 0 ? (
-          <div className="ie-empty">This note has no headings.</div>
+          <EmptyState
+            compact
+            icon="list"
+            title="No headings"
+            description="Start a line with # to add one, and it will appear here."
+          />
         ) : (
           headings.map((heading, index) => (
             <button

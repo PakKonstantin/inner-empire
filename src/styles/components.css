@@ -969,6 +969,14 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* A stack of skeleton bars standing in for a panel's contents. */
+.ie-panel__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-sm);
+}
+
 /* ---------- Rail ---------- */
 
 .ie-rail {

@@ -395,9 +395,16 @@ export function App() {
               onImportFile={importFile}
             />
           ) : (
-            <div className="ie-empty">
-              Nothing open in this pane. Press Ctrl+O to find a note.
-            </div>
+            <EmptyState
+              icon="file-text"
+              title="Nothing open here"
+              description="Pick a note from the explorer, or search for one."
+              action={{ label: 'Find a note', onClick: () => setDialog({ kind: 'palette', mode: 'files' }) }}
+              secondaryAction={{
+                label: 'New note',
+                onClick: () => setDialog({ kind: 'createNote', folder: folderOf(activePath) }),
+              }}
+            />
           )}
         </div>
       </section>

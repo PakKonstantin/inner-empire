@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import { events } from '@/services/events';
 import type { Backlink, SearchHit, VaultPath } from '@/types/domain';
+import { Badge, EmptyState, Icon, Skeleton } from '@/ui';
 
 export interface BacklinksPanelProps {
   path: VaultPath | null;
@@ -66,14 +67,33 @@ export function BacklinksPanel({ path, onOpen }: BacklinksPanelProps) {
     <div className="ie-panel ie-backlinks">
       <div className="ie-panel-header">
         <span>Backlinks</span>
-        <span className="ie-count-badge">{linked.length}</span>
+        <Badge>{linked.length}</Badge>
       </div>
 
       <div className="ie-panel__body">
         {!path ? (
-          <div className="ie-empty">Open a note to see what links to it.</div>
-        ) : linked.length === 0 && !loading ? (
-          <div className="ie-empty">Nothing links here yet.</div>
+          <EmptyState
+            compact
+            icon="corner-down-left"
+            title="No note open"
+            description="Open a note to see what points at it."
+          />
+        ) : loading && linked.length === 0 ? (
+          // Three bars rather than a spinner: the shape of what is coming,
+          // so the panel does not jump when it arrives.
+          <div className="ie-panel__loading" aria-busy="true" aria-live="polite">
+            <span className="sr-only">Looking for backlinks</span>
+            <Skeleton height={14} width="70%" />
+            <Skeleton height={14} width="90%" />
+            <Skeleton height={14} width="55%" />
+          </div>
+        ) : linked.length === 0 ? (
+          <EmptyState
+            compact
+            icon="corner-down-left"
+            title="Nothing links here yet"
+            description="Write [[the name of this note]] in another note to make a link."
+          />
         ) : (
           grouped.map(([source, entries]) => (
             <div key={source} className="ie-backlink-group">
@@ -83,7 +103,7 @@ export function BacklinksPanel({ path, onOpen }: BacklinksPanelProps) {
                 onClick={() => onOpen(entries[0]!.sourcePath)}
               >
                 {entries[0]!.sourceTitle}
-                <span className="ie-count-badge">{entries.length}</span>
+                <Badge>{entries.length}</Badge>
               </button>
               {entries.map((entry, index) => (
                 <button
@@ -112,15 +132,22 @@ export function BacklinksPanel({ path, onOpen }: BacklinksPanelProps) {
             aria-expanded={showUnlinked}
             onClick={() => setShowUnlinked((current) => !current)}
           >
-            <span className={`ie-tree-chevron${showUnlinked ? ' is-open' : ''}`}>▸</span>
+            <span className={`ie-tree-chevron${showUnlinked ? ' is-open' : ''}`}>
+              <Icon name="chevron-right" size={14} />
+            </span>
             Unlinked mentions
           </button>
-          {showUnlinked ? <span className="ie-count-badge">{unlinked.length}</span> : null}
+          {showUnlinked ? <Badge>{unlinked.length}</Badge> : null}
         </div>
 
         {showUnlinked ? (
           unlinked.length === 0 ? (
-            <div className="ie-empty">No unlinked mentions.</div>
+            <EmptyState
+              compact
+              icon="search"
+              title="No unlinked mentions"
+              description="No other note names this one without linking to it."
+            />
           ) : (
             unlinked.map((hit) => (
               <button

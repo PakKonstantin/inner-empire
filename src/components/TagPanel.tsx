@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/services/api';
 import { events } from '@/services/events';
 import type { TagSummary } from '@/types/domain';
+import { Badge, EmptyState, Icon, LoadingState, SearchInput } from '@/ui';
 
 interface TagNode {
   name: string;
@@ -29,12 +30,18 @@ export function TagPanel({ onSelectTag }: TagPanelProps) {
   const [tags, setTags] = useState<TagSummary[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [filter, setFilter] = useState('');
+  // Only the first load shows a spinner. A refresh after the index updates
+  // replaces the list in place, and flashing it empty would be worse than
+  // letting it go stale for a moment.
+  const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
       setTags(await api.allTags());
     } catch {
       setTags([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -58,24 +65,38 @@ export function TagPanel({ onSelectTag }: TagPanelProps) {
     <div className="ie-panel ie-tags">
       <div className="ie-panel-header">
         <span>Tags</span>
-        <span className="ie-count-badge">{tags.length}</span>
+        <Badge>{tags.length}</Badge>
       </div>
 
-      <div className="ie-explorer__filter">
-        <input
-          className="ie-input"
-          type="search"
+      <div className="ie-explorer__controls">
+        <SearchInput
+          label="Filter tags"
           placeholder="Filter tags"
           value={filter}
-          onChange={(event) => setFilter(event.target.value)}
+          onValueChange={setFilter}
         />
       </div>
 
       <div className="ie-panel__body">
-        {visible.length === 0 ? (
-          <div className="ie-empty">
-            {tags.length === 0 ? 'No tags in this vault yet.' : 'Nothing matches that filter.'}
-          </div>
+        {loading ? (
+          <LoadingState label="Reading the tags" />
+        ) : visible.length === 0 ? (
+          tags.length === 0 ? (
+            <EmptyState
+              compact
+              icon="hash"
+              title="No tags yet"
+              description="Add #a-tag to a note, or a tags: line in its properties, and it will show up here."
+            />
+          ) : (
+            <EmptyState
+              compact
+              icon="search"
+              title="Nothing matches"
+              description="No tag in this vault has that in its name."
+              action={{ label: 'Clear the filter', onClick: () => setFilter('') }}
+            />
+          )
         ) : (
           visible.map((node) => {
             const isCollapsed = collapsed.has(node.name);
@@ -90,6 +111,7 @@ export function TagPanel({ onSelectTag }: TagPanelProps) {
                     type="button"
                     className={`ie-tree-chevron${isCollapsed ? '' : ' is-open'}`}
                     aria-label={isCollapsed ? `Expand ${node.name}` : `Collapse ${node.name}`}
+                    aria-expanded={!isCollapsed}
                     onClick={() =>
                       setCollapsed((current) => {
                         const next = new Set(current);
@@ -99,7 +121,7 @@ export function TagPanel({ onSelectTag }: TagPanelProps) {
                       })
                     }
                   >
-                    ▸
+                    <Icon name="chevron-right" size={14} />
                   </button>
                 ) : (
                   <span className="ie-tree-chevron ie-tree-chevron--placeholder" />
@@ -112,7 +134,7 @@ export function TagPanel({ onSelectTag }: TagPanelProps) {
                 >
                   {node.segment}
                 </button>
-                <span className="ie-count-badge">{node.totalCount}</span>
+                <Badge>{node.totalCount}</Badge>
               </div>
             );
           })

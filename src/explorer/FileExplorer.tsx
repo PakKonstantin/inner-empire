@@ -16,6 +16,7 @@ import type { VaultPath } from '@/types/domain';
 import { VAULT_ROOT, joinPath, pathFileName, pathParent } from '@/types/domain';
 import { EmptyState, Icon, IconButton, SearchInput, Select, Tooltip, iconForFile } from '@/ui';
 
+import { parentIndex, verticalTarget } from './treeNavigation';
 import { useFileTree, type FileTreeOptions, type SortOrder, type TreeRow } from './useFileTree';
 
 const ROW_HEIGHT = 26;
@@ -40,6 +41,7 @@ export function FileExplorer(props: FileExplorerProps) {
   const [dragging, setDragging] = useState<VaultPath | null>(null);
   const [dropTarget, setDropTarget] = useState<VaultPath | null>(null);
   const [revealed, setRevealed] = useState<VaultPath | null>(null);
+  const [focused, setFocused] = useState<VaultPath | null>(null);
   const filterInput = useRef<HTMLInputElement | null>(null);
 
   // The hook hands back a fresh object every render, so the listener below
@@ -62,6 +64,7 @@ export function FileExplorer(props: FileExplorerProps) {
       // A filter would hide whatever was just revealed.
       setOptions((current) => (current.filter ? { ...current, filter: '' } : current));
       setRevealed(detail.path);
+      setFocused(detail.path);
     };
     window.addEventListener('ie:reveal-path', onReveal);
     return () => window.removeEventListener('ie:reveal-path', onReveal);
@@ -89,7 +92,12 @@ export function FileExplorer(props: FileExplorerProps) {
     () => (revealed ? tree.rows.findIndex((row) => row.path === revealed) : -1),
     [tree.rows, revealed],
   );
-  const scrollToIndex = revealedIndex >= 0 ? revealedIndex : activeIndex;
+  const focusedIndex = useMemo(
+    () => (focused ? tree.rows.findIndex((row) => row.path === focused) : -1),
+    [tree.rows, focused],
+  );
+  const scrollToIndex =
+    focusedIndex >= 0 ? focusedIndex : revealedIndex >= 0 ? revealedIndex : activeIndex;
 
   const onRowContextMenu = useCallback(
     (event: React.MouseEvent, row: TreeRow) => {
@@ -178,11 +186,69 @@ export function FileExplorer(props: FileExplorerProps) {
     [],
   );
 
+  /**
+   * Driving the tree from the keyboard.
+   *
+   * Rows come and go as the list scrolls, so focus cannot live on a row — it
+   * would be destroyed the moment that row left the window. The scroller keeps
+   * the focus and names the current row with `aria-activedescendant`, which is
+   * the arrangement a screen reader expects from a virtualized tree.
+   */
+  const onTreeKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const rows = tree.rows;
+      if (rows.length === 0) return;
+
+      const index = focused ? rows.findIndex((row) => row.path === focused) : -1;
+      const row = index >= 0 ? rows[index] : undefined;
+      const moveTo = (target: number | null) => {
+        const next = target === null ? undefined : rows[target];
+        if (next) setFocused(next.path);
+      };
+
+      switch (event.key) {
+        case 'ArrowDown':
+        case 'ArrowUp':
+        case 'Home':
+        case 'End':
+          moveTo(verticalTarget(rows, index, event.key));
+          break;
+        case 'ArrowRight':
+          // Open a closed folder; on an open one, step into its first child.
+          if (row?.kind === 'folder' && !row.expanded) tree.expand(row.path);
+          else if (row?.kind === 'folder') moveTo(verticalTarget(rows, index, 'ArrowDown'));
+          break;
+        case 'ArrowLeft':
+          // Close an open folder; otherwise go out to the one containing this.
+          if (row?.kind === 'folder' && row.expanded) tree.toggle(row.path);
+          else if (row) moveTo(parentIndex(rows, index));
+          break;
+        case 'Enter':
+        case ' ':
+          if (!row) return;
+          if (row.kind === 'folder') tree.toggle(row.path);
+          else props.onOpen(row.path, { newPane: event.ctrlKey || event.metaKey });
+          break;
+        case 'F2':
+          if (row) props.onRename(row.path);
+          break;
+        case 'Delete':
+          if (row) props.onDelete(row.path);
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+    },
+    [focused, props, tree],
+  );
+
   const renderRow = useCallback(
     (row: TreeRow) => {
       const isActive = row.path === props.activePath;
       const isDropTarget = dropTarget === row.path;
       const isRevealed = revealed === row.path && !isActive;
+      const isFocused = focused === row.path;
 
       return (
         <div
@@ -191,15 +257,17 @@ export function FileExplorer(props: FileExplorerProps) {
             `ie-tree-row--${row.kind}`,
             isActive ? 'is-active' : '',
             isRevealed ? 'is-revealed' : '',
+            isFocused ? 'is-focused' : '',
             isDropTarget ? 'is-drop-target' : '',
           ]
             .filter(Boolean)
             .join(' ')}
           style={{ paddingLeft: `${8 + row.depth * 14}px` }}
+          id={rowId(row.path)}
           role="treeitem"
           aria-expanded={row.kind === 'folder' ? row.expanded : undefined}
+          aria-level={row.depth + 1}
           aria-selected={isActive}
-          tabIndex={-1}
           draggable
           onDragStart={(event) => {
             setDragging(row.path);
@@ -228,6 +296,7 @@ export function FileExplorer(props: FileExplorerProps) {
             void moveInto(source, folder);
           }}
           onClick={() => {
+            setFocused(row.path);
             if (row.kind === 'folder') tree.toggle(row.path);
             else props.onOpen(row.path);
           }}
@@ -238,13 +307,9 @@ export function FileExplorer(props: FileExplorerProps) {
               props.onOpen(row.path, { newPane: true });
             }
           }}
-          onContextMenu={(event) => onRowContextMenu(event, row)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              if (row.kind === 'folder') tree.toggle(row.path);
-              else props.onOpen(row.path);
-            }
-            if (event.key === 'F2') props.onRename(row.path);
+          onContextMenu={(event) => {
+            setFocused(row.path);
+            onRowContextMenu(event, row);
           }}
         >
           {row.kind === 'folder' ? (
@@ -268,7 +333,7 @@ export function FileExplorer(props: FileExplorerProps) {
         </div>
       );
     },
-    [dragging, dropTarget, moveInto, onRowContextMenu, props, revealed, tree],
+    [dragging, dropTarget, focused, moveInto, onRowContextMenu, props, revealed, tree],
   );
 
   return (
@@ -312,7 +377,7 @@ export function FileExplorer(props: FileExplorerProps) {
           onValueChange={(value) => setOptions((current) => ({ ...current, filter: value }))}
         />
         <Select
-          label="Sort order"
+          aria-label="Sort order"
           value={options.sort}
           onChange={(event) =>
             setOptions((current) => ({ ...current, sort: event.target.value as SortOrder }))
@@ -333,6 +398,16 @@ export function FileExplorer(props: FileExplorerProps) {
         keyOf={(row) => row.path}
         renderRow={renderRow}
         scrollToIndex={scrollToIndex}
+        container={{
+          role: 'tree',
+          'aria-label': 'Files',
+          tabIndex: 0,
+          onKeyDown: onTreeKeyDown,
+          // Tabbing in lands on the open note rather than at the top, which is
+          // almost always where the user meant to be.
+          onFocus: () => setFocused((current) => current ?? props.activePath),
+          ...(focused ? { 'aria-activedescendant': rowId(focused) } : {}),
+        }}
         emptyState={
           options.filter ? (
             <EmptyState
@@ -358,6 +433,16 @@ export function FileExplorer(props: FileExplorerProps) {
       />
     </div>
   );
+}
+
+/**
+ * A stable DOM id for a row, so `aria-activedescendant` can point at it.
+ *
+ * Vault paths contain slashes, spaces and dots, none of which belong in an id
+ * a selector might later have to match.
+ */
+function rowId(path: VaultPath): string {
+  return `ie-tree-${path.replace(/[^a-zA-Z0-9]+/g, '-')}`;
 }
 
 /** Prefer the note's title over its filename, when they differ. */
