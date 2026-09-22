@@ -288,6 +288,13 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: node scripts/check-package.mjs
 
+      # The rule with no acceptable failure mode. A vault is work that may
+      # exist nowhere else, so this is asserted on the artifact rather than
+      # promised in a document.
+      - name: Uninstalling cannot reach a vault
+        if: matrix.os == 'ubuntu-22.04'
+        run: node scripts/check-uninstall-safety.mjs
+
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest

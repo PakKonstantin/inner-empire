@@ -37,6 +37,7 @@
     "version:check": "node scripts/version.mjs --check",
     "package:portable": "node scripts/package-portable.mjs",
     "package:check": "node scripts/check-package.mjs",
+    "uninstall:check": "node scripts/check-uninstall-safety.mjs",
     "checksums": "node scripts/checksums.mjs",
     "ios:docs": "node ios/Scripts/check-docs.mjs",
     "ios:a11y": "node ios/Scripts/check-accessibility.mjs"
