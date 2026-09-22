@@ -64,12 +64,30 @@
   --font-size-h5: 0.9375rem;
   --font-size-h6: 0.875rem;
 
+  /*
+   * The same ratios again, relative rather than absolute.
+   *
+   * Document headings have to scale with the size the *reader* chose, not
+   * with the interface: a `rem` heading above a 20px body would shrink as the
+   * reader made the text larger. The interface's own headings keep the `rem`
+   * scale above, because the interface does not resize with a note.
+   */
+  --doc-size-h1: 2em;
+  --doc-size-h2: 1.5em;
+  --doc-size-h3: 1.25em;
+  --doc-size-h4: 1.0625em;
+  --doc-size-h5: 0.9375em;
+  --doc-size-h6: 0.875em;
+
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   --line-height-heading: 1.25;
-  --line-height-body: var(--line-height-normal);
+  /* A shade tighter than the interface's, because a document's measure is
+     narrower and the eye has less distance to travel back. */
+  --line-height-body: 1.65;
   --letter-spacing-tight: -0.011em;
   --letter-spacing-caps: 0.04em;
 

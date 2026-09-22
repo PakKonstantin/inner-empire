@@ -18,8 +18,8 @@ export const editorTheme = EditorView.theme({
     fontSize: 'var(--font-size-editor)',
   },
   '.cm-content': {
-    fontFamily: 'var(--font-text)',
-    lineHeight: '1.7',
+    fontFamily: 'var(--font-editor)',
+    lineHeight: 'var(--line-height-body)',
     padding: 'var(--space-5) 0 40vh 0',
     caretColor: 'var(--cursor-color)',
   },
@@ -84,19 +84,74 @@ export const editorTheme = EditorView.theme({
   },
 });
 
-/** Widen the text column so prose stays readable on a wide window. */
+/**
+ * Hold the text column to a readable measure on a wide window.
+ *
+ * In `ch` rather than `rem`, so it tracks the size the reader chose: a fixed
+ * 46rem column silently becomes a ninety-character line once the font is
+ * turned up, which is the opposite of what this setting is for.
+ */
 export const readableLineLength = EditorView.theme({
-  '.cm-content': { maxWidth: '46rem', margin: '0 auto' },
+  '.cm-content': { maxWidth: 'var(--measure)', margin: '0 auto' },
   '.cm-line': { padding: '0 var(--space-2)' },
 });
 
+/*
+ * The same heading scale the reading view uses.
+ *
+ * Switching between editing and reading should change what the note does, not
+ * what it looks like — two scales that nearly agree are worse than one that
+ * is slightly wrong, because the difference reads as the document moving.
+ *
+ * H5 and H6 are too close to body size for size alone to distinguish them,
+ * here as there, so they are set in caps and in a quieter colour instead of
+ * being one more weight of bold.
+ */
 export const markdownHighlighting = HighlightStyle.define([
-  { tag: tags.heading1, fontSize: '1.7em', fontWeight: '700', color: 'var(--h1-color)', lineHeight: '1.3' },
-  { tag: tags.heading2, fontSize: '1.45em', fontWeight: '700', color: 'var(--h2-color)', lineHeight: '1.3' },
-  { tag: tags.heading3, fontSize: '1.25em', fontWeight: '650', color: 'var(--h3-color)' },
-  { tag: tags.heading4, fontSize: '1.1em', fontWeight: '650', color: 'var(--h4-color)' },
-  { tag: tags.heading5, fontWeight: '650', color: 'var(--h5-color)' },
-  { tag: tags.heading6, fontWeight: '650', color: 'var(--h6-color)' },
+  {
+    tag: tags.heading1,
+    fontSize: 'var(--doc-size-h1)',
+    fontWeight: 'var(--font-weight-bold)',
+    color: 'var(--h1-color)',
+    lineHeight: 'var(--line-height-heading)',
+    letterSpacing: '-0.015em',
+  },
+  {
+    tag: tags.heading2,
+    fontSize: 'var(--doc-size-h2)',
+    fontWeight: 'var(--font-weight-bold)',
+    color: 'var(--h2-color)',
+    lineHeight: 'var(--line-height-heading)',
+    letterSpacing: '-0.01em',
+  },
+  {
+    tag: tags.heading3,
+    fontSize: 'var(--doc-size-h3)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--h3-color)',
+    lineHeight: 'var(--line-height-heading)',
+  },
+  {
+    tag: tags.heading4,
+    fontSize: 'var(--doc-size-h4)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--h4-color)',
+  },
+  {
+    tag: tags.heading5,
+    fontSize: 'var(--doc-size-h5)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--h5-color)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+  },
+  {
+    tag: tags.heading6,
+    fontSize: 'var(--doc-size-h6)',
+    fontWeight: 'var(--font-weight-semibold)',
+    color: 'var(--h6-color)',
+    letterSpacing: '0.04em',
+  },
   { tag: tags.strong, fontWeight: '700', color: 'var(--text-normal)' },
   { tag: tags.emphasis, fontStyle: 'italic' },
   { tag: tags.strikethrough, textDecoration: 'line-through', color: 'var(--text-muted)' },

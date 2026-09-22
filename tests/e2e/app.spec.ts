@@ -297,6 +297,30 @@ test.describe('the workspace', () => {
     await expect(page.locator('.ie-tab', { hasText: 'Statistics' })).toBeVisible();
   });
 
+  test('the reading view renders a callout', async ({ page }) => {
+    await openApp(page, [
+      {
+        path: 'Notes/Guide.md',
+        content:
+          '# Guide\n\n> [!warning] Mind the gap\n> Stand clear of the doors.\n\n> An ordinary quotation.\n',
+      },
+    ]);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+    await openNote(page, 'Guide');
+    await page.keyboard.press('Control+Shift+R');
+
+    const callout = page.locator('.ie-callout');
+    await expect(callout).toHaveCount(1);
+    await expect(callout).toHaveClass(/ie-callout--warning/);
+    await expect(callout).toContainText('Mind the gap');
+    await expect(callout).toContainText('Stand clear of the doors.');
+    // The marker itself is not part of what the reader sees.
+    await expect(callout).not.toContainText('[!warning]');
+
+    // A blockquote without a marker stays a blockquote.
+    await expect(page.locator('.ie-reading__body blockquote')).toHaveCount(1);
+  });
+
   test('the outline lists the note’s headings', async ({ page }) => {
     await openApp(page, [
       ...STARTER_FILES,

@@ -7,7 +7,15 @@
  * handlers, and nothing has to set `dangerouslySetInnerHTML` on note content.
  */
 
-import type { Nodes as MdastNode, Parent, PhrasingContent, RootContent } from 'mdast';
+import type {
+  Blockquote,
+  Image,
+  Nodes as MdastNode,
+  Paragraph,
+  Parent,
+  PhrasingContent,
+  RootContent,
+} from 'mdast';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { gfmFromMarkdown } from 'mdast-util-gfm';
 import { gfm } from 'micromark-extension-gfm';
@@ -15,6 +23,7 @@ import type { JSX, ReactNode } from 'react';
 import { Fragment } from 'react';
 
 import type { VaultPath } from '@/types/domain';
+import { Icon, type IconName } from '@/ui/icons';
 
 import {
   displayTextOf,
@@ -70,8 +79,21 @@ function renderChildren(node: Parent, context: RenderContext): ReactNode {
 
 function renderNode(node: RootContent, context: RenderContext): ReactNode {
   switch (node.type) {
-    case 'paragraph':
+    case 'paragraph': {
+      const image = soleImageOf(node);
+      if (image) {
+        const source = context.resolveAsset(decodeURI(image.url));
+        if (source) {
+          return (
+            <figure className="ie-figure">
+              <img src={source} alt={image.alt ?? ''} loading="lazy" />
+              <figcaption>{image.alt}</figcaption>
+            </figure>
+          );
+        }
+      }
       return <p>{renderChildren(node, context)}</p>;
+    }
 
     case 'heading': {
       const Tag = `h${node.depth}` as keyof JSX.IntrinsicElements;
@@ -101,8 +123,11 @@ function renderNode(node: RootContent, context: RenderContext): ReactNode {
         </pre>
       );
 
-    case 'blockquote':
+    case 'blockquote': {
+      const callout = readCallout(node);
+      if (callout) return <CalloutBlock callout={callout} context={context} />;
       return <blockquote>{renderChildren(node, context)}</blockquote>;
+    }
 
     case 'list':
       return node.ordered ? (
@@ -330,4 +355,138 @@ export function excerpt(source: string, maxLength = 200): string {
   const text = 'children' in tree ? plainText(tree as MdastNode) : '';
   const collapsed = text.replace(/\s+/g, ' ').trim();
   return collapsed.length > maxLength ? `${collapsed.slice(0, maxLength - 1)}…` : collapsed;
+}
+
+/**
+ * Callouts.
+ *
+ * `> [!warning] Mind the gap` is an ordinary blockquote as far as the parser
+ * is concerned — the marker is just the first line of its first paragraph.
+ * That is deliberate: recognising it here means the Markdown engine keeps one
+ * definition of what a blockquote is, a vault stays readable in any other
+ * editor, and a callout type nobody has heard of degrades into a quote rather
+ * than an error.
+ */
+export interface Callout {
+  kind: string;
+  title: string | null;
+  /** `> [!note]-` starts folded; `> [!note]+` starts open. */
+  folded: boolean;
+  collapsible: boolean;
+  /** The blockquote with the marker line removed. */
+  body: RootContent[];
+}
+
+const CALLOUT_MARKER = /^\[!([A-Za-z][\w-]*)\]([-+])?[ \t]*(.*)$/;
+
+/** The callout kinds that get their own colour and icon; others fall back. */
+const CALLOUT_KINDS: Record<string, IconName> = {
+  note: 'file-text',
+  info: 'info',
+  tip: 'tip',
+  success: 'check',
+  question: 'help',
+  warning: 'warning',
+  danger: 'warning',
+  error: 'error',
+  bug: 'bug',
+  example: 'list',
+  quote: 'quote',
+  abstract: 'list',
+  todo: 'check',
+};
+
+/** Read a blockquote as a callout, or `null` when it is only a quote. */
+export function readCallout(node: Blockquote): Callout | null {
+  const first = node.children[0];
+  if (!first || first.type !== 'paragraph') return null;
+
+  const opener = first.children[0];
+  if (!opener || opener.type !== 'text') return null;
+
+  const [line, ...restOfLine] = opener.value.split('\n');
+  const match = line ? CALLOUT_MARKER.exec(line.trim()) : null;
+  if (!match) return null;
+
+  const [, kind = '', fold, inlineTitle = ''] = match;
+
+  // What is left of the first paragraph once the marker line is gone. An
+  // empty remainder means the callout has a title and no body on that line.
+  const remainder = restOfLine.join('\n');
+  const rest: PhrasingContent[] = [
+    ...(remainder ? [{ type: 'text' as const, value: remainder }] : []),
+    ...first.children.slice(1),
+  ];
+
+  const body: RootContent[] = [
+    ...(rest.length > 0 ? [{ type: 'paragraph' as const, children: rest }] : []),
+    ...node.children.slice(1),
+  ];
+
+  return {
+    kind: kind.toLowerCase(),
+    title: inlineTitle.trim() || null,
+    folded: fold === '-',
+    collapsible: fold === '-' || fold === '+',
+    body,
+  };
+}
+
+function CalloutBlock({ callout, context }: { callout: Callout; context: RenderContext }) {
+  const icon = CALLOUT_KINDS[callout.kind] ?? 'info';
+  const known = callout.kind in CALLOUT_KINDS;
+  const title = callout.title ?? capitalise(callout.kind);
+  const body = (
+    <div className="ie-callout__body">
+      {callout.body.map((child, index) => (
+        <Fragment key={index}>{renderNode(child, context)}</Fragment>
+      ))}
+    </div>
+  );
+
+  // An unknown kind still gets the callout's shape; only its colour falls
+  // back, so a vault written against another editor's list still reads well.
+  const className = `ie-callout ie-callout--${known ? callout.kind : 'note'}`;
+
+  if (callout.collapsible) {
+    return (
+      <details className={className} open={!callout.folded}>
+        <summary className="ie-callout__title">
+          <Icon name={icon} size={16} className="ie-callout__icon" />
+          {title}
+        </summary>
+        {body}
+      </details>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <p className="ie-callout__title">
+        <Icon name={icon} size={16} className="ie-callout__icon" />
+        {title}
+      </p>
+      {body}
+    </div>
+  );
+}
+
+function capitalise(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/**
+ * A paragraph holding nothing but one image becomes a figure.
+ *
+ * The alt text then serves twice: as the description for a reader who cannot
+ * see the image, and as the caption under it. A figure inside a paragraph
+ * would be invalid, which is why this is decided here rather than when the
+ * image itself is rendered.
+ */
+function soleImageOf(node: Paragraph): Image | null {
+  const meaningful = node.children.filter(
+    (child) => !(child.type === 'text' && child.value.trim() === ''),
+  );
+  const only = meaningful.length === 1 ? meaningful[0] : undefined;
+  return only && only.type === 'image' && only.alt?.trim() ? only : null;
 }

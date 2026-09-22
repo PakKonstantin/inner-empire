@@ -540,23 +540,94 @@
 }
 
 .ie-reading__body {
-  max-width: 46rem;
+  /* A measure in `ch` tracks the font the reader actually chose, which a
+     fixed rem width does not: raise the size and a 46rem column silently
+     becomes a 90-character line. */
+  max-width: var(--measure);
   margin: 0 auto;
+  font-family: var(--font-editor);
   font-size: var(--font-size-editor);
-  line-height: 1.7;
+  line-height: var(--line-height-body);
 }
 
+/*
+ * The heading rhythm.
+ *
+ * Space above a heading belongs to the heading, not to the paragraph before
+ * it — which is why the top margin is large and the bottom one small. That
+ * gap is what tells a reader where a section starts, without a rule or a
+ * colour doing the work.
+ */
 .ie-reading__body h1,
 .ie-reading__body h2,
-.ie-reading__body h3 {
-  line-height: 1.25;
+.ie-reading__body h3,
+.ie-reading__body h4,
+.ie-reading__body h5,
+.ie-reading__body h6 {
+  font-family: var(--font-ui);
+  line-height: var(--line-height-heading);
   margin-top: 1.8em;
   margin-bottom: 0.5em;
+  text-wrap: balance;
 }
 
-.ie-reading__body h1 { font-size: 1.7em; }
-.ie-reading__body h2 { font-size: 1.45em; }
-.ie-reading__body h3 { font-size: 1.25em; }
+/* The first heading has nothing above it to be separated from. */
+.ie-reading__body > :first-child {
+  margin-top: 0;
+}
+
+.ie-reading__body h1 {
+  font-size: var(--doc-size-h1);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.015em;
+}
+
+.ie-reading__body h2 {
+  font-size: var(--doc-size-h2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: -0.01em;
+}
+
+.ie-reading__body h3 {
+  font-size: var(--doc-size-h3);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ie-reading__body h4 {
+  font-size: var(--doc-size-h4);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* H5 and H6 are too close to body size to be told apart by size alone, so
+   they are distinguished the way small headings have always been. */
+.ie-reading__body h5 {
+  font-size: var(--doc-size-h5);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.ie-reading__body h6 {
+  font-size: var(--doc-size-h6);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.ie-reading__body p {
+  margin: 0 0 1em;
+}
+
+.ie-reading__body ul,
+.ie-reading__body ol {
+  margin: 0 0 1em;
+  padding-left: 1.5em;
+}
+
+.ie-reading__body li + li {
+  margin-top: 0.25em;
+}
 
 .ie-reading__body blockquote {
   margin: 1em 0;
@@ -1884,6 +1955,104 @@
   gap: var(--space-2);
 }
 
+/* ---------- Callouts and figures ---------- */
+
+/*
+ * A callout is a blockquote the reader is meant to stop at.
+ *
+ * The colour is carried on one custom property per kind, so the shape is
+ * written once and an unknown kind still gets a callout rather than an error
+ * — a vault written against another editor's list of types still reads well.
+ */
+.ie-callout {
+  --callout-colour: var(--accent);
+  margin: 1.2em 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--callout-colour);
+  background: color-mix(in srgb, var(--callout-colour) 8%, transparent);
+}
+
+.ie-callout__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--callout-colour);
+  cursor: default;
+}
+
+.ie-callout__icon {
+  flex: none;
+}
+
+.ie-callout__body > :first-child {
+  margin-top: var(--space-sm);
+}
+
+.ie-callout__body > :last-child {
+  margin-bottom: 0;
+}
+
+/* A collapsible callout's title is the control, so it has to look like one. */
+details.ie-callout > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details.ie-callout > summary::-webkit-details-marker {
+  display: none;
+}
+
+details.ie-callout > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  margin-inline-start: auto;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+details.ie-callout[open] > summary::after {
+  transform: rotate(-135deg);
+}
+
+.ie-callout--note { --callout-colour: var(--accent); }
+.ie-callout--info { --callout-colour: var(--accent); }
+.ie-callout--abstract { --callout-colour: var(--accent); }
+.ie-callout--tip { --callout-colour: var(--text-success); }
+.ie-callout--success { --callout-colour: var(--text-success); }
+.ie-callout--todo { --callout-colour: var(--text-success); }
+.ie-callout--question { --callout-colour: var(--text-warning); }
+.ie-callout--warning { --callout-colour: var(--text-warning); }
+.ie-callout--danger { --callout-colour: var(--text-error); }
+.ie-callout--error { --callout-colour: var(--text-error); }
+.ie-callout--bug { --callout-colour: var(--text-error); }
+.ie-callout--example { --callout-colour: var(--text-muted); }
+.ie-callout--quote { --callout-colour: var(--text-muted); }
+
+/* An image with alt text gets that text as its caption too: the same words
+   describe the picture to someone who cannot see it and to someone who can. */
+.ie-figure {
+  margin: 1.5em 0;
+  text-align: center;
+}
+
+.ie-figure img {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.ie-figure figcaption {
+  margin-top: var(--space-sm);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+  text-align: center;
+}
+
 /* ---------- Responsive ---------- */
 
 /*
@@ -1963,5 +2132,121 @@
 @media (min-width: 961px) {
   .ie-app__scrim {
     display: none;
+  }
+}
+
+/* ---------- Print ---------- */
+
+/*
+ * Printing a note, and saving one as a PDF, are the same operation to the
+ * browser — which is how the export-to-PDF command works. So this is not a
+ * courtesy for people with printers: it is the layout of a file the user
+ * keeps.
+ *
+ * Everything that helps you navigate is gone, because a page you cannot
+ * click is not helped by a sidebar. What is left is the note.
+ */
+@media print {
+  .ie-toolbar,
+  .ie-rail,
+  .ie-sidebar,
+  .ie-tabbar,
+  .ie-statusbar,
+  .ie-app__scrim,
+  .ie-notifications,
+  .ie-context-menu {
+    display: none !important;
+  }
+
+  html,
+  body,
+  .ie-app,
+  .ie-app__main,
+  .ie-app__panes,
+  .ie-pane,
+  .ie-pane__body {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Paper is white whatever the screen was, and ink is expensive. */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .ie-reading {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .ie-reading__body {
+    max-width: none;
+    font-size: 11pt;
+    color: #000;
+  }
+
+  /* A heading at the foot of a page, with its section overleaf, is the one
+     break that always looks like a mistake. */
+  .ie-reading__body h1,
+  .ie-reading__body h2,
+  .ie-reading__body h3,
+  .ie-reading__body h4,
+  .ie-reading__body h5,
+  .ie-reading__body h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+    color: #000;
+  }
+
+  .ie-reading__body p,
+  .ie-reading__body li,
+  .ie-reading__body blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .ie-figure,
+  .ie-callout,
+  .ie-code-block,
+  .ie-table-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* A tint that is invisible on paper leaves the callout looking like a
+     stray paragraph, so on print it keeps its rule and loses its fill. */
+  .ie-callout {
+    background: none;
+    border: 1px solid #999;
+    border-inline-start-width: 3px;
+  }
+
+  .ie-code-block,
+  .ie-inline-code {
+    background: none;
+    border: 1px solid #ccc;
+    color: #000;
+  }
+
+  /* A collapsed callout would print as a heading with nothing under it. */
+  details.ie-callout > .ie-callout__body {
+    display: block !important;
+  }
+
+  /* The destination of a link cannot be clicked on paper, so it is written
+     out — but only for links that lead somewhere outside the vault. */
+  .ie-external-link::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.85em;
+    color: #555;
+    word-break: break-all;
+  }
+
+  .ie-wikilink,
+  .ie-internal-link {
+    color: #000;
+    text-decoration: underline;
   }
 }
