@@ -6,7 +6,7 @@
  * here even though they are written to different places.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { commands } from '@/commands/registry';
 import { combinationFromEvent, formatCombination } from '@/commands/hotkeys';
@@ -17,6 +17,9 @@ import { useSettingsStore, type ThemeChoice } from '@/state/settingsStore';
 import { useVaultStore } from '@/state/vaultStore';
 import type { AppDirectories, TrashEntry, VaultSettings } from '@/types/domain';
 import { asVaultPath } from '@/types/domain';
+import { EmptyState, SearchInput } from '@/ui';
+
+import { matchSettings, sectionsMatching, type SettingsEntry } from './settingsIndex';
 
 type Section =
   | 'general'
@@ -43,30 +46,125 @@ const SECTIONS: { id: Section; label: string }[] = [
   { id: 'about', label: 'About' },
 ];
 
+/**
+ * The setting a search result sent the user to.
+ *
+ * Passed by context rather than through every section component, because a
+ * `Field` is used in ten places and none of them should have to know that
+ * searching exists.
+ */
+const HighlightContext = createContext<string | null>(null);
+
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const [section, setSection] = useState<Section>('general');
+  const [query, setQuery] = useState('');
+  const [highlight, setHighlight] = useState<string | null>(null);
+
+  const results = useMemo(() => matchSettings(query), [query]);
+  const matchingSections = useMemo(() => sectionsMatching(query), [query]);
+  const searching = query.trim().length > 0;
+
+  const goTo = useCallback((entry: SettingsEntry) => {
+    setSection(entry.section);
+    setHighlight(entry.label);
+    setQuery('');
+  }, []);
+
+  // The highlight is a signpost, not a state: it fades once the user has had
+  // a moment to see where they landed.
+  useEffect(() => {
+    if (!highlight) return;
+    const timer = setTimeout(() => setHighlight(null), 2400);
+    return () => clearTimeout(timer);
+  }, [highlight]);
 
   return (
     <Modal title="Settings" onClose={onClose} size="large">
       <div className="ie-settings">
         <nav className="ie-settings__nav" aria-label="Settings sections">
-          {SECTIONS.map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              className={`ie-settings__nav-item${section === entry.id ? ' is-active' : ''}`}
-              aria-current={section === entry.id}
-              onClick={() => setSection(entry.id)}
-            >
-              {entry.label}
-            </button>
-          ))}
+          <div className="ie-settings__search">
+            <SearchInput
+              label="Search the settings"
+              placeholder="Search settings"
+              value={query}
+              onValueChange={setQuery}
+            />
+          </div>
+
+          {SECTIONS.map((entry) => {
+            // While searching, a section with nothing in it is dimmed rather
+            // than removed: the list jumping about as you type costs more
+            // than the empty rows save.
+            const dimmed = searching && !matchingSections.has(entry.id);
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                className={`ie-settings__nav-item${section === entry.id ? ' is-active' : ''}${
+                  dimmed ? ' is-dimmed' : ''
+                }`}
+                aria-current={section === entry.id}
+                onClick={() => {
+                  setSection(entry.id);
+                  setQuery('');
+                }}
+              >
+                {entry.label}
+              </button>
+            );
+          })}
         </nav>
+
         <div className="ie-settings__body">
-          <SettingsSection section={section} />
+          {searching ? (
+            <SettingsResults query={query} results={results} onChoose={goTo} />
+          ) : (
+            <HighlightContext.Provider value={highlight}>
+              <SettingsSection section={section} />
+            </HighlightContext.Provider>
+          )}
         </div>
       </div>
     </Modal>
+  );
+}
+
+function SettingsResults({
+  query,
+  results,
+  onChoose,
+}: {
+  query: string;
+  results: SettingsEntry[];
+  onChoose: (entry: SettingsEntry) => void;
+}) {
+  if (results.length === 0) {
+    return (
+      <EmptyState
+        icon="search"
+        title="No setting matches"
+        description={`Nothing in Settings mentions “${query.trim()}”.`}
+      />
+    );
+  }
+
+  return (
+    <>
+      <h3>{results.length === 1 ? '1 setting' : `${results.length} settings`}</h3>
+      <div className="ie-settings__results">
+        {results.map((entry) => (
+          <button
+            key={`${entry.section}:${entry.label}`}
+            type="button"
+            className="ie-settings__result"
+            onClick={() => onChoose(entry)}
+          >
+            <span className="ie-settings__result-label">{entry.label}</span>
+            <span className="ie-settings__result-section">{entry.sectionLabel}</span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -111,8 +209,9 @@ function Field({
   hint?: string;
   children: React.ReactNode;
 }) {
+  const highlighted = useContext(HighlightContext) === label;
   return (
-    <label className="ie-field">
+    <label className={`ie-field${highlighted ? ' is-highlighted' : ''}`}>
       <span className="ie-field__label">
         <span>{label}</span>
         {hint ? <span className="ie-field__hint">{hint}</span> : null}

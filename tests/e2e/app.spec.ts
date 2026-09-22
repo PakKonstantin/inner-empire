@@ -500,6 +500,24 @@ test.describe('the interface', () => {
     );
   });
 
+  test('searching the settings finds a setting by one of its values', async ({ page }) => {
+    await openApp(page);
+    await page.keyboard.press('Control+,');
+    const dialog = page.getByRole('dialog', { name: 'Settings' });
+
+    // "Dark" is a value of the Theme setting, not its name — a search that
+    // only looked at labels would find nothing.
+    await dialog.getByRole('searchbox', { name: 'Search the settings' }).fill('dark');
+
+    const result = dialog.getByRole('button', { name: /Theme/ });
+    await expect(result).toBeVisible();
+    await result.click();
+
+    // Choosing a result opens its section and points at the field.
+    await expect(dialog.locator('.ie-field.is-highlighted')).toContainText('Theme');
+    await expect(dialog.getByLabel('Theme')).toBeVisible();
+  });
+
   test('the theme switches between light and dark', async ({ page }) => {
     await openApp(page);
 
