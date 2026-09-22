@@ -953,6 +953,16 @@
   flex: none;
 }
 
+/* One chip per clause of the query, so the search is legible as a set of
+   conditions rather than as a string the user has to re-read. */
+.ie-search__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  padding: 0 var(--space-3) var(--space-2);
+  flex: none;
+}
+
 /* The error state brings its own colour and border; this only places it. */
 .ie-search__error {
   margin: var(--space-2) var(--space-3);

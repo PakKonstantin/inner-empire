@@ -231,6 +231,24 @@ test.describe('finding things', () => {
     await expect(page.locator('.ie-search-result')).toHaveCount(2);
   });
 
+  test('a search shows its clauses as chips, and removing one rewrites it', async ({ page }) => {
+    await openApp(page);
+    await openPanel(page, 'left', 'Search');
+
+    const box = page.getByRole('searchbox', { name: 'Search notes' });
+    await box.fill('neural tag:AI');
+
+    const chips = page.locator('.ie-search__chips .ie-chip');
+    await expect(chips).toHaveCount(2);
+    await expect(chips.nth(1)).toContainText('tagged #AI');
+
+    // Removing the tag chip takes that clause out of the query itself, so the
+    // box and the chips cannot disagree about what is being searched for.
+    await chips.nth(1).getByRole('button', { name: /^Remove/ }).click();
+    await expect(box).toHaveValue('neural');
+    await expect(chips).toHaveCount(1);
+  });
+
   test('the tag panel lists the vault’s tags', async ({ page }) => {
     await openApp(page);
 

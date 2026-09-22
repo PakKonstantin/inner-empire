@@ -217,28 +217,34 @@ export function TagChip({ name, count, onClick, onRemove }: TagChipProps) {
 }
 
 export interface FilterChipProps {
-  /** `tag`, `path`, `ext` — the clause's field. */
-  field: string;
+  /** `tag`, `path`, `ext` — the clause's field, when it has one to show. */
+  field?: string;
   value: string;
+  /** A mark for the kind of clause, so the shape is readable at a glance. */
+  icon?: IconName;
+  /** Struck through and dimmed, for a clause that excludes rather than includes. */
+  negated?: boolean;
   onRemove: () => void;
 }
 
 /**
  * One clause of a search query, shown as a chip.
  *
- * The brief's point is that a person should be able to see *why* a result is
- * in the list. A chip per clause makes the query legible and removable
- * without editing a string by hand.
+ * The point is that a person should be able to see *why* a result is in the
+ * list. A chip per clause makes the query legible and removable without
+ * editing a string by hand.
  */
-export function FilterChip({ field, value, onRemove }: FilterChipProps) {
+export function FilterChip({ field, value, icon, negated, onRemove }: FilterChipProps) {
+  const described = field ? `${field}: ${value}` : value;
   return (
-    <span className="ie-chip ie-chip--filter">
-      <span className="ie-chip__field">{field}:</span>
+    <span className={`ie-chip ie-chip--filter${negated ? ' is-negated' : ''}`}>
+      {icon ? <Icon name={icon} size={13} className="ie-chip__icon" /> : null}
+      {field ? <span className="ie-chip__field">{field}:</span> : null}
       <span className="ie-chip__value">{value}</span>
       <button
         type="button"
         className="ie-chip__remove"
-        aria-label={`Remove the filter ${field}: ${value}`}
+        aria-label={`Remove ${described}`}
         onClick={onRemove}
       >
         <Icon name="close" />

@@ -677,6 +677,23 @@
   gap: 4px;
 }
 
+.ie-chip__icon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+/*
+ * A clause that excludes rather than includes.
+ *
+ * Struck through as well as dimmed: "without draft" and "draft" are opposite
+ * conditions, and a difference in weight alone is not enough to carry that.
+ */
+.ie-chip--filter.is-negated .ie-chip__value {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: var(--color-text-muted);
+}
+
 .ie-chip__field {
   color: var(--color-text-muted);
 }

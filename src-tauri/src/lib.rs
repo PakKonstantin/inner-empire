@@ -127,6 +127,7 @@ pub fn run() {
             commands::index_queries::local_graph,
             commands::search::search_vault,
             commands::search::validate_query,
+            commands::search::describe_query,
             commands::search::quick_switch,
             commands::search::complete_tags,
             commands::search::complete_headings,

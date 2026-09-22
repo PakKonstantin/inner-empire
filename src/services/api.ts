@@ -25,6 +25,7 @@ import type {
   Note,
   OpenReport,
   Property,
+  QueryClause,
   RecentVault,
   RenameOutcome,
   RenamePlan,
@@ -166,6 +167,8 @@ export const api = {
   searchVault: (query: string, limit?: number, offset?: number) =>
     call<SearchResults>('search_vault', { query, limit, offset }),
   validateQuery: (query: string) => call<void>('validate_query', { query }),
+  /** The clauses of a query, for the chips above the results. */
+  describeQuery: (query: string) => call<QueryClause[]>('describe_query', { query }),
   quickSwitch: (needle: string, limit?: number) =>
     call<FileMatch[]>('quick_switch', { needle, limit }),
   completeTags: (needle: string, limit?: number) =>

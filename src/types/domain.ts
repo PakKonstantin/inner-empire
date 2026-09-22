@@ -217,6 +217,33 @@ export interface SearchHit {
   rank: number;
 }
 
+/** What kind of clause a chip stands for, deciding its icon and colour. */
+export type QueryClauseKind =
+  | 'text'
+  | 'phrase'
+  | 'tag'
+  | 'path'
+  | 'file'
+  | 'extension'
+  | 'section'
+  | 'property'
+  | 'structural';
+
+/**
+ * One clause of a search query, described for a person.
+ *
+ * Produced by the same parser that runs the search, so a chip cannot say
+ * something the results disagree with.
+ */
+export interface QueryClause {
+  /** Exactly the text the clause was written as, so a chip can remove it. */
+  source: string;
+  kind: QueryClauseKind;
+  /** What it does, in words: "tagged #AI", "not in Archive". */
+  label: string;
+  negated: boolean;
+}
+
 export interface SearchResults {
   hits: SearchHit[];
   total: number;

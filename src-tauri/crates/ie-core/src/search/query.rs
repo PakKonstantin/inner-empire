@@ -181,6 +181,28 @@ struct Token {
     negated: bool,
 }
 
+impl Token {
+    /// The text this token was written as.
+    ///
+    /// Rebuilt rather than sliced out of the input, because the tokenizer
+    /// does not carry byte offsets — and for this language the reconstruction
+    /// is exact: a token is an optional dash, then either a bare word or a
+    /// quoted phrase, and `key:"value"` keeps its prefix outside the quotes.
+    fn reconstruct(&self) -> String {
+        let dash = if self.negated { "-" } else { "" };
+        if !self.quoted {
+            return format!("{dash}{}", self.text);
+        }
+        match self.text.find(':') {
+            Some(index) => {
+                let (key, value) = self.text.split_at(index + 1);
+                format!("{dash}{key}\"{value}\"")
+            }
+            None => format!("{dash}\"{}\"", self.text),
+        }
+    }
+}
+
 fn tokenize(input: &str) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     let mut current = String::new();
@@ -431,6 +453,103 @@ fn escape_like(input: &str) -> String {
         .replace('_', "\\_")
 }
 
+/// One clause of a query, described for a person rather than for SQL.
+///
+/// The search panel shows these as chips above the results, so a query built
+/// up over several keystrokes can be taken apart one clause at a time. They
+/// come from the parser that runs the search, not from a second reading of
+/// the string on the other side of the bridge: two parsers for one language
+/// drift, and the one the user can see is the one that would be wrong.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Clause {
+    /// The clause exactly as it appeared, so removing a chip can cut it back
+    /// out of the query string.
+    pub source: String,
+    /// What kind of clause it is, for the chip's icon and colour.
+    pub kind: ClauseKind,
+    /// What it does, in words: "tagged #AI", "not in Archive".
+    pub label: String,
+    pub negated: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ClauseKind {
+    Text,
+    Phrase,
+    Tag,
+    Path,
+    File,
+    Extension,
+    Section,
+    Property,
+    Structural,
+}
+
+/// Describe each clause of a query, in the order they were written.
+///
+/// Fails on the same input `parse` fails on, so a half-typed query reports one
+/// error rather than showing chips for the part that happened to parse.
+pub fn describe(input: &str) -> Result<Vec<Clause>> {
+    let mut clauses = Vec::new();
+    for token in tokenize(input)? {
+        let source = token.reconstruct();
+        let negated = token.negated;
+        let (kind, label) = match classify(&token)? {
+            Classified::Term(term) => describe_term(&term),
+            Classified::Filter(filter) => describe_filter(&filter),
+        };
+        clauses.push(Clause {
+            source,
+            kind,
+            label,
+            negated,
+        });
+    }
+    Ok(clauses)
+}
+
+fn describe_term(term: &Term) -> (ClauseKind, String) {
+    match term {
+        Term::Word(word) => (ClauseKind::Text, word.clone()),
+        Term::Phrase(phrase) => (ClauseKind::Phrase, format!("\"{phrase}\"")),
+        Term::Not(inner) => {
+            let (kind, label) = describe_term(inner);
+            (kind, format!("without {label}"))
+        }
+    }
+}
+
+fn describe_filter(filter: &Filter) -> (ClauseKind, String) {
+    match filter {
+        Filter::Tag(tag) => (ClauseKind::Tag, format!("tagged #{tag}")),
+        Filter::Path(path) => (ClauseKind::Path, format!("in {path}")),
+        Filter::File(name) => (ClauseKind::File, format!("named {name}")),
+        Filter::Extension(ext) => (ClauseKind::Extension, format!(".{ext} files")),
+        Filter::Section(section) => (ClauseKind::Section, format!("heading {section}")),
+        Filter::Property {
+            key,
+            comparison,
+            value,
+        } => (
+            ClauseKind::Property,
+            format!("{key} {} {value}", comparison.sql()),
+        ),
+        Filter::Is(structural) => (
+            ClauseKind::Structural,
+            match structural {
+                Structural::Unresolved => "has a broken link".to_string(),
+                Structural::Orphan => "nothing links to it".to_string(),
+                Structural::Untagged => "has no tags".to_string(),
+                Structural::DeadEnd => "links nowhere".to_string(),
+            },
+        ),
+        Filter::Not(inner) => {
+            let (kind, label) = describe_filter(inner);
+            (kind, format!("not {label}"))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -633,5 +752,104 @@ mod tests {
             value: "active".into(),
         });
         assert!(sql.contains("text_fold ="), "{sql}");
+    }
+
+    #[test]
+    fn describes_each_clause_in_order() {
+        let clauses = describe("gradient tag:AI path:Projects").expect("parses");
+        assert_eq!(clauses.len(), 3);
+        assert_eq!(clauses[0].kind, ClauseKind::Text);
+        assert_eq!(clauses[1].kind, ClauseKind::Tag);
+        assert_eq!(clauses[1].label, "tagged #AI");
+        assert_eq!(clauses[2].label, "in Projects");
+    }
+
+    /// The chip has to be able to cut itself back out of the query, so what it
+    /// reports as its source must be exactly what the user typed.
+    #[test]
+    fn a_clause_reports_the_text_it_came_from() {
+        for input in [
+            "gradient",
+            "tag:AI",
+            "-draft",
+            "-tag:archive",
+            "\"exact phrase\"",
+            "-\"not this\"",
+            "section:\"Design notes\"",
+            "rating>7",
+            "is:orphan",
+            "ext:.md",
+        ] {
+            let clauses = describe(input).expect("parses");
+            assert_eq!(clauses.len(), 1, "{input} should be one clause");
+            assert_eq!(clauses[0].source, input, "round trip of {input}");
+        }
+    }
+
+    #[test]
+    fn removing_a_clause_leaves_a_query_that_still_parses() {
+        let input = "gradient tag:AI section:\"Design notes\" -draft";
+        let clauses = describe(input).expect("parses");
+
+        for clause in &clauses {
+            let remaining = input.replace(&clause.source, "");
+            parse(remaining.trim()).unwrap_or_else(|error| {
+                panic!(
+                    "removing {} left an unparseable query: {error}",
+                    clause.source
+                )
+            });
+        }
+    }
+
+    #[test]
+    fn negation_is_reported_and_read_into_the_label() {
+        let clauses = describe("-tag:archive").expect("parses");
+        assert!(clauses[0].negated);
+        assert_eq!(clauses[0].kind, ClauseKind::Tag);
+        assert_eq!(clauses[0].label, "not tagged #archive");
+
+        let terms = describe("-draft").expect("parses");
+        assert!(terms[0].negated);
+        assert_eq!(terms[0].label, "without draft");
+    }
+
+    #[test]
+    fn describes_the_structural_filters_in_words() {
+        let labels: Vec<String> = ["is:orphan", "is:untagged", "is:unresolved", "is:dead-end"]
+            .iter()
+            .map(|input| describe(input).expect("parses")[0].label.clone())
+            .collect();
+
+        assert_eq!(
+            labels,
+            vec![
+                "nothing links to it",
+                "has no tags",
+                "has a broken link",
+                "links nowhere",
+            ]
+        );
+    }
+
+    #[test]
+    fn describes_a_property_comparison_with_its_operator() {
+        let clauses = describe("rating>=7").expect("parses");
+        assert_eq!(clauses[0].kind, ClauseKind::Property);
+        assert_eq!(clauses[0].label, "rating >= 7");
+    }
+
+    #[test]
+    fn an_empty_query_has_no_clauses() {
+        assert!(describe("").expect("parses").is_empty());
+        assert!(describe("   ").expect("parses").is_empty());
+    }
+
+    /// A query that does not parse reports its one error rather than showing
+    /// chips for the part that happened to work.
+    #[test]
+    fn a_broken_query_is_an_error_not_a_partial_list() {
+        assert!(describe("tag:AI \"unclosed").is_err());
+        assert!(describe("is:nonsense").is_err());
     }
 }

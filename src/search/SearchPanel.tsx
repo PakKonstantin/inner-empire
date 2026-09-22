@@ -10,8 +10,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { VirtualList } from '@/components/VirtualList';
 import { api } from '@/services/api';
-import type { SearchHit, SearchResults, VaultPath } from '@/types/domain';
-import { EmptyState, ErrorState, IconButton, SearchInput, Skeleton, Tooltip } from '@/ui';
+import type {
+  QueryClause,
+  QueryClauseKind,
+  SearchHit,
+  SearchResults,
+  VaultPath,
+} from '@/types/domain';
+import {
+  EmptyState,
+  ErrorState,
+  FilterChip,
+  IconButton,
+  SearchInput,
+  Skeleton,
+  Tooltip,
+} from '@/ui';
+import type { IconName } from '@/ui';
 
 const ROW_HEIGHT = 62;
 const DEBOUNCE_MS = 180;
@@ -28,6 +43,7 @@ export function SearchPanel({ initialQuery, onOpen }: SearchPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [clauses, setClauses] = useState<QueryClause[]>([]);
   const input = useRef<HTMLInputElement | null>(null);
   const requestId = useRef(0);
 
@@ -41,20 +57,28 @@ export function SearchPanel({ initialQuery, onOpen }: SearchPanelProps) {
     const id = (requestId.current += 1);
     if (!text.trim()) {
       setResults(null);
+      setClauses([]);
       setError(null);
       return;
     }
 
     setSearching(true);
     try {
-      const found = await api.searchVault(text, 200);
+      // The clauses come from the same parser, in the same round trip, so the
+      // chips can never describe a query other than the one that ran.
+      const [found, described] = await Promise.all([
+        api.searchVault(text, 200),
+        api.describeQuery(text).catch(() => [] as QueryClause[]),
+      ]);
       // Ignore a response that a newer keystroke has already superseded.
       if (id !== requestId.current) return;
       setResults(found);
+      setClauses(described);
       setError(null);
     } catch (caught) {
       if (id !== requestId.current) return;
       setResults(null);
+      setClauses([]);
       setError(caught instanceof Object && 'message' in caught ? String(caught.message) : String(caught));
     } finally {
       if (id === requestId.current) setSearching(false);
@@ -116,6 +140,20 @@ export function SearchPanel({ initialQuery, onOpen }: SearchPanelProps) {
           <dt>is:orphan</dt>
           <dd>also unresolved, untagged, dead-end</dd>
         </dl>
+      ) : null}
+
+      {clauses.length > 0 ? (
+        <div className="ie-search__chips" aria-label="Parts of this search">
+          {clauses.map((clause) => (
+            <FilterChip
+              key={clause.source}
+              value={clause.label}
+              icon={CLAUSE_ICONS[clause.kind]}
+              negated={clause.negated}
+              onRemove={() => setQuery((current) => withoutClause(current, clause.source))}
+            />
+          ))}
+        </div>
       ) : null}
 
       {error ? (
@@ -203,4 +241,38 @@ function SearchResultRow({
       ) : null}
     </button>
   );
+}
+
+/**
+ * Which mark a clause gets.
+ *
+ * The kinds come from the backend's parser, so this map is the only place
+ * that has to know a new kind exists — and an unrecognised one still gets a
+ * chip, just a plain one.
+ */
+const CLAUSE_ICONS: Record<QueryClauseKind, IconName> = {
+  text: 'search',
+  phrase: 'quote',
+  tag: 'hash',
+  path: 'folder',
+  file: 'file-text',
+  extension: 'file',
+  section: 'list',
+  property: 'settings',
+  structural: 'graph',
+};
+
+/**
+ * Remove one clause from a query string.
+ *
+ * The clause's `source` is exactly what the user typed, so this is a cut
+ * rather than a re-serialisation — which matters because re-serialising would
+ * quietly rewrite the rest of the query the user is still editing.
+ */
+export function withoutClause(query: string, source: string): string {
+  const at = query.indexOf(source);
+  if (at === -1) return query;
+  const before = query.slice(0, at);
+  const after = query.slice(at + source.length);
+  return `${before}${after}`.replace(/\s+/g, ' ').trim();
 }

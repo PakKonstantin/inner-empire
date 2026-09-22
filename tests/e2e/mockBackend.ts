@@ -510,6 +510,58 @@ export function installMockBackend(options: MockOptions = {}): string {
 
     validate_query: () => null,
 
+    /**
+     * A stand-in for the backend's query description.
+     *
+     * Deliberately simpler than the real parser — a double's job is to be
+     * faithful about the shape of the answer, not to be a second
+     * implementation of the language. The Rust query module owns that, and
+     * its own tests cover the cases this skips.
+     */
+    describe_query: ({ query }) => {
+      const clauses = [];
+      const chunks = String(query ?? '').match(/-?(?:[^\\s"]*"[^"]*"|\\S+)/g) ?? [];
+      const kinds = {
+        tag: 'tag',
+        path: 'path',
+        folder: 'path',
+        file: 'file',
+        name: 'file',
+        ext: 'extension',
+        extension: 'extension',
+        section: 'section',
+        heading: 'section',
+        is: 'structural',
+      };
+
+      for (const raw of chunks) {
+        const negated = raw.startsWith('-');
+        const body = negated ? raw.slice(1) : raw;
+        const colon = body.indexOf(':');
+        const field = colon === -1 ? null : body.slice(0, colon).toLowerCase();
+        const value = colon === -1 ? body : body.slice(colon + 1).replace(/^"|"$/g, '');
+
+        let kind;
+        if (field) kind = kinds[field] ?? 'property';
+        else kind = body.startsWith('"') ? 'phrase' : 'text';
+
+        let base;
+        if (kind === 'tag') base = 'tagged #' + value.replace(/^#/, '');
+        else if (kind === 'path') base = 'in ' + value;
+        else if (kind === 'file') base = 'named ' + value;
+        else if (kind === 'extension') base = '.' + value.replace(/^\\./, '') + ' files';
+        else if (kind === 'section') base = 'heading ' + value;
+        else if (field) base = field + ' = ' + value;
+        else base = body.replace(/^"|"$/g, '');
+
+        let label = base;
+        if (negated) label = field ? 'not ' + base : 'without ' + base;
+        clauses.push({ source: raw, kind, label, negated });
+      }
+      return clauses;
+    },
+
+
     quick_switch: ({ needle, limit }) => {
       const lowered = (needle ?? '').toLowerCase();
       return [...files.keys()]
