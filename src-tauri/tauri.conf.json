@@ -47,6 +47,14 @@
     "longDescription": "Inner Empire turns an ordinary folder of Markdown files into a linked knowledge base: wiki links, backlinks, tags, typed properties, full-text search, a graph view and a canvas. Everything stays on your machine, in files any editor can open.",
     "copyright": "Inner Empire contributors",
     "licenseFile": "../LICENSE",
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown"],
+        "name": "Markdown",
+        "description": "Markdown document",
+        "role": "Editor"
+      }
+    ],
     "linux": {
       "deb": {
         "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
@@ -61,9 +69,10 @@
     },
     "windows": {
       "nsis": {
-        "installMode": "perMachine",
+        "installMode": "both",
         "languages": ["English"],
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerHooks": "installer/hooks.nsh"
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"

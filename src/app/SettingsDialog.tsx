@@ -15,9 +15,14 @@ import { notify } from '@/components/Notifications';
 import { api } from '@/services/api';
 import { useSettingsStore, type ThemeChoice } from '@/state/settingsStore';
 import { useVaultStore } from '@/state/vaultStore';
-import type { AppDirectories, TrashEntry, VaultSettings } from '@/types/domain';
+import type {
+  AppDirectories,
+  ShellIntegration,
+  TrashEntry,
+  VaultSettings,
+} from '@/types/domain';
 import { asVaultPath } from '@/types/domain';
-import { EmptyState, SearchInput } from '@/ui';
+import { EmptyState, SearchInput, Toggle } from '@/ui';
 
 import { matchSettings, sectionsMatching, type SettingsEntry } from './settingsIndex';
 
@@ -456,6 +461,8 @@ function FileSettings() {
           }
         />
       </Field>
+
+      <SystemIntegration />
     </>
   );
 }
@@ -850,4 +857,96 @@ function AboutSettings() {
       {log ? <pre className="ie-log">{log}</pre> : null}
     </>
   );
+}
+
+/**
+ * How much of the desktop this application is allowed to claim.
+ *
+ * Nothing here is on until the user turns it on, and the installer does not
+ * turn any of it on either. Appearing under "Open with" is registered by the
+ * bundle and changes nothing about what opens when you double-click; these
+ * two switches are the part that does, which is why they live where they can
+ * be seen and undone rather than in a wizard page seen once.
+ */
+function SystemIntegration() {
+  const [state, setState] = useState<ShellIntegration | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void api
+      .shellIntegration()
+      .then(setState)
+      .catch(() => setState(null));
+  }, []);
+
+  const apply = useCallback(
+    async (patch: Partial<Pick<ShellIntegration, 'markdownDefault' | 'folderContextMenu'>>) => {
+      if (!state) return;
+      const wanted = { ...state, ...patch };
+      setBusy(true);
+      try {
+        // The reply is what the system says afterwards, not what was asked
+        // for, so a switch that did not take does not look as though it did.
+        setState(await api.setShellIntegration(wanted.markdownDefault, wanted.folderContextMenu));
+      } catch (error) {
+        notify('error', errorText(error));
+        setState(await api.shellIntegration().catch(() => state));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [state],
+  );
+
+  if (!state) return null;
+
+  if (!state.supported) {
+    return (
+      <>
+        <h3>System integration</h3>
+        <p className="ie-settings__note">
+          {state.reason ??
+            'Changing which application opens a file is not available on this system.'}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <h3>System integration</h3>
+      <p className="ie-settings__note">
+        Inner Empire already appears under “Open with” for Markdown files. These two go
+        further and change how the desktop behaves outside the application. Both are off
+        until you turn them on, and turning one off puts back what was there before.
+      </p>
+
+      <Field label="Open Markdown files with Inner Empire by default">
+        <Toggle
+          hideLabel
+          label="Open Markdown files with Inner Empire by default"
+          checked={state.markdownDefault}
+          disabled={busy}
+          onChange={(checked) => void apply({ markdownDefault: checked })}
+        />
+      </Field>
+
+      <Field
+        label="Add “Open as vault” to the folder right-click menu"
+        hint="Adds one entry to the context menu for folders."
+      >
+        <Toggle
+          hideLabel
+          label="Add Open as vault to the folder right-click menu"
+          checked={state.folderContextMenu}
+          disabled={busy}
+          onChange={(checked) => void apply({ folderContextMenu: checked })}
+        />
+      </Field>
+    </>
+  );
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Object && 'message' in error ? String(error.message) : String(error);
 }

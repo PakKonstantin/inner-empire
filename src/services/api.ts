@@ -32,6 +32,7 @@ import type {
   ResolvedLink,
   SearchHit,
   SearchResults,
+  ShellIntegration,
   TagSummary,
   TemplateInfo,
   TrashEntry,
@@ -204,6 +205,12 @@ export const api = {
       sources,
     }),
   appDirectories: () => call<AppDirectories>('app_directories'),
+
+  /** What the desktop currently routes here, and whether it can be changed. */
+  shellIntegration: () => call<ShellIntegration>('shell_integration'),
+  /** Turn an integration on or off. Only ever called from a user action. */
+  setShellIntegration: (markdownDefault: boolean, folderContextMenu: boolean) =>
+    call<ShellIntegration>('set_shell_integration', { markdownDefault, folderContextMenu }),
   loadAppSettings: () => call<Record<string, unknown>>('load_app_settings'),
   saveAppSettings: (settings: Record<string, unknown>) =>
     call<void>('save_app_settings', { settings }),

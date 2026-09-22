@@ -206,6 +206,22 @@ export interface GraphData {
   truncated: boolean;
 }
 
+/**
+ * What the desktop currently routes to this application.
+ *
+ * Both are off until the user asks. The installer registers the capability
+ * only — Inner Empire appears under "Open with" — and becoming the default
+ * handler is a choice made in Settings, where it can be seen and undone.
+ */
+export interface ShellIntegration {
+  /** Whether this platform can change any of it from inside the app. */
+  supported: boolean;
+  /** Why not, when it cannot — shown instead of a dead switch. */
+  reason: string | null;
+  markdownDefault: boolean;
+  folderContextMenu: boolean;
+}
+
 export interface SearchHit {
   path: VaultPath;
   title: string;

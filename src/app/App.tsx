@@ -31,6 +31,7 @@ import { VAULT_ROOT, asVaultPath, joinPath, pathFileName, pathParent, pathStem }
 import * as tree from '@/workspace/paneTree';
 import { SplitContainer } from '@/workspace/SplitContainer';
 import { TabBar } from '@/workspace/TabBar';
+import { APP_VERSION } from '@/version';
 
 import { PaneContent } from './PaneContent';
 import { RecoveryPrompt } from './RecoveryPrompt';
@@ -682,9 +683,6 @@ export function App() {
     </div>
   );
 }
-
-/** Reported to plugins so they can check compatibility. */
-const APP_VERSION = '0.1.0';
 
 /** Every modal, kept out of the shell so the shell reads as a layout. */
 function Dialogs({

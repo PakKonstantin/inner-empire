@@ -104,42 +104,56 @@ Both are available in Tauri v2. NSIS is the right choice here:
 The `.msi` target stays — it is what an IT department deploys by policy — but
 the interactive installer people download is the NSIS `.exe`.
 
-### 3.2 The wizard
+### 3.2 The wizard, and where the choice actually lives
 
-```
-Welcome  →  Licence  →  Install location  →  Components  →  Install  →  Finish
-                                              │                          │
-                          Desktop shortcut ───┤            Launch app ───┘
-                          Start-menu entry ───┤
-                     Open .md with this app ──┤   (unchecked by default)
-                       "Open with" in the     │
-                        folder context menu ──┘   (unchecked by default)
-```
+**Changed during implementation.** The plan above described a components page
+in the installer offering file associations and a shell-integration entry.
+Tauri v2's NSIS integration exposes four hook points — `NSIS_HOOK_PREINSTALL`,
+`POSTINSTALL`, `PREUNINSTALL`, `POSTUNINSTALL` — and nothing that can add a
+page to the wizard's sequence. A components page is not available through the
+supported surface, and building one would mean replacing Tauri's installer
+template wholesale.
 
-`installMode` changes from `perMachine` to `both`, so a user without admin
-rights can still install for themselves. The two integration options are
-**unchecked by default**: the brief is explicit that file associations and
-shell integration are not to be taken without asking, and an application that
-seizes `.md` on install is the kind of thing people uninstall.
+So the choice moved into the application, which is a better place for it
+anyway:
 
-### 3.3 File associations and the protocol
+- The installer registers the **capability** only. `fileAssociations` in the
+  bundle config makes Inner Empire appear under "Open with" for Markdown,
+  which changes nothing about what opens when a file is double-clicked.
+- **Settings → Files and links → System integration** has the two switches,
+  both off, that change the default handler and add the folder context-menu
+  entry. They can be seen, changed and undone, rather than being a wizard
+  page seen once and then forgotten about.
+- `installMode` is `both`, so a user without admin rights can install for
+  themselves.
 
-Declared in the bundle config so the binary knows about them:
+The brief's requirement — nothing seized without explicit consent — is met
+more strictly this way than by a pre-ticked-nothing wizard page, because the
+state remains visible and reversible.
 
-```json
-"fileAssociations": [
-  { "ext": ["md", "markdown"], "name": "Markdown", "description": "Markdown document", "role": "Editor" }
-]
-```
+### 3.3 How the integration is written
 
-On Windows the *capability* is registered (the app appears under "Open
-with"); becoming the **default** handler happens only when the user ticks the
-box, and is implemented in the NSIS hook by writing the
-`HKCU\Software\Classes\.md` association. Removing it on uninstall is part of
-the same hook.
+`PlatformOps` gains `shell_integration_support`, `shell_integration` and
+`set_shell_integration`, defaulting to "not available here" so a new platform
+has to opt in rather than silently appear to support it. The Windows adapter
+implements them through `reg.exe`, which ships with Windows — no new
+dependency, and the exact keys are readable in the source. Everything is
+under `HKCU`, so a per-user install needs no admin rights and one account's
+choice cannot reach another's.
 
-The `inner-empire://` protocol is registered the same way — capability
-always, default only on request — and lets a note link open the app.
+Two details that matter:
+
+- Turning the association **off** gives an extension back only while it is
+  still ours. If another editor has taken `.md` since, taking it away again
+  would be the same rudeness in reverse.
+- `SHChangeNotify` is called after a change, or Explorer keeps the old icon
+  and the old handler until the next sign-in — which reads as the setting not
+  having worked.
+
+The `inner-empire://` protocol is not implemented. It was listed above as a
+capability to register; nothing in the application yet produces or consumes
+such a link, so registering a handler for it would be a scheme that leads
+nowhere.
 
 ### 3.4 Uninstall
 
@@ -147,13 +161,22 @@ The uninstaller removes:
 
 - the application binaries and its install directory,
 - the Start-menu and desktop shortcuts,
-- registry keys it created (associations, protocol, uninstall entry),
-- the **cache** directory (`%LOCALAPPDATA%\InnerEmpire\cache`).
+- the registry keys the application may have written when the user turned
+  integration on, and only while `.md` still points at us,
+- the **cache** directory (`%LOCALAPPDATA%\InnerEmpire\cache`), which is
+  rebuilt from the notes and so costs nothing to lose.
 
-It offers, unchecked, "also remove settings and logs". It never touches
-`%APPDATA%\InnerEmpire\data` without that box, and it has no code path that
-can reach a vault: vaults live wherever the user put them and the uninstaller
-is not told where that is.
+**Changed during implementation.** The "also remove settings and logs"
+checkbox needed a custom uninstaller page, which is unavailable for the same
+reason as the components page. Rather than offer nothing, the uninstaller now
+takes the safer default unconditionally: settings, hotkeys and logs are
+**kept**, so a reinstall finds them. An uninstaller that quietly deletes
+preferences is one nobody forgives, and "remove everything" belongs in the
+application where it can say what it is about to do.
+
+It has no code path that can reach a vault: vaults live wherever the user put
+them, the uninstaller is never told where that is, and `hooks.nsh` contains
+no removal of `%APPDATA%\InnerEmpire\data`.
 
 ### 3.5 Upgrade
 

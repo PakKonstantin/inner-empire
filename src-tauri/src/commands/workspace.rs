@@ -4,6 +4,7 @@ use ie_core::export::{ExportOptions, ExportResult};
 use ie_core::model::Workspace;
 use ie_core::templates::{self, TemplateContext, TemplateInfo};
 use ie_core::vault::VaultPath;
+use ie_platform::{ShellIntegrationState, ShellIntegrationSupport};
 use tauri::State;
 
 use crate::error::{CommandError, CommandResult};
@@ -229,6 +230,76 @@ pub fn app_directories(state: State<'_, SharedState>) -> CommandResult<AppDirect
         cache: dirs.cache_dir().map(path_string).unwrap_or_default(),
         platform: state.host.platform.kind().to_string(),
     })
+}
+
+/// What the desktop currently routes to this application, and whether it can
+/// be changed from here at all.
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellIntegration {
+    pub supported: bool,
+    /// Why not, when `supported` is false — shown instead of a dead switch.
+    pub reason: Option<String>,
+    pub markdown_default: bool,
+    pub folder_context_menu: bool,
+}
+
+#[tauri::command]
+pub fn shell_integration(state: State<'_, SharedState>) -> CommandResult<ShellIntegration> {
+    let support = state.host.platform.shell_integration_support();
+    let current = state.host.platform.shell_integration().unwrap_or_default();
+
+    Ok(ShellIntegration {
+        supported: matches!(support, ShellIntegrationSupport::Available),
+        reason: match support {
+            ShellIntegrationSupport::Available => None,
+            ShellIntegrationSupport::Unavailable(reason) => Some(reason.to_string()),
+        },
+        markdown_default: current.markdown_default,
+        folder_context_menu: current.folder_context_menu,
+    })
+}
+
+/// Turn file association or the folder context-menu entry on or off.
+///
+/// Only ever called because the user moved a switch: nothing here runs at
+/// startup, at install, or on the application's own initiative.
+#[tauri::command]
+pub fn set_shell_integration(
+    state: State<'_, SharedState>,
+    markdown_default: bool,
+    folder_context_menu: bool,
+) -> CommandResult<ShellIntegration> {
+    // The binary the shell should launch is this one, whichever copy it is —
+    // a portable build on a stick and an installed one have to register
+    // themselves, not each other.
+    let executable = std::env::current_exe().map_err(|error| {
+        CommandError::from(ie_core::CoreError::Refused {
+            operation: "find this application's own path",
+            reason: error.to_string(),
+        })
+    })?;
+
+    state
+        .host
+        .platform
+        .set_shell_integration(
+            ShellIntegrationState {
+                markdown_default,
+                folder_context_menu,
+            },
+            &executable,
+        )
+        .map_err(|error| {
+            CommandError::from(ie_core::CoreError::Refused {
+                operation: "change the desktop integration",
+                reason: error.to_string(),
+            })
+        })?;
+
+    // Report what the registry says afterwards rather than what was asked
+    // for, so a switch that did not take does not look as though it did.
+    shell_integration(state)
 }
 
 fn path_string(path: std::path::PathBuf) -> String {

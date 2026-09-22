@@ -46,6 +46,12 @@ jobs:
       - name: Contrast
         run: pnpm check:contrast
 
+      # An installer that claims one version while the application claims
+      # another is the kind of thing nobody notices until a bug is filed
+      # against a version that was never built.
+      - name: Version is consistent
+        run: pnpm version:check
+
       - name: Unit tests
         run: pnpm test
 

@@ -71,6 +71,16 @@ export const SETTINGS_INDEX: SettingsEntry[] = [
   entry('files', 'New attachments go', 'images paste drop folder location'),
   entry('files', 'Attachment folder', 'images files paste drop location'),
   entry('files', 'Template folder', 'templates location'),
+  entry(
+    'files',
+    'Open Markdown files with Inner Empire by default',
+    'file association default handler open with windows shell',
+  ),
+  entry(
+    'files',
+    'Add \u201cOpen as vault\u201d to the folder right-click menu',
+    'context menu shell integration explorer folder windows',
+  ),
 
   entry('appearance', 'Theme', 'dark light system colour color night mode'),
   entry('appearance', 'Interface size', 'zoom scale bigger smaller ui'),

@@ -145,6 +145,8 @@ pub fn run() {
             commands::workspace::export_notes,
             commands::workspace::import_files,
             commands::workspace::app_directories,
+            commands::workspace::shell_integration,
+            commands::workspace::set_shell_integration,
             commands::workspace::load_app_settings,
             commands::workspace::save_app_settings,
             commands::workspace::read_log_tail,

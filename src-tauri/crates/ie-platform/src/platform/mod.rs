@@ -49,6 +49,36 @@ pub trait PlatformOps: Send + Sync {
 
     /// Open an http(s) URL in the default browser.
     fn open_external_url(&self, url: &str) -> Result<()>;
+
+    /// Whether this platform can change file associations from inside the
+    /// application. Defaults to no, so a new platform has to opt in rather
+    /// than silently appear to support it.
+    fn shell_integration_support(&self) -> ShellIntegrationSupport {
+        ShellIntegrationSupport::Unavailable(
+            "Changing which application opens a file is not available on this system.",
+        )
+    }
+
+    /// What the desktop currently routes to this application.
+    fn shell_integration(&self) -> Result<ShellIntegrationState> {
+        Ok(ShellIntegrationState::default())
+    }
+
+    /// Turn an integration on or off.
+    ///
+    /// `executable` is the path the shell should launch. Taking it as an
+    /// argument rather than reading `current_exe` keeps this testable and
+    /// keeps the decision about *which* binary at the caller, where a
+    /// portable install differs from an installed one.
+    fn set_shell_integration(
+        &self,
+        _state: ShellIntegrationState,
+        _executable: &Path,
+    ) -> Result<()> {
+        Err(crate::error::PlatformError::Unsupported {
+            operation: "change file associations",
+        })
+    }
 }
 
 /// The adapter for the desktop OS this binary was built for.
@@ -69,4 +99,32 @@ pub fn current() -> Arc<dyn PlatformOps> {
     {
         Arc::new(linux::LinuxPlatform::new())
     }
+}
+
+/// Whether the desktop currently routes Markdown and folders to this app.
+///
+/// Both are off until the user asks. An application that seizes `.md` on
+/// install is one people uninstall, so the installer registers the
+/// *capability* — appearing under "Open with" — and nothing more; becoming
+/// the default handler is a choice made here, where it can be seen, changed
+/// and undone.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ShellIntegrationState {
+    /// Double-clicking a `.md` file opens it in this application.
+    pub markdown_default: bool,
+    /// Right-clicking a folder offers to open it as a vault.
+    pub folder_context_menu: bool,
+}
+
+/// Whether this platform can offer shell integration at all.
+///
+/// Linux desktops take their associations from `.desktop` files installed by
+/// the package, which the application must not rewrite behind the package
+/// manager's back — so there the answer is no, and the settings say so rather
+/// than offering a switch that does nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ShellIntegrationSupport {
+    Available,
+    /// Not offered here, with a reason a person can read.
+    Unavailable(&'static str),
 }
