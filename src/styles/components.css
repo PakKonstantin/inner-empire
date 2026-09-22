@@ -1014,6 +1014,26 @@
   color: var(--color-accent);
 }
 
+/* A bar on the outer edge says which panel is showing. Colour alone would
+   not, in a high-contrast theme or to a colour-blind eye. */
+.ie-rail__item.is-active::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--color-accent);
+}
+
+.ie-rail--left .ie-rail__item.is-active::before {
+  left: -6px;
+}
+
+.ie-rail--right .ie-rail__item.is-active::before {
+  right: -6px;
+}
+
 .ie-rail__badge {
   position: absolute;
   top: 2px;

@@ -193,8 +193,11 @@ export function Rail({ items, activeId, onSelect, side, footer }: RailProps) {
       ref={roving.container}
       onKeyDown={roving.onKeyDown}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const selected = item.id === activeId;
+        // With every sidebar collapsed nothing is selected, and a rail where
+        // no item is tabbable is a rail the keyboard cannot reach.
+        const tabbable = selected || (activeId === null && index === 0);
         return (
           <Tooltip
             key={item.id}
@@ -208,7 +211,7 @@ export function Rail({ items, activeId, onSelect, side, footer }: RailProps) {
               data-roving=""
               aria-selected={selected}
               aria-label={item.label}
-              tabIndex={selected ? 0 : -1}
+              tabIndex={tabbable ? 0 : -1}
               className={`ie-rail__item${selected ? ' is-active' : ''}`}
               onClick={() => onSelect(item.id)}
             >

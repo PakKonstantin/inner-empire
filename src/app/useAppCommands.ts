@@ -191,6 +191,22 @@ export function useAppCommands(actions: CommandActions): void {
         run: () => workspace().toggleSidebar('right'),
       },
       {
+        id: 'view.back',
+        name: 'Go back',
+        category: 'View',
+        defaultHotkey: 'Mod+[',
+        isAvailable: () => workspace().historyIndex > 0,
+        run: () => void workspace().goBack(),
+      },
+      {
+        id: 'view.forward',
+        name: 'Go forward',
+        category: 'View',
+        defaultHotkey: 'Mod+]',
+        isAvailable: () => workspace().historyIndex < workspace().history.length - 1,
+        run: () => void workspace().goForward(),
+      },
+      {
         id: 'view.graph',
         name: 'Open the graph',
         category: 'View',

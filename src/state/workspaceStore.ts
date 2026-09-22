@@ -113,6 +113,18 @@ interface WorkspaceState {
   setSidebar: (side: 'left' | 'right', patch: Partial<WorkspaceSidebar>) => void;
   toggleSidebar: (side: 'left' | 'right') => void;
 
+  /**
+   * Where the user has been, for the toolbar's back and forward.
+   *
+   * Session state rather than workspace state: which notes you walked through
+   * this afternoon is not something to restore tomorrow, and writing it to the
+   * vault would put a new key in a file two platforms share for no gain.
+   */
+  history: VaultPath[];
+  historyIndex: number;
+  goBack: () => Promise<void>;
+  goForward: () => Promise<void>;
+
   // Buffers
   editBuffer: (path: VaultPath, content: string) => void;
   saveBuffer: (path: VaultPath) => Promise<void>;
@@ -127,6 +139,36 @@ interface WorkspaceState {
 }
 
 const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+/** Set while back or forward is doing the opening. */
+let navigatingHistory = false;
+
+/** How far back the toolbar can go. Long enough for an afternoon. */
+const HISTORY_LIMIT = 100;
+
+async function withHistorySuspended(action: () => Promise<void>): Promise<void> {
+  navigatingHistory = true;
+  try {
+    await action();
+  } finally {
+    navigatingHistory = false;
+  }
+}
+
+function recordVisit(
+  set: (patch: Partial<WorkspaceState>) => void,
+  get: () => WorkspaceState,
+  path: VaultPath,
+): void {
+  const { history, historyIndex } = get();
+  // Reopening the note you are already on is not a move.
+  if (history[historyIndex] === path) return;
+
+  // A new visit after going back discards the forward trail, which is how
+  // every back button in the world behaves.
+  const trail = [...history.slice(0, historyIndex + 1), path].slice(-HISTORY_LIMIT);
+  set({ history: trail, historyIndex: trail.length - 1 });
+}
 let layoutTimer: ReturnType<typeof setTimeout> | null = null;
 let journalTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -138,6 +180,8 @@ function defaultSidebar(side: 'left' | 'right'): WorkspaceSidebar {
 
 export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   carried: {},
+  history: [],
+  historyIndex: -1,
   layout: tree.emptyLayout(),
   leftSidebar: defaultSidebar('left'),
   rightSidebar: defaultSidebar('right'),
@@ -214,10 +258,31 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const paneId = options.paneId ?? get().layout.activePaneId;
     const mode = options.mode ?? inferMode(path);
     set((state) => ({ layout: tree.openInPane(state.layout, paneId, path, mode) }));
+    // Walking back through history is not itself a visit, or the trail would
+    // grow every time you retraced it and forward would never be reachable.
+    if (!navigatingHistory) recordVisit(set, get, path);
     schedulePersist(get);
     if (mode === 'edit' || mode === 'read') {
       await get().reloadBuffer(path);
     }
+  },
+
+  async goBack() {
+    const { history, historyIndex } = get();
+    if (historyIndex <= 0) return;
+    const target = history[historyIndex - 1];
+    if (!target) return;
+    set({ historyIndex: historyIndex - 1 });
+    await withHistorySuspended(() => get().openFile(target));
+  },
+
+  async goForward() {
+    const { history, historyIndex } = get();
+    if (historyIndex >= history.length - 1) return;
+    const target = history[historyIndex + 1];
+    if (!target) return;
+    set({ historyIndex: historyIndex + 1 });
+    await withHistorySuspended(() => get().openFile(target));
   },
 
   async closeTab(tabId) {

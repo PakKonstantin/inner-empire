@@ -10,12 +10,14 @@ mod commands;
 mod error;
 mod events;
 mod state;
+mod window_state;
 
 use std::sync::Arc;
 
 use ie_core::logging::LogLevel;
 use ie_platform::HostServices;
 use state::{AppState, SharedState};
+use tauri::{Manager, WindowEvent};
 
 /// Build and run the application.
 pub fn run() {
@@ -52,6 +54,26 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(state)
+        .setup(|app| {
+            // The window is created by the config, then moved back to wherever
+            // the user last left it — before it is shown, so restoring is not
+            // a visible jump.
+            if let Some(webview) = app.get_webview_window("main") {
+                window_state::restore(&webview.as_ref().window());
+            }
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            // Geometry is written on the way out rather than on every drag:
+            // a resize fires continuously, and a settings file is not a place
+            // for that much churn.
+            if matches!(
+                event,
+                WindowEvent::CloseRequested { .. } | WindowEvent::Destroyed
+            ) {
+                window_state::save(window);
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             commands::vault::open_vault,
             commands::vault::create_vault,

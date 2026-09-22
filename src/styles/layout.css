@@ -11,6 +11,8 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  /* The anchor for a sidebar that overlays the editor on a narrow window. */
+  position: relative;
 }
 
 .ie-app__panes {
@@ -18,6 +20,62 @@
   min-width: 0;
   display: flex;
   background: var(--background-primary);
+}
+
+/* ---------- Toolbar ---------- */
+
+/* One row, and it must stay one row: the centre section is the only part
+   allowed to give up space, because a breadcrumb can be truncated and a
+   button cannot. */
+.ie-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: none;
+  height: var(--toolbar-height);
+  padding: 0 var(--space-sm);
+  border-bottom: 1px solid var(--border);
+  background: var(--background-secondary);
+  /* The bar is a drag surface on frameless windows; the controls inside opt
+     back out below. */
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.ie-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+
+.ie-toolbar__group--start,
+.ie-toolbar__group--end {
+  flex: none;
+}
+
+.ie-toolbar__group--center {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ie-toolbar__history {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-xs);
+}
+
+.ie-toolbar__search {
+  width: 200px;
+  margin-right: var(--space-xs);
+  transition: width var(--duration-fast) var(--easing-standard);
+}
+
+.ie-toolbar__search:focus-within {
+  width: 280px;
 }
 
 /* ---------- Sidebars ---------- */
@@ -33,43 +91,6 @@
 .ie-sidebar--right {
   border-right: none;
   border-left: 1px solid var(--border);
-}
-
-.ie-sidebar__inner {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.ie-sidebar__tabs {
-  display: flex;
-  gap: 2px;
-  padding: var(--space-2);
-  border-bottom: 1px solid var(--border);
-  flex: none;
-}
-
-.ie-sidebar__tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 28px;
-  border-radius: var(--radius-m);
-  color: var(--text-muted);
-  font-size: 14px;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.ie-sidebar__tab:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.ie-sidebar__tab.is-active {
-  background: var(--background-modifier-active);
-  color: var(--accent);
 }
 
 .ie-sidebar__content {
@@ -150,17 +171,24 @@
   gap: 2px;
 }
 
-.ie-explorer__sort {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: var(--font-size-smaller);
-  max-width: 96px;
-}
-
-.ie-explorer__filter {
+.ie-explorer__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
   padding: var(--space-2) var(--space-3);
   flex: none;
+}
+
+.ie-explorer__controls .ie-field {
+  min-width: 0;
+}
+
+.ie-explorer__controls .ie-field:first-child {
+  flex: 1;
+}
+
+.ie-explorer__controls .ie-select {
+  max-width: 116px;
 }
 
 .ie-explorer__list {
@@ -208,8 +236,25 @@
   width: 14px;
   flex: none;
   color: var(--text-faint);
-  font-size: 9px;
-  transition: transform var(--transition-fast);
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+
+.ie-tree-icon {
+  flex: none;
+  color: var(--text-faint);
+}
+
+.ie-tree-row.is-active .ie-tree-icon,
+.ie-tree-row--folder .ie-tree-icon {
+  color: var(--text-muted);
+}
+
+/* A revealed row is not the open note, so it gets a ring rather than the
+   selected background — two different states should not look the same. */
+.ie-tree-row.is-revealed {
+  outline: 1px solid var(--accent-muted);
+  outline-offset: -1px;
+  color: var(--text-normal);
 }
 
 .ie-tree-chevron.is-open {
@@ -1795,4 +1840,86 @@
 .ie-recovery__actions {
   display: flex;
   gap: var(--space-2);
+}
+
+/* ---------- Responsive ---------- */
+
+/*
+ * Three layouts, and the rails are in all of them.
+ *
+ * Wide: both sidebars take their own column. Medium: they are capped so the
+ * editor keeps a readable measure. Narrow: a sidebar stops being a column and
+ * slides over the editor instead — hiding it outright would mean the user's
+ * own choice of panel silently stopped working when they resized the window.
+ *
+ * Nothing here writes to the workspace, so a window that widens again shows
+ * exactly the sidebars the user had open.
+ */
+
+@media (max-width: 1280px) {
+  .ie-sidebar {
+    max-width: 32vw;
+  }
+
+  .ie-toolbar__search {
+    width: 160px;
+  }
+
+  .ie-toolbar__search:focus-within {
+    width: 220px;
+  }
+}
+
+@media (max-width: 960px) {
+  .ie-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: var(--z-dropdown);
+    max-width: 78vw;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ie-sidebar--left {
+    left: 0;
+  }
+
+  .ie-sidebar--right {
+    right: 0;
+  }
+
+  /* The drag handle would sit under the editor's own scrollbar and is the
+     wrong gesture for a drawer anyway. */
+  .ie-sidebar__handle {
+    display: none;
+  }
+
+  /* Tapping the editor puts the drawer away, the way a drawer should behave. */
+  .ie-app__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: calc(var(--z-dropdown) - 1);
+    background: rgba(0, 0, 0, 0.32);
+    border: none;
+    padding: 0;
+  }
+
+  .ie-toolbar__group--center {
+    display: none;
+  }
+
+  .ie-toolbar__search {
+    width: 140px;
+  }
+
+  .ie-toolbar__search:focus-within {
+    width: 180px;
+  }
+}
+
+/* Above the narrow breakpoint the scrim has nothing to dismiss. */
+@media (min-width: 961px) {
+  .ie-app__scrim {
+    display: none;
+  }
 }

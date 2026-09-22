@@ -6,7 +6,7 @@
  * every move goes through the rename command so links are rewritten.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useContextMenu, type MenuEntry } from '@/components/ContextMenu';
 import { VirtualList } from '@/components/VirtualList';
@@ -14,6 +14,7 @@ import { notify } from '@/components/Notifications';
 import { api } from '@/services/api';
 import type { VaultPath } from '@/types/domain';
 import { VAULT_ROOT, joinPath, pathFileName, pathParent } from '@/types/domain';
+import { EmptyState, Icon, IconButton, SearchInput, Select, Tooltip, iconForFile } from '@/ui';
 
 import { useFileTree, type FileTreeOptions, type SortOrder, type TreeRow } from './useFileTree';
 
@@ -38,12 +39,57 @@ export function FileExplorer(props: FileExplorerProps) {
   const menu = useContextMenu();
   const [dragging, setDragging] = useState<VaultPath | null>(null);
   const [dropTarget, setDropTarget] = useState<VaultPath | null>(null);
+  const [revealed, setRevealed] = useState<VaultPath | null>(null);
   const filterInput = useRef<HTMLInputElement | null>(null);
+
+  // The hook hands back a fresh object every render, so the listener below
+  // reads it through a ref instead of re-subscribing each time.
+  const treeRef = useRef(tree);
+  treeRef.current = tree;
+
+  /**
+   * Someone elsewhere — the breadcrumb, for one — asked for a path to be
+   * shown here. The tree's own state lives in this component, so the request
+   * arrives as an event rather than as a ref reaching in from the shell.
+   */
+  useEffect(() => {
+    const onReveal = (event: Event) => {
+      const detail = (event as CustomEvent<{ path?: VaultPath; folder?: boolean }>).detail;
+      if (!detail?.path) return;
+      treeRef.current.revealPath(detail.path);
+      // A folder also opens itself; a file only needs its ancestors open.
+      if (detail.folder) treeRef.current.expand(detail.path);
+      // A filter would hide whatever was just revealed.
+      setOptions((current) => (current.filter ? { ...current, filter: '' } : current));
+      setRevealed(detail.path);
+    };
+    window.addEventListener('ie:reveal-path', onReveal);
+    return () => window.removeEventListener('ie:reveal-path', onReveal);
+  }, []);
+
+  // A reveal holds the list's attention only until the user opens something
+  // else; after that the open note is what should stay in view.
+  useEffect(() => {
+    setRevealed(null);
+  }, [props.activePath]);
 
   const activeIndex = useMemo(
     () => tree.rows.findIndex((row) => row.path === props.activePath),
     [tree.rows, props.activePath],
   );
+
+  /**
+   * Where the list should scroll.
+   *
+   * A reveal wins over the open note until its row actually exists — folders
+   * load a level at a time, so the row a reveal is waiting for often appears
+   * a tick or two later.
+   */
+  const revealedIndex = useMemo(
+    () => (revealed ? tree.rows.findIndex((row) => row.path === revealed) : -1),
+    [tree.rows, revealed],
+  );
+  const scrollToIndex = revealedIndex >= 0 ? revealedIndex : activeIndex;
 
   const onRowContextMenu = useCallback(
     (event: React.MouseEvent, row: TreeRow) => {
@@ -136,6 +182,7 @@ export function FileExplorer(props: FileExplorerProps) {
     (row: TreeRow) => {
       const isActive = row.path === props.activePath;
       const isDropTarget = dropTarget === row.path;
+      const isRevealed = revealed === row.path && !isActive;
 
       return (
         <div
@@ -143,6 +190,7 @@ export function FileExplorer(props: FileExplorerProps) {
             'ie-tree-row',
             `ie-tree-row--${row.kind}`,
             isActive ? 'is-active' : '',
+            isRevealed ? 'is-revealed' : '',
             isDropTarget ? 'is-drop-target' : '',
           ]
             .filter(Boolean)
@@ -200,12 +248,17 @@ export function FileExplorer(props: FileExplorerProps) {
           }}
         >
           {row.kind === 'folder' ? (
-            <span className={`ie-tree-chevron${row.expanded ? ' is-open' : ''}`} aria-hidden="true">
-              ▸
+            <span className={`ie-tree-chevron${row.expanded ? ' is-open' : ''}`}>
+              <Icon name="chevron-right" size={14} />
             </span>
           ) : (
             <span className="ie-tree-chevron ie-tree-chevron--placeholder" aria-hidden="true" />
           )}
+          <Icon
+            className="ie-tree-icon"
+            name={row.kind === 'folder' ? (row.expanded ? 'folder-open' : 'folder') : iconForFile(row.path)}
+            size={15}
+          />
           <span className="ie-tree-label" title={row.path}>
             {row.kind === 'file' ? displayName(row) : row.name}
           </span>
@@ -215,7 +268,7 @@ export function FileExplorer(props: FileExplorerProps) {
         </div>
       );
     },
-    [dragging, dropTarget, moveInto, onRowContextMenu, props, tree],
+    [dragging, dropTarget, moveInto, onRowContextMenu, props, revealed, tree],
   );
 
   return (
@@ -223,57 +276,53 @@ export function FileExplorer(props: FileExplorerProps) {
       <div className="ie-panel-header">
         <span>Files</span>
         <div className="ie-explorer__actions">
-          <button
-            type="button"
-            className="ie-icon-button"
-            title="New note"
-            aria-label="New note"
-            onClick={() => props.onCreateNote(VAULT_ROOT)}
-          >
-            ＋
-          </button>
-          <button
-            type="button"
-            className="ie-icon-button"
-            title="New folder"
-            aria-label="New folder"
-            onClick={() => props.onCreateFolder(VAULT_ROOT)}
-          >
-            ⌸
-          </button>
-          <button
-            type="button"
-            className="ie-icon-button"
-            title="Collapse all"
-            aria-label="Collapse all"
-            onClick={() => tree.collapseAll()}
-          >
-            ⌄
-          </button>
-          <select
-            className="ie-explorer__sort"
-            value={options.sort}
-            aria-label="Sort order"
-            onChange={(event) =>
-              setOptions((current) => ({ ...current, sort: event.target.value as SortOrder }))
-            }
-          >
-            <option value="name">Name A–Z</option>
-            <option value="nameDescending">Name Z–A</option>
-            <option value="modified">Recently changed</option>
-            <option value="created">Oldest first</option>
-          </select>
+          <Tooltip content="New note">
+            <IconButton
+              icon="plus"
+              label="New note"
+              size="sm"
+              onClick={() => props.onCreateNote(VAULT_ROOT)}
+            />
+          </Tooltip>
+          <Tooltip content="New folder">
+            <IconButton
+              icon="folder-plus"
+              label="New folder"
+              size="sm"
+              onClick={() => props.onCreateFolder(VAULT_ROOT)}
+            />
+          </Tooltip>
+          <Tooltip content="Collapse all">
+            <IconButton
+              icon="chevrons-up"
+              label="Collapse all"
+              size="sm"
+              onClick={() => tree.collapseAll()}
+            />
+          </Tooltip>
         </div>
       </div>
 
-      <div className="ie-explorer__filter">
-        <input
+      <div className="ie-explorer__controls">
+        <SearchInput
           ref={filterInput}
-          className="ie-input"
-          type="search"
+          label="Filter by name"
           placeholder="Filter by name"
           value={options.filter}
-          onChange={(event) => setOptions((current) => ({ ...current, filter: event.target.value }))}
+          onValueChange={(value) => setOptions((current) => ({ ...current, filter: value }))}
+        />
+        <Select
+          label="Sort order"
+          value={options.sort}
+          onChange={(event) =>
+            setOptions((current) => ({ ...current, sort: event.target.value as SortOrder }))
+          }
+          options={[
+            { value: 'name', label: 'Name A–Z' },
+            { value: 'nameDescending', label: 'Name Z–A' },
+            { value: 'modified', label: 'Recently changed' },
+            { value: 'created', label: 'Oldest first' },
+          ]}
         />
       </div>
 
@@ -283,11 +332,28 @@ export function FileExplorer(props: FileExplorerProps) {
         rowHeight={ROW_HEIGHT}
         keyOf={(row) => row.path}
         renderRow={renderRow}
-        scrollToIndex={activeIndex}
+        scrollToIndex={scrollToIndex}
         emptyState={
-          <div className="ie-empty">
-            {options.filter ? 'Nothing matches that filter.' : 'This vault has no notes yet.'}
-          </div>
+          options.filter ? (
+            <EmptyState
+              compact
+              icon="search"
+              title="Nothing matches"
+              description="No file or folder here has that in its name."
+              action={{
+                label: 'Clear the filter',
+                onClick: () => setOptions((current) => ({ ...current, filter: '' })),
+              }}
+            />
+          ) : (
+            <EmptyState
+              compact
+              icon="file-text"
+              title="This vault is empty"
+              description="Notes you create will appear here."
+              action={{ label: 'New note', onClick: () => props.onCreateNote(VAULT_ROOT) }}
+            />
+          )
         }
       />
     </div>

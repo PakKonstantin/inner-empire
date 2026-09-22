@@ -20,6 +20,7 @@ import { FileExplorer } from '@/explorer/FileExplorer';
 import { DEFAULT_GRAPH_SETTINGS, GraphView, type GraphSettings } from '@/graph/GraphView';
 import { PluginPanelHost, usePlugins } from '@/plugins/usePlugins';
 import { SearchPanel } from '@/search/SearchPanel';
+import { EmptyState, Rail } from '@/ui';
 import { api } from '@/services/api';
 import { events } from '@/services/events';
 import { useSettingsStore } from '@/state/settingsStore';
@@ -36,6 +37,8 @@ import { RecoveryPrompt } from './RecoveryPrompt';
 import { SettingsDialog } from './SettingsDialog';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
+import { Toolbar } from './Toolbar';
+import { NARROW_QUERY, useMediaQuery } from '@/hooks/useMediaQuery';
 import { useAppCommands, type CommandActions } from './useAppCommands';
 import { useHotkeys } from './useHotkeys';
 import { VaultChooser } from './VaultChooser';
@@ -55,6 +58,7 @@ export function App() {
   const vault = useVaultStore();
   const workspace = useWorkspaceStore();
   const settings = useSettingsStore();
+  const narrow = useMediaQuery(NARROW_QUERY);
 
   const [dialog, setDialog] = useState<Dialog>({ kind: 'none' });
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined);
@@ -233,6 +237,23 @@ export function App() {
     [workspace],
   );
 
+  /**
+   * Show a folder in the explorer.
+   *
+   * The breadcrumb needs to reach into a panel that owns its own tree state.
+   * It asks through an event, the way the editor is asked to jump to a line,
+   * so the shell does not hold a reference to the explorer's internals.
+   */
+  const revealFolder = useCallback(
+    (folder: VaultPath) => {
+      workspace.setSidebar('left', { visible: true, activePanel: 'files' });
+      window.dispatchEvent(
+        new CustomEvent('ie:reveal-path', { detail: { path: folder, folder: true } }),
+      );
+    },
+    [workspace],
+  );
+
   const assetUrlFor = useCallback(
     (target: string) => assetUrls[target.toLowerCase()] ?? null,
     [assetUrls],
@@ -383,58 +404,184 @@ export function App() {
     );
   };
 
+  /** Panels for the left rail, in the order they appear. */
+  const leftPanels = [
+    {
+      id: 'files',
+      label: 'Files',
+      icon: 'folder' as const,
+      render: () => (
+        <FileExplorer
+          activePath={activePath}
+          onOpen={(path, options) => void openFile(path, options ?? {})}
+          onRename={(path) => setDialog({ kind: 'rename', path })}
+          onDelete={(path) => setDialog({ kind: 'confirmDelete', path })}
+          onCreateNote={(folder) => setDialog({ kind: 'createNote', folder })}
+          onCreateFolder={(folder) => setDialog({ kind: 'createFolder', folder })}
+        />
+      ),
+    },
+    {
+      id: 'search',
+      label: 'Search',
+      icon: 'search' as const,
+      render: () => (
+        <SearchPanel
+          initialQuery={searchQuery}
+          onOpen={(path, options) => void openFile(path, options ?? {})}
+        />
+      ),
+    },
+    {
+      id: 'tags',
+      label: 'Tags',
+      icon: 'hash' as const,
+      render: () => <TagPanel onSelectTag={followTag} />,
+    },
+    ...pluginHost.panels
+      .filter((panel) => panel.side === 'left')
+      .map((panel) => ({
+        id: `${panel.pluginId}:${panel.id}`,
+        label: panel.label,
+        // A plugin's icon is a string from its manifest, not one of ours, so
+        // it gets the generic mark rather than a broken glyph.
+        icon: 'grid' as const,
+        render: () => <PluginPanelHost panel={panel} />,
+      })),
+  ];
+
+  const rightPanels = [
+    {
+      id: 'backlinks',
+      label: 'Backlinks',
+      icon: 'corner-down-left' as const,
+      render: () => (
+        <BacklinksPanel
+          path={activePath}
+          onOpen={(path, options) => void openFile(path, options ?? {})}
+        />
+      ),
+    },
+    {
+      id: 'outline',
+      label: 'Outline',
+      icon: 'list' as const,
+      render: () => (
+        <OutlinePanel
+          path={activePath}
+          currentLine={cursor.line - 1}
+          onJump={(line) => {
+            pendingJump.current = line;
+            jumpToLine(line);
+          }}
+        />
+      ),
+    },
+    {
+      id: 'properties',
+      label: 'Properties',
+      icon: 'settings' as const,
+      render: () => (
+        <PropertiesPanel
+          path={activePath}
+          properties={activeProperties}
+          onChanged={() => {
+            if (activePath) void workspace.reloadBuffer(activePath);
+            void refreshLinkState();
+          }}
+        />
+      ),
+    },
+    {
+      id: 'localGraph',
+      label: 'Local graph',
+      icon: 'graph' as const,
+      render: () =>
+        activePath ? (
+          <GraphView
+            compact
+            centerPath={activePath}
+            activePath={activePath}
+            settings={graphSettings}
+            onSettingsChange={setGraphSettings}
+            onOpen={(path, options) => void openFile(path, options ?? {})}
+          />
+        ) : (
+          <EmptyState
+            compact
+            icon="graph"
+            title="Nothing to draw"
+            description="Open a note to see what links to it and where it leads."
+          />
+        ),
+    },
+    ...pluginHost.panels
+      .filter((panel) => panel.side === 'right')
+      .map((panel) => ({
+        id: `${panel.pluginId}:${panel.id}`,
+        label: panel.label,
+        icon: 'grid' as const,
+        render: () => <PluginPanelHost panel={panel} />,
+      })),
+  ];
+
+  /**
+   * Choosing from a rail.
+   *
+   * Choosing the panel that is already showing collapses the sidebar, which
+   * is what a rail does everywhere else and saves a separate toggle button.
+   */
+  const selectPanel = (side: 'left' | 'right', id: string) => {
+    const sidebar = side === 'left' ? workspace.leftSidebar : workspace.rightSidebar;
+    if (sidebar.visible && sidebar.activePanel === id) workspace.setSidebar(side, { visible: false });
+    else workspace.setSidebar(side, { visible: true, activePanel: id });
+    // On a narrow window the sidebars overlay the editor, so two open at once
+    // would cover it entirely.
+    if (narrow) {
+      const other = side === 'left' ? 'right' : 'left';
+      workspace.setSidebar(other, { visible: false });
+    }
+  };
+
   return (
     <div className="ie-app">
+      <Toolbar
+        vaultName={vault.info?.settings.name ?? null}
+        activePath={activePath}
+        activeTitle={activePath ? (titles[activePath] ?? null) : null}
+        leftSidebarVisible={workspace.leftSidebar.visible}
+        rightSidebarVisible={workspace.rightSidebar.visible}
+        onToggleSidebar={(side) => workspace.toggleSidebar(side)}
+        canGoBack={workspace.historyIndex > 0}
+        canGoForward={workspace.historyIndex < workspace.history.length - 1}
+        onBack={() => void workspace.goBack()}
+        onForward={() => void workspace.goForward()}
+        onRevealFolder={revealFolder}
+        onSearch={(query) => {
+          setSearchQuery(query);
+          workspace.setSidebar('left', { visible: true, activePanel: 'search' });
+        }}
+        onNewNote={() => setDialog({ kind: 'createNote', folder: folderOf(activePath) })}
+        onQuickSwitch={() => setDialog({ kind: 'palette', mode: 'files' })}
+        onCommandPalette={() => setDialog({ kind: 'palette', mode: 'commands' })}
+        onSettings={() => setDialog({ kind: 'settings' })}
+      />
+
       <div className="ie-app__main">
+        <Rail
+          side="left"
+          items={leftPanels.map(({ id, label, icon }) => ({ id, label, icon }))}
+          activeId={workspace.leftSidebar.visible ? workspace.leftSidebar.activePanel : null}
+          onSelect={(id) => selectPanel('left', id)}
+        />
+
         {workspace.leftSidebar.visible ? (
           <Sidebar
             side="left"
             width={workspace.leftSidebar.width}
             activePanel={workspace.leftSidebar.activePanel}
-            onPanelChange={(panel) => workspace.setSidebar('left', { activePanel: panel })}
+            panels={leftPanels}
             onResize={(width) => workspace.setSidebar('left', { width })}
-            panels={[
-              {
-                id: 'files',
-                label: 'Files',
-                icon: '🗂',
-                render: () => (
-                  <FileExplorer
-                    activePath={activePath}
-                    onOpen={(path, options) => void openFile(path, options ?? {})}
-                    onRename={(path) => setDialog({ kind: 'rename', path })}
-                    onDelete={(path) => setDialog({ kind: 'confirmDelete', path })}
-                    onCreateNote={(folder) => setDialog({ kind: 'createNote', folder })}
-                    onCreateFolder={(folder) => setDialog({ kind: 'createFolder', folder })}
-                  />
-                ),
-              },
-              {
-                id: 'search',
-                label: 'Search',
-                icon: '🔍',
-                render: () => (
-                  <SearchPanel
-                    initialQuery={searchQuery}
-                    onOpen={(path, options) => void openFile(path, options ?? {})}
-                  />
-                ),
-              },
-              {
-                id: 'tags',
-                label: 'Tags',
-                icon: '#',
-                render: () => <TagPanel onSelectTag={followTag} />,
-              },
-              ...pluginHost.panels
-                .filter((panel) => panel.side === 'left')
-                .map((panel) => ({
-                  id: `${panel.pluginId}:${panel.id}`,
-                  label: panel.label,
-                  icon: panel.icon,
-                  render: () => <PluginPanelHost panel={panel} />,
-                })),
-            ]}
           />
         ) : null}
 
@@ -446,84 +593,38 @@ export function App() {
           />
         </main>
 
+        {/* Only a drawer needs putting away, and only the CSS knows when a
+            sidebar is one — so this is rendered whenever a sidebar is open and
+            the narrow breakpoint hides it the rest of the time. */}
+        {workspace.leftSidebar.visible || workspace.rightSidebar.visible ? (
+          <button
+            type="button"
+            className="ie-app__scrim"
+            aria-label="Close the sidebar"
+            tabIndex={narrow ? 0 : -1}
+            onClick={() => {
+              workspace.setSidebar('left', { visible: false });
+              workspace.setSidebar('right', { visible: false });
+            }}
+          />
+        ) : null}
+
         {workspace.rightSidebar.visible ? (
           <Sidebar
             side="right"
             width={workspace.rightSidebar.width}
             activePanel={workspace.rightSidebar.activePanel}
-            onPanelChange={(panel) => workspace.setSidebar('right', { activePanel: panel })}
+            panels={rightPanels}
             onResize={(width) => workspace.setSidebar('right', { width })}
-            panels={[
-              {
-                id: 'backlinks',
-                label: 'Backlinks',
-                icon: '↩',
-                render: () => (
-                  <BacklinksPanel
-                    path={activePath}
-                    onOpen={(path, options) => void openFile(path, options ?? {})}
-                  />
-                ),
-              },
-              {
-                id: 'outline',
-                label: 'Outline',
-                icon: '☰',
-                render: () => (
-                  <OutlinePanel
-                    path={activePath}
-                    currentLine={cursor.line - 1}
-                    onJump={(line) => {
-                      pendingJump.current = line;
-                      jumpToLine(line);
-                    }}
-                  />
-                ),
-              },
-              {
-                id: 'properties',
-                label: 'Properties',
-                icon: '⚙',
-                render: () => (
-                  <PropertiesPanel
-                    path={activePath}
-                    properties={activeProperties}
-                    onChanged={() => {
-                      if (activePath) void workspace.reloadBuffer(activePath);
-                      void refreshLinkState();
-                    }}
-                  />
-                ),
-              },
-              {
-                id: 'localGraph',
-                label: 'Local graph',
-                icon: '◉',
-                render: () =>
-                  activePath ? (
-                    <GraphView
-                      compact
-                      centerPath={activePath}
-                      activePath={activePath}
-                      settings={graphSettings}
-                      onSettingsChange={setGraphSettings}
-                      onOpen={(path, options) => void openFile(path, options ?? {})}
-                    />
-                  ) : (
-                    <div className="ie-empty">Open a note to see its neighbourhood.</div>
-                  ),
-              },
-              ...pluginHost.panels
-                .filter((panel) => panel.side === 'right')
-                .map((panel) => ({
-                  id: `${panel.pluginId}:${panel.id}`,
-                  label: panel.label,
-                  icon: panel.icon,
-                  render: () => <PluginPanelHost panel={panel} />,
-                })),
-            ]}
           />
         ) : null}
+
+        <Rail
+          side="right"
+          items={rightPanels.map(({ id, label, icon }) => ({ id, label, icon }))}
+          activeId={workspace.rightSidebar.visible ? workspace.rightSidebar.activePanel : null}
+          onSelect={(id) => selectPanel('right', id)}
+        />
       </div>
 
       {settings.appearance.showStatusBar ? (

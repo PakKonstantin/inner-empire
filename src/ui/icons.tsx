@@ -36,6 +36,12 @@ const paths = {
       <path d="M3.5 19l2.2-7.3A1 1 0 0 1 6.7 11H21l-2.2 7.3a1 1 0 0 1-1 .7z" />
     </>
   ),
+  'folder-plus': (
+    <>
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <path d="M12 10.5v5M9.5 13h5" />
+    </>
+  ),
   image: (
     <>
       <path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z" />
@@ -73,6 +79,7 @@ const paths = {
   'chevron-left': <path d="M14.5 5.5L8 12l6.5 6.5" />,
   'chevron-down': <path d="M5.5 9.5L12 16l6.5-6.5" />,
   'chevron-up': <path d="M18.5 14.5L12 8l-6.5 6.5" />,
+  'chevrons-up': <path d="M18 17l-6-6-6 6M18 11l-6-6-6 6" />,
   'arrow-left': <path d="M19 12H5M11 6l-6 6 6 6" />,
   'arrow-right': <path d="M5 12h14M13 6l6 6-6 6" />,
   'corner-down-left': <path d="M20 4v7a4 4 0 0 1-4 4H5M9 11l-4 4 4 4" />,

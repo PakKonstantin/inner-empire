@@ -1,17 +1,23 @@
 /**
- * A resizable sidebar holding several panels.
+ * A resizable sidebar.
  *
- * The width is dragged and persisted with the workspace, so the layout the
- * user arranges survives a restart.
+ * It used to own its own icon column. That column is now a `Rail`, rendered
+ * beside the sidebar rather than inside it, for a reason that only shows up
+ * on a narrow window: the rail has to survive the sidebar collapsing. With
+ * the icons inside, collapsing took away the only way to bring the panel
+ * back.
+ *
+ * So this is now just the panel body and the drag handle, and the width it
+ * carries is the width the user set — never a width the layout decided on
+ * their behalf when the window got small.
  */
 
 import type { ReactNode } from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 
 export interface SidebarPanel {
   id: string;
   label: string;
-  icon: string;
   render: () => ReactNode;
 }
 
@@ -20,94 +26,87 @@ export interface SidebarProps {
   width: number;
   activePanel: string;
   panels: SidebarPanel[];
-  onPanelChange: (panel: string) => void;
   onResize: (width: number) => void;
 }
 
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 640;
+const DEFAULT_WIDTH = { left: 260, right: 300 } as const;
+const KEYBOARD_STEP = 16;
 
 export function Sidebar(props: SidebarProps) {
-  const element = useRef<HTMLDivElement | null>(null);
+  const clamp = (width: number) => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));
 
   const onPointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
       const startX = event.clientX;
       const startWidth = props.width;
 
       const move = (moveEvent: PointerEvent) => {
-        const delta = props.side === 'left' ? moveEvent.clientX - startX : startX - moveEvent.clientX;
-        props.onResize(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidth + delta)));
+        const delta =
+          props.side === 'left' ? moveEvent.clientX - startX : startX - moveEvent.clientX;
+        props.onResize(clamp(startWidth + delta));
       };
       const up = () => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
+        document.body.classList.remove('is-resizing');
       };
+      // While dragging, the cursor belongs to the divider wherever it wanders.
+      document.body.classList.add('is-resizing');
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', up);
     },
-    [props],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [props.side, props.width, props.onResize],
   );
 
-  const active = props.panels.find((panel) => panel.id === props.activePanel) ?? props.panels[0];
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const grow = props.side === 'left' ? 'ArrowRight' : 'ArrowLeft';
+      const shrink = props.side === 'left' ? 'ArrowLeft' : 'ArrowRight';
+      if (event.key === grow) props.onResize(clamp(props.width + KEYBOARD_STEP));
+      else if (event.key === shrink) props.onResize(clamp(props.width - KEYBOARD_STEP));
+      else if (event.key === 'Home') props.onResize(MIN_WIDTH);
+      else if (event.key === 'End') props.onResize(MAX_WIDTH);
+      else return;
+      event.preventDefault();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [props.side, props.width, props.onResize],
+  );
+
+  const active =
+    props.panels.find((panel) => panel.id === props.activePanel) ?? props.panels[0] ?? null;
+
+  const handle = (
+    <div
+      className="ie-sidebar__handle"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize the ${props.side} sidebar`}
+      aria-valuenow={props.width}
+      aria-valuemin={MIN_WIDTH}
+      aria-valuemax={MAX_WIDTH}
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      // A double click restores the width the sidebar started at, which is
+      // faster than dragging back to something that looks about right.
+      onDoubleClick={() => props.onResize(DEFAULT_WIDTH[props.side])}
+      onKeyDown={onKeyDown}
+    />
+  );
 
   return (
     <aside
       className={`ie-sidebar ie-sidebar--${props.side} ie-chrome`}
       style={{ width: props.width }}
-      ref={element}
+      aria-label={`${props.side === 'left' ? 'Left' : 'Right'} sidebar`}
     >
-      {props.side === 'right' ? (
-        <div
-          className="ie-sidebar__handle"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize sidebar"
-          tabIndex={0}
-          onPointerDown={onPointerDown}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowLeft') props.onResize(Math.min(MAX_WIDTH, props.width + 16));
-            if (event.key === 'ArrowRight') props.onResize(Math.max(MIN_WIDTH, props.width - 16));
-          }}
-        />
-      ) : null}
-
-      <div className="ie-sidebar__inner">
-        <nav className="ie-sidebar__tabs" role="tablist" aria-label={`${props.side} sidebar`}>
-          {props.panels.map((panel) => (
-            <button
-              key={panel.id}
-              type="button"
-              role="tab"
-              aria-selected={panel.id === active?.id}
-              className={`ie-sidebar__tab${panel.id === active?.id ? ' is-active' : ''}`}
-              title={panel.label}
-              onClick={() => props.onPanelChange(panel.id)}
-            >
-              <span aria-hidden="true">{panel.icon}</span>
-              <span className="sr-only">{panel.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="ie-sidebar__content">{active?.render()}</div>
-      </div>
-
-      {props.side === 'left' ? (
-        <div
-          className="ie-sidebar__handle"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize sidebar"
-          tabIndex={0}
-          onPointerDown={onPointerDown}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowRight') props.onResize(Math.min(MAX_WIDTH, props.width + 16));
-            if (event.key === 'ArrowLeft') props.onResize(Math.max(MIN_WIDTH, props.width - 16));
-          }}
-        />
-      ) : null}
+      {props.side === 'right' ? handle : null}
+      <div className="ie-sidebar__content">{active?.render()}</div>
+      {props.side === 'left' ? handle : null}
     </aside>
   );
 }
