@@ -263,6 +263,21 @@ test.describe('the workspace', () => {
     await expect(page.locator('.ie-tab')).toHaveCount(1);
   });
 
+  test('a closed tab can be brought back', async ({ page }) => {
+    await openApp(page);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+    await openNote(page, 'Welcome');
+    await openNote(page, 'Statistics');
+    await expect(page.locator('.ie-tab')).toHaveCount(2);
+
+    await page.getByRole('button', { name: /^Close Statistics/ }).click();
+    await expect(page.locator('.ie-tab')).toHaveCount(1);
+
+    await page.keyboard.press('Control+Shift+W');
+    await expect(page.locator('.ie-tab')).toHaveCount(2);
+    await expect(page.locator('.ie-tab').last()).toContainText('Statistics');
+  });
+
   test('the layout comes back after a restart', async ({ page }) => {
     await openApp(page);
     await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();

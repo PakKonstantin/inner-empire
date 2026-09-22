@@ -14,7 +14,7 @@ import { Icon, type IconName } from './icons';
 import { Tooltip } from './Tooltip';
 
 /** Move focus with the arrow keys inside a group of controls. */
-function useRovingFocus(orientation: 'horizontal' | 'vertical') {
+export function useRovingFocus(orientation: 'horizontal' | 'vertical') {
   const container = useRef<HTMLDivElement | null>(null);
 
   const onKeyDown = useCallback(

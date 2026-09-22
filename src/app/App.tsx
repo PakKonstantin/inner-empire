@@ -355,7 +355,19 @@ export function App() {
             onSelect={workspace.setActiveTab}
             onClose={(tabId) => void workspace.closeTab(tabId)}
             onCloseOthers={workspace.closeOthers}
+            onCloseToTheRight={workspace.closeToTheRight}
             onCloseAll={() => workspace.closeAllInPane(leaf.id)}
+            canReopen={workspace.recentlyClosed.length > 0}
+            onReopenClosed={() => void workspace.reopenClosed()}
+            onOpenInNewPane={(tabId) => {
+              // Split first, so the note lands in the pane the split created
+              // rather than opening beside itself.
+              const tabToMove = leaf.tabs.find((candidate) => candidate.id === tabId);
+              if (!tabToMove) return;
+              workspace.setActivePane(leaf.id);
+              workspace.splitActivePane('vertical');
+              void workspace.openFile(tabToMove.path, { mode: tabToMove.mode });
+            }}
             onTogglePin={workspace.togglePin}
             onDuplicate={workspace.duplicateTab}
             onReorder={workspace.reorderTab}

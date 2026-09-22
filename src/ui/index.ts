@@ -43,7 +43,7 @@ export type {
 export { CollapsibleSection, Panel, PanelStack } from './Panel';
 export type { CollapsibleSectionProps, PanelProps } from './Panel';
 
-export { Breadcrumb, Rail, SegmentedControl } from './Navigation';
+export { Breadcrumb, Rail, SegmentedControl, useRovingFocus } from './Navigation';
 export type {
   BreadcrumbSegment,
   RailItem,

@@ -160,6 +160,30 @@ export function closeOthers(layout: PaneLayout, tabId: string): PaneLayout {
   });
 }
 
+/**
+ * Close every tab after this one in its pane.
+ *
+ * Pinned tabs survive, as they do everywhere else — pinning is the way to say
+ * "not this one" to a bulk close, and it would be a poor promise if the
+ * position of the pin decided whether it held.
+ */
+export function closeToTheRight(layout: PaneLayout, tabId: string): PaneLayout {
+  const owner = findLeafOfTab(layout.root, tabId);
+  if (!owner) return layout;
+  const cut = owner.tabs.findIndex((tab) => tab.id === tabId);
+  if (cut === -1) return layout;
+
+  return normalise({
+    ...layout,
+    root: mapLeaf(layout.root, owner.id, (leaf) => {
+      const tabs = leaf.tabs.filter((tab, index) => index <= cut || tab.pinned);
+      // The active tab may be one of the ones just closed.
+      const stillThere = tabs.some((tab) => tab.id === leaf.activeTabId);
+      return { ...leaf, tabs, activeTabId: stillThere ? leaf.activeTabId : tabId };
+    }),
+  });
+}
+
 export function closeAllInPane(layout: PaneLayout, paneId: string): PaneLayout {
   return normalise({
     ...layout,

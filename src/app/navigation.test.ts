@@ -11,6 +11,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { VaultPath } from '@/types/domain';
 import { asVaultPath } from '@/types/domain';
 
 vi.mock('@/services/api', () => ({
@@ -26,6 +27,7 @@ vi.mock('@/services/events', () => ({
 }));
 
 const { useWorkspaceStore } = await import('@/state/workspaceStore');
+const { allTabs, emptyLayout } = await import('@/workspace/paneTree');
 const { breadcrumbFor } = await import('@/app/Toolbar');
 
 const a = asVaultPath('A.md');
@@ -149,5 +151,84 @@ describe('breadcrumbFor', () => {
   it('falls back to the file name when a note has no title', () => {
     const segments = breadcrumbFor('Notes', asVaultPath('Inbox/Scratch.md'), '', reveal);
     expect(segments.at(-1)?.label).toBe('Scratch.md');
+  });
+});
+
+describe('reopening closed tabs', () => {
+  beforeEach(async () => {
+    useWorkspaceStore.setState({
+      history: [],
+      historyIndex: -1,
+      recentlyClosed: [],
+      layout: emptyLayout(),
+    });
+  });
+
+  const tabIdFor = (path: VaultPath): string => {
+    const found = allTabs(useWorkspaceStore.getState().layout.root).find(
+      (tab) => tab.path === path,
+    );
+    if (!found) throw new Error(`no tab open for ${path}`);
+    return found.id;
+  };
+
+  it('brings back the last note whose tab was closed', async () => {
+    const workspace = useWorkspaceStore.getState();
+    await workspace.openFile(a);
+    await useWorkspaceStore.getState().closeTab(tabIdFor(a));
+    expect(useWorkspaceStore.getState().recentlyClosed).toEqual([a]);
+
+    await useWorkspaceStore.getState().reopenClosed();
+
+    expect(allTabs(useWorkspaceStore.getState().layout.root).map((tab) => tab.path)).toEqual([a]);
+    // Reopening consumes the entry, so pressing it twice does not open the
+    // same note again.
+    expect(useWorkspaceStore.getState().recentlyClosed).toEqual([]);
+  });
+
+  it('does nothing when nothing has been closed', async () => {
+    await useWorkspaceStore.getState().reopenClosed();
+    expect(allTabs(useWorkspaceStore.getState().layout.root)).toHaveLength(0);
+  });
+
+  it('records every note a bulk close took away', async () => {
+    const workspace = useWorkspaceStore.getState();
+    await workspace.openFile(a);
+    await workspace.openFile(b);
+    await workspace.openFile(c);
+
+    useWorkspaceStore.getState().closeOthers(tabIdFor(a));
+
+    // Order is oldest first, so the last one closed comes back first.
+    expect(useWorkspaceStore.getState().recentlyClosed).toEqual([b, c]);
+
+    await useWorkspaceStore.getState().reopenClosed();
+    expect(allTabs(useWorkspaceStore.getState().layout.root).map((tab) => tab.path)).toContain(c);
+  });
+
+  it('moves a note to the top rather than listing it twice', async () => {
+    const workspace = useWorkspaceStore.getState();
+    await workspace.openFile(a);
+    await useWorkspaceStore.getState().closeTab(tabIdFor(a));
+    await useWorkspaceStore.getState().openFile(b);
+    await useWorkspaceStore.getState().closeTab(tabIdFor(b));
+    await useWorkspaceStore.getState().openFile(a);
+    await useWorkspaceStore.getState().closeTab(tabIdFor(a));
+
+    // Closing the same note twice must not cost two reopens to undo.
+    expect(useWorkspaceStore.getState().recentlyClosed).toEqual([b, a]);
+  });
+
+  it('keeps the stack bounded', async () => {
+    const workspace = useWorkspaceStore.getState();
+    for (let index = 0; index < 30; index += 1) {
+      const path = asVaultPath(`Note ${index}.md`);
+      await workspace.openFile(path);
+      await useWorkspaceStore.getState().closeTab(tabIdFor(path));
+    }
+
+    const { recentlyClosed } = useWorkspaceStore.getState();
+    expect(recentlyClosed).toHaveLength(20);
+    expect(recentlyClosed[19]).toBe(asVaultPath('Note 29.md'));
   });
 });

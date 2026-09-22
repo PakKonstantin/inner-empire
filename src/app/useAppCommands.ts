@@ -287,6 +287,24 @@ export function useAppCommands(actions: CommandActions): void {
         },
       },
       {
+        id: 'pane.closeToTheRight',
+        name: 'Close the tabs to the right',
+        category: 'Panes',
+        isAvailable: hasNote,
+        run: () => {
+          const pane = findActivePane(workspace().layout);
+          if (pane?.activeTabId) workspace().closeToTheRight(pane.activeTabId);
+        },
+      },
+      {
+        id: 'pane.reopenClosed',
+        name: 'Reopen the last closed tab',
+        category: 'Panes',
+        defaultHotkey: 'Mod+Shift+W',
+        isAvailable: () => workspace().recentlyClosed.length > 0,
+        run: () => void workspace().reopenClosed(),
+      },
+      {
         id: 'vault.open',
         name: 'Open another vault',
         category: 'Vault',

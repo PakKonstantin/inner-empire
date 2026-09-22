@@ -9,6 +9,7 @@ import {
   closeAllInPane,
   closeOthers,
   closeTab,
+  closeToTheRight,
   cyclePane,
   cycleTab,
   emptyLayout,
@@ -111,6 +112,48 @@ describe('closing tabs', () => {
     expect(paths).toContain('C.md');
     expect(paths).not.toContain('B.md');
     expect(b).toBeDefined();
+  });
+
+  it('closes the tabs to the right and leaves the rest', () => {
+    let layout = withOpen(['A.md', 'B.md', 'C.md', 'D.md']);
+    const [, b] = allTabs(layout.root);
+    layout = closeToTheRight(layout, b!.id);
+
+    expect(openPaths(layout)).toEqual(['A.md', 'B.md']);
+  });
+
+  it('closing to the right spares pinned tabs', () => {
+    let layout = withOpen(['A.md', 'B.md', 'C.md', 'D.md']);
+    // Pinning sorts D to the front, so pin last and work from the order the
+    // pane actually holds.
+    const tabs = allTabs(layout.root);
+    layout = togglePin(layout, tabs[3]!.id);
+
+    const after = allTabs(layout.root);
+    const b = after.find((tab) => tab.path === 'B.md');
+    layout = closeToTheRight(layout, b!.id);
+
+    // D was pinned, so it survives wherever it ended up.
+    expect(openPaths(layout)).toContain('D.md');
+    expect(openPaths(layout)).not.toContain('C.md');
+  });
+
+  it('closing to the right on the last tab changes nothing', () => {
+    let layout = withOpen(['A.md', 'B.md']);
+    const last = allTabs(layout.root)[1];
+    layout = closeToTheRight(layout, last!.id);
+    expect(openPaths(layout)).toEqual(['A.md', 'B.md']);
+  });
+
+  it('moves focus off a tab that closing to the right took away', () => {
+    let layout = withOpen(['A.md', 'B.md', 'C.md']);
+    const tabs = allTabs(layout.root);
+    // C is active; closing to the right of A must not leave it pointing there.
+    layout = closeToTheRight(layout, tabs[0]!.id);
+
+    const leaf = findLeaf(layout.root, layout.activePaneId);
+    expect(leaf?.activeTabId).toBe(tabs[0]!.id);
+    expect(openPaths(layout)).toEqual(['A.md']);
   });
 
   it('closing all in a pane spares pinned tabs', () => {

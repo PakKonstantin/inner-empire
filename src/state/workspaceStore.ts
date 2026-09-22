@@ -19,6 +19,7 @@ import type {
   PaneLayout,
   SplitDirection,
   TabMode,
+  TabState,
   VaultPath,
   Workspace,
   WorkspaceSidebar,
@@ -94,7 +95,16 @@ interface WorkspaceState {
   openFile: (path: VaultPath, options?: { mode?: TabMode; paneId?: string }) => Promise<void>;
   closeTab: (tabId: string) => Promise<void>;
   closeOthers: (tabId: string) => void;
+  closeToTheRight: (tabId: string) => void;
   closeAllInPane: (paneId: string) => void;
+  /**
+   * Notes whose tabs were closed, most recent last.
+   *
+   * Session state like the history, and for the same reason: which tabs you
+   * shut this afternoon is not something to restore tomorrow.
+   */
+  recentlyClosed: VaultPath[];
+  reopenClosed: () => Promise<void>;
   setActiveTab: (tabId: string) => void;
   setActivePane: (paneId: string) => void;
   togglePin: (tabId: string) => void;
@@ -155,6 +165,41 @@ async function withHistorySuspended(action: () => Promise<void>): Promise<void> 
   }
 }
 
+/** How many closed tabs can be brought back. A morning's worth of mistakes. */
+const REOPEN_LIMIT = 20;
+
+/**
+ * Note that these files were closed, so they can be reopened.
+ *
+ * A file already in the stack moves to the top rather than appearing twice —
+ * otherwise closing the same note three times would take three reopens to
+ * undo, which is not what "reopen the last one" means to anyone.
+ */
+function rememberClosed(
+  set: (patch: Partial<WorkspaceState>) => void,
+  get: () => WorkspaceState,
+  paths: VaultPath[],
+): void {
+  if (paths.length === 0) return;
+  const kept = get().recentlyClosed.filter((path) => !paths.includes(path));
+  set({ recentlyClosed: [...kept, ...paths].slice(-REOPEN_LIMIT) });
+}
+
+/**
+ * Which files a bulk close took away.
+ *
+ * A file open in two panes is not gone when one of them closes, so this
+ * compares what is still open rather than counting the tabs that vanished.
+ */
+function closedPaths(before: TabState[], after: PaneLayout): VaultPath[] {
+  const open = new Set(tree.allTabs(after.root).map((tab) => tab.path));
+  const gone: VaultPath[] = [];
+  for (const tab of before) {
+    if (!open.has(tab.path) && !gone.includes(tab.path)) gone.push(tab.path);
+  }
+  return gone;
+}
+
 function recordVisit(
   set: (patch: Partial<WorkspaceState>) => void,
   get: () => WorkspaceState,
@@ -182,6 +227,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   carried: {},
   history: [],
   historyIndex: -1,
+  recentlyClosed: [],
   layout: tree.emptyLayout(),
   leftSidebar: defaultSidebar('left'),
   rightSidebar: defaultSidebar('right'),
@@ -295,6 +341,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
 
     set((state) => ({ layout: tree.closeTab(state.layout, tabId) }));
+    if (tab) rememberClosed(set, get, [tab.path]);
 
     // Drop the buffer once no tab references the file any more.
     if (tab) {
@@ -307,13 +354,32 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   },
 
   closeOthers(tabId) {
+    const before = tree.allTabs(get().layout.root);
     set((state) => ({ layout: tree.closeOthers(state.layout, tabId) }));
+    rememberClosed(set, get, closedPaths(before, get().layout));
+    schedulePersist(get);
+  },
+
+  closeToTheRight(tabId) {
+    const before = tree.allTabs(get().layout.root);
+    set((state) => ({ layout: tree.closeToTheRight(state.layout, tabId) }));
+    rememberClosed(set, get, closedPaths(before, get().layout));
     schedulePersist(get);
   },
 
   closeAllInPane(paneId) {
+    const before = tree.allTabs(get().layout.root);
     set((state) => ({ layout: tree.closeAllInPane(state.layout, paneId) }));
+    rememberClosed(set, get, closedPaths(before, get().layout));
     schedulePersist(get);
+  },
+
+  async reopenClosed() {
+    const { recentlyClosed } = get();
+    const path = recentlyClosed[recentlyClosed.length - 1];
+    if (!path) return;
+    set({ recentlyClosed: recentlyClosed.slice(0, -1) });
+    await get().openFile(path);
   },
 
   setActiveTab(tabId) {
