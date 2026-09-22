@@ -41,6 +41,18 @@ async function openNote(page: Page, label: string): Promise<void> {
   await expect(page.locator('.ie-editor .cm-content')).toBeVisible();
 }
 
+/**
+ * Show a sidebar panel by clicking its icon in the rail.
+ *
+ * Asked for by role and name rather than by class, so moving the rail or
+ * restyling it does not break the test — and so that a panel unreachable by
+ * its accessible name fails here rather than silently.
+ */
+async function openPanel(page: Page, side: 'left' | 'right', label: string): Promise<void> {
+  await page.locator(`.ie-rail--${side}`).getByRole('tab', { name: label }).click();
+  await expect(page.locator(`.ie-sidebar--${side}`)).toBeVisible();
+}
+
 test.describe('opening a vault', () => {
   test('shows the file tree with the vault’s notes', async ({ page }) => {
     await openApp(page);
@@ -222,7 +234,7 @@ test.describe('finding things', () => {
   test('the tag panel lists the vault’s tags', async ({ page }) => {
     await openApp(page);
 
-    await page.locator('.ie-sidebar--left .ie-sidebar__tab[title="Tags"]').click();
+    await openPanel(page, 'left', 'Tags');
     await expect(page.locator('.ie-tag-row', { hasText: 'AI' }).first()).toBeVisible();
     await expect(page.locator('.ie-tag-row', { hasText: 'planning' })).toBeVisible();
   });
@@ -281,7 +293,7 @@ test.describe('the workspace', () => {
     await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
     await openNote(page, 'Structured');
 
-    await page.locator('.ie-sidebar--right .ie-sidebar__tab[title="Outline"]').click();
+    await openPanel(page, 'right', 'Outline');
     await expect(page.locator('.ie-outline__item')).toHaveCount(3);
     await expect(page.locator('.ie-outline__item').first()).toContainText('Structured');
   });
@@ -309,6 +321,75 @@ test.describe('the interface', () => {
     await expect(page.locator('.ie-sidebar--left')).toHaveCount(0);
     await page.keyboard.press('Control+b');
     await expect(page.locator('.ie-sidebar--left')).toBeVisible();
+  });
+
+  test('the rail reopens a sidebar it closed', async ({ page }) => {
+    await openApp(page);
+
+    // The rail is the one part that never collapses, so it has to be able to
+    // bring back a sidebar it just put away.
+    const tags = page.locator('.ie-rail--left').getByRole('tab', { name: 'Tags' });
+    await tags.click();
+    await expect(page.locator('.ie-tag-row').first()).toBeVisible();
+
+    // Choosing the panel already showing collapses the sidebar.
+    await tags.click();
+    await expect(page.locator('.ie-sidebar--left')).toHaveCount(0);
+    await expect(page.locator('.ie-rail--left')).toBeVisible();
+
+    await tags.click();
+    await expect(page.locator('.ie-sidebar--left')).toBeVisible();
+  });
+
+  test('back and forward walk the notes that were opened', async ({ page }) => {
+    await openApp(page);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+
+    await openNote(page, 'Welcome');
+    await openNote(page, 'Statistics');
+    await expect(page.locator('.ie-toolbar')).toContainText('Statistics');
+
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(page.locator('.ie-toolbar')).toContainText('Welcome');
+
+    await page.getByRole('button', { name: 'Forward', exact: true }).click();
+    await expect(page.locator('.ie-toolbar')).toContainText('Statistics');
+  });
+
+  test('the breadcrumb shows the folder a note lives in', async ({ page }) => {
+    await openApp(page);
+    await page.locator('.ie-tree-row--folder', { hasText: 'Notes' }).click();
+    await openNote(page, 'Statistics');
+
+    const trail = page.locator('.ie-breadcrumb');
+    await expect(trail).toContainText('Notes');
+
+    // Collapse the explorer, then use the trail to bring it back showing that
+    // folder — which is the only reason the segments are clickable.
+    await page.keyboard.press('Control+b');
+    await expect(page.locator('.ie-sidebar--left')).toHaveCount(0);
+    await trail.getByRole('button', { name: 'Notes' }).click();
+    await expect(page.locator('.ie-tree-row--folder', { hasText: 'Notes' })).toBeVisible();
+  });
+
+  test('the file tree can be driven from the keyboard', async ({ page }) => {
+    await openApp(page);
+
+    // The tree is a virtualized list, so focus stays on the scroller and the
+    // current row is named rather than focused.
+    const tree = page.getByRole('tree', { name: 'Files' });
+    await tree.click({ position: { x: 4, y: 4 } });
+    await page.keyboard.press('ArrowDown');
+    await expect(tree).toHaveAttribute('aria-activedescendant', /.+/);
+
+    // Right opens a closed folder, and its contents appear below it.
+    await page.keyboard.press('ArrowRight');
+    await expect(page.locator('.ie-tree-row--file').first()).toBeVisible();
+
+    // Down then Enter opens the first note inside it.
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.ie-editor .cm-content')).toBeVisible();
   });
 
   test('settings open and show the sections', async ({ page }) => {
