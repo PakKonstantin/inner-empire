@@ -268,6 +268,38 @@ describe('Toggle', () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
+  it('has a name even when its label is only a sibling', () => {
+    // The label sits beside the button rather than wrapping it, so without an
+    // explicit association the switch reads as nameless — text plainly on
+    // screen and entirely absent to a screen reader.
+    const container = render(
+      <Toggle checked onChange={() => {}} label="Only notes with links" />,
+    );
+
+    const toggle = container.querySelector('[role="switch"]')!;
+    const labelledBy = toggle.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    expect(byId(container, labelledBy!)?.textContent).toBe('Only notes with links');
+  });
+
+  it('ties a description to the switch without making it the name', () => {
+    const container = render(
+      <Toggle
+        checked={false}
+        onChange={() => {}}
+        label="Only notes with links"
+        description="Hides the notes nothing connects to."
+      />,
+    );
+
+    const toggle = container.querySelector('[role="switch"]')!;
+    const describedBy = toggle.getAttribute('aria-describedby');
+    expect(byId(container, describedBy!)?.textContent).toBe('Hides the notes nothing connects to.');
+    // The description must not also be the name, or the switch announces the
+    // whole sentence every time it is reached.
+    expect(toggle.getAttribute('aria-labelledby')).not.toBe(describedBy);
+  });
+
   it('keeps its name when the text is hidden', () => {
     const container = render(
       <Toggle checked onChange={() => {}} label="Dark mode" hideLabel />,

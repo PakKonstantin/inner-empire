@@ -23,6 +23,17 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@/services/api';
+import {
+  Button,
+  CollapsibleSection,
+  IconButton,
+  SearchInput,
+  Select,
+  Toggle,
+  Tooltip,
+} from '@/ui';
+
+import { applyGraphFilters, foldersOf } from './filters';
 import { events } from '@/services/events';
 import type { GraphData, GraphNodeKind, VaultPath } from '@/types/domain';
 
@@ -52,6 +63,10 @@ export interface GraphSettings {
   labelThreshold: number;
   /** For the local graph: how many hops to include. */
   depth: number;
+  /** Show only this folder and what is nested inside it. */
+  folder: string | null;
+  /** Leave out the notes nothing links to. */
+  hideOrphans: boolean;
 }
 
 export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
@@ -62,6 +77,8 @@ export const DEFAULT_GRAPH_SETTINGS: GraphSettings = {
   linkStrength: 0.35,
   labelThreshold: 0.75,
   depth: 1,
+  folder: null,
+  hideOrphans: false,
 };
 
 export interface GraphViewProps {
@@ -87,6 +104,9 @@ export function GraphView(props: GraphViewProps) {
 
   const [data, setData] = useState<GraphData | null>(null);
   const [filter, setFilter] = useState('');
+  // Mirrored into state only so the readout can show it; the drawing reads
+  // the ref, because a number changing sixty times a second is not state.
+  const [zoom, setZoom] = useState(1);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -126,6 +146,21 @@ export function GraphView(props: GraphViewProps) {
     return () => offs.forEach((off) => off());
   }, [load]);
 
+  // The folder list comes from the unfiltered data, so choosing a folder does
+  // not remove every other folder from the chooser.
+  const folders = useMemo(() => (data ? foldersOf(data) : []), [data]);
+
+  const visible = useMemo(
+    () =>
+      data
+        ? applyGraphFilters(data, {
+            folder: props.settings.folder,
+            hideOrphans: props.settings.hideOrphans,
+          })
+        : null,
+    [data, props.settings.folder, props.settings.hideOrphans],
+  );
+
   const matchesFilter = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     if (!needle) return null;
@@ -134,7 +169,7 @@ export function GraphView(props: GraphViewProps) {
 
   // Build and run the simulation.
   useEffect(() => {
-    if (!data || !container.current) return;
+    if (!visible || !container.current) return;
 
     const width = container.current.clientWidth || 800;
     const height = container.current.clientHeight || 600;
@@ -142,7 +177,7 @@ export function GraphView(props: GraphViewProps) {
     // Keep positions for nodes that already existed, so a refresh after an
     // edit does not scatter the whole graph.
     const previous = new Map(nodes.current.map((node) => [node.id, node]));
-    nodes.current = data.nodes.map((node) => {
+    nodes.current = visible.nodes.map((node) => {
       const existing = previous.get(node.id);
       return {
         id: node.id,
@@ -157,7 +192,7 @@ export function GraphView(props: GraphViewProps) {
         vy: existing?.vy ?? 0,
       };
     });
-    edges.current = data.edges.map((edge) => ({ source: edge.source, target: edge.target }));
+    edges.current = visible.edges.map((edge) => ({ source: edge.source, target: edge.target }));
 
     simulation.current?.stop();
     simulation.current = forceSimulation<Node, Edge>(nodes.current)
@@ -182,7 +217,7 @@ export function GraphView(props: GraphViewProps) {
     return () => {
       simulation.current?.stop();
     };
-  }, [data, props.settings.linkStrength, props.settings.repulsion]);
+  }, [visible, props.settings.linkStrength, props.settings.repulsion]);
 
   // Draw on every animation frame while the simulation is warm.
   useEffect(() => {
@@ -243,6 +278,57 @@ export function GraphView(props: GraphViewProps) {
       if (dx * dx + dy * dy <= radius * radius) return node;
     }
     return null;
+  }, []);
+
+  /**
+   * Zoom about the middle of the view.
+   *
+   * The wheel zooms towards the pointer, because that is where the eye is.
+   * A button has no pointer to aim at, so the centre is the honest choice —
+   * the thing you were looking at stays where it was.
+   */
+  const zoomBy = useCallback((factor: number) => {
+    const next = Math.max(0.1, Math.min(6, transform.current.k * factor));
+    const ratio = next / transform.current.k;
+    transform.current.x *= ratio;
+    transform.current.y *= ratio;
+    transform.current.k = next;
+    setZoom(next);
+  }, []);
+
+  /** Frame everything the simulation has laid out. */
+  const fitToView = useCallback(() => {
+    const surface = canvas.current;
+    const laid = nodes.current;
+    if (!surface || laid.length === 0) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const node of laid) {
+      const radius = radiusOf(node) + 12;
+      minX = Math.min(minX, (node.x ?? 0) - radius);
+      minY = Math.min(minY, (node.y ?? 0) - radius);
+      maxX = Math.max(maxX, (node.x ?? 0) + radius);
+      maxY = Math.max(maxY, (node.y ?? 0) + radius);
+    }
+
+    const width = surface.clientWidth || 800;
+    const height = surface.clientHeight || 600;
+    const k = Math.max(
+      0.1,
+      Math.min(2, Math.min(width / Math.max(maxX - minX, 1), height / Math.max(maxY - minY, 1))),
+    );
+
+    // The drawing is centred on the origin, so the pan is the graph's own
+    // centre moved back to the middle of the view.
+    transform.current = {
+      k,
+      x: -((minX + maxX) / 2) * k,
+      y: -((minY + maxY) / 2) * k,
+    };
+    setZoom(k);
   }, []);
 
   return (
@@ -307,108 +393,146 @@ export function GraphView(props: GraphViewProps) {
           transform.current.x = px - (px - transform.current.x) * ratio;
           transform.current.y = py - (py - transform.current.y) * ratio;
           transform.current.k = next;
+          setZoom(next);
         }}
       />
 
       {props.compact ? null : (
-        <div className="ie-graph__controls ie-chrome">
-          <input
-            className="ie-input"
-            type="search"
-            placeholder="Find a note in the graph"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-          />
-          <label className="ie-graph__toggle">
-            <input
-              type="checkbox"
-              checked={props.settings.includeUnresolved}
-              onChange={(event) =>
-                props.onSettingsChange({ ...props.settings, includeUnresolved: event.target.checked })
-              }
+        <>
+          <div className="ie-graph__zoom ie-chrome">
+            <Tooltip content="Zoom in" placement="left">
+              <IconButton icon="plus" label="Zoom in" size="sm" onClick={() => zoomBy(1.25)} />
+            </Tooltip>
+            <Tooltip content="Zoom out" placement="left">
+              <IconButton icon="minus" label="Zoom out" size="sm" onClick={() => zoomBy(1 / 1.25)} />
+            </Tooltip>
+            <Tooltip content="Fit everything on screen" placement="left">
+              <IconButton icon="maximize" label="Fit to view" size="sm" onClick={fitToView} />
+            </Tooltip>
+            <span className="ie-graph__zoom-level" aria-live="polite">
+              {Math.round(zoom * 100)}%
+            </span>
+          </div>
+
+          <div className="ie-graph__controls ie-chrome">
+            <SearchInput
+              label="Find a note in the graph"
+              placeholder="Find a note"
+              value={filter}
+              onValueChange={setFilter}
             />
-            Notes that do not exist yet
-          </label>
-          <label className="ie-graph__toggle">
-            <input
-              type="checkbox"
-              checked={props.settings.includeAttachments}
-              onChange={(event) =>
-                props.onSettingsChange({ ...props.settings, includeAttachments: event.target.checked })
-              }
-            />
-            Attachments
-          </label>
-          <label className="ie-graph__toggle">
-            <input
-              type="checkbox"
-              checked={props.settings.includeTags}
-              onChange={(event) =>
-                props.onSettingsChange({ ...props.settings, includeTags: event.target.checked })
-              }
-            />
-            Tags
-          </label>
-          <label className="ie-graph__slider">
-            Spacing
-            <input
-              type="range"
-              min={60}
-              max={600}
-              value={props.settings.repulsion}
-              onChange={(event) =>
-                props.onSettingsChange({ ...props.settings, repulsion: Number(event.target.value) })
-              }
-            />
-          </label>
-          <label className="ie-graph__slider">
-            Link pull
-            <input
-              type="range"
-              min={5}
-              max={100}
-              value={props.settings.linkStrength * 100}
-              onChange={(event) =>
-                props.onSettingsChange({
-                  ...props.settings,
-                  linkStrength: Number(event.target.value) / 100,
-                })
-              }
-            />
-          </label>
-          {props.centerPath ? (
-            <label className="ie-graph__slider">
-              Depth
-              <input
-                type="range"
-                min={1}
-                max={5}
-                value={props.settings.depth}
-                onChange={(event) =>
-                  props.onSettingsChange({ ...props.settings, depth: Number(event.target.value) })
+
+            <CollapsibleSection title="Show" defaultOpen>
+              <Toggle
+                label="Notes that do not exist yet"
+                checked={props.settings.includeUnresolved}
+                onChange={(checked) =>
+                  props.onSettingsChange({ ...props.settings, includeUnresolved: checked })
                 }
               />
-            </label>
-          ) : null}
-          <button
-            type="button"
-            className="ie-button ie-button--quiet"
-            onClick={() => {
-              transform.current = { x: 0, y: 0, k: 1 };
-              simulation.current?.alpha(0.6).restart();
-            }}
-          >
-            Reset view
-          </button>
-        </div>
+              <Toggle
+                label="Attachments"
+                checked={props.settings.includeAttachments}
+                onChange={(checked) =>
+                  props.onSettingsChange({ ...props.settings, includeAttachments: checked })
+                }
+              />
+              <Toggle
+                label="Tags"
+                checked={props.settings.includeTags}
+                onChange={(checked) =>
+                  props.onSettingsChange({ ...props.settings, includeTags: checked })
+                }
+              />
+              <Toggle
+                label="Only notes with links"
+                description="Hides the notes nothing connects to."
+                checked={props.settings.hideOrphans}
+                onChange={(checked) =>
+                  props.onSettingsChange({ ...props.settings, hideOrphans: checked })
+                }
+              />
+              <Select
+                label="Folder"
+                value={props.settings.folder ?? ''}
+                onChange={(event) =>
+                  props.onSettingsChange({
+                    ...props.settings,
+                    folder: event.target.value || null,
+                  })
+                }
+                options={[
+                  { value: '', label: 'The whole vault' },
+                  ...folders.map((folder) => ({ value: folder, label: folder })),
+                ]}
+              />
+            </CollapsibleSection>
+
+            <CollapsibleSection title="Layout">
+              <label className="ie-graph__slider">
+                Spacing
+                <input
+                  type="range"
+                  min={60}
+                  max={600}
+                  value={props.settings.repulsion}
+                  onChange={(event) =>
+                    props.onSettingsChange({ ...props.settings, repulsion: Number(event.target.value) })
+                  }
+                />
+              </label>
+              <label className="ie-graph__slider">
+                Link pull
+                <input
+                  type="range"
+                  min={5}
+                  max={100}
+                  value={props.settings.linkStrength * 100}
+                  onChange={(event) =>
+                    props.onSettingsChange({
+                      ...props.settings,
+                      linkStrength: Number(event.target.value) / 100,
+                    })
+                  }
+                />
+              </label>
+              {props.centerPath ? (
+                <label className="ie-graph__slider">
+                  Depth
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={props.settings.depth}
+                    onChange={(event) =>
+                      props.onSettingsChange({ ...props.settings, depth: Number(event.target.value) })
+                    }
+                  />
+                </label>
+              ) : null}
+              <Button
+                variant="quiet"
+                size="sm"
+                icon="undo"
+                onClick={() => {
+                  transform.current = { x: 0, y: 0, k: 1 };
+                  setZoom(1);
+                  simulation.current?.alpha(0.6).restart();
+                }}
+              >
+                Reset the layout
+              </Button>
+            </CollapsibleSection>
+          </div>
+        </>
       )}
 
       <div className="ie-graph__status">
         {loading
           ? 'Building the graph…'
-          : data
-            ? `${data.nodes.length} notes, ${data.edges.length} links${
-                data.truncated ? ' (showing the most connected)' : ''
+          : visible
+            ? `${visible.nodes.length} notes, ${visible.edges.length} links${
+                visible.truncated ? ' (showing the most connected)' : ''
               }`
             : ''}
       </div>

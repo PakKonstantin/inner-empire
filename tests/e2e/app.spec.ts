@@ -367,6 +367,42 @@ test.describe('the graph', () => {
     await expect(page.locator('.ie-graph__status')).toContainText('4 notes');
     await expect(page.locator('.ie-graph__status')).toContainText('1 links');
   });
+
+  test('the filters narrow what the graph draws', async ({ page }) => {
+    await openApp(page);
+    await page.keyboard.press('Control+g');
+    await expect(page.locator('.ie-graph__status')).toContainText('4 notes');
+
+    // Scoped to the graph's own panel: the explorer has a "New folder" button
+    // that an unscoped label would also match.
+    const controls = page.locator('.ie-graph__controls');
+
+    // Three of the four notes live in Notes/; Roadmap.md is in Projects/.
+    await controls.getByLabel('Folder').selectOption('Notes');
+    await expect(page.locator('.ie-graph__status')).toContainText('3 notes');
+
+    // Of those three, only Statistics and Machine Learning are linked.
+    await controls.getByRole('switch', { name: 'Only notes with links' }).click();
+    await expect(page.locator('.ie-graph__status')).toContainText('2 notes');
+    await expect(page.locator('.ie-graph__status')).toContainText('1 links');
+
+    await controls.getByLabel('Folder').selectOption('');
+    await expect(page.locator('.ie-graph__status')).toContainText('2 notes');
+  });
+
+  test('the zoom controls change the zoom readout', async ({ page }) => {
+    await openApp(page);
+    await page.keyboard.press('Control+g');
+
+    const level = page.locator('.ie-graph__zoom-level');
+    await expect(level).toHaveText('100%');
+
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await expect(level).toHaveText('125%');
+
+    await page.getByRole('button', { name: 'Zoom out' }).click();
+    await expect(level).toHaveText('100%');
+  });
 });
 
 test.describe('the interface', () => {

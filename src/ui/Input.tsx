@@ -270,6 +270,7 @@ export function Toggle({
 }: ToggleProps) {
   const base = useId();
   const descriptionId = description ? `${base}-description` : undefined;
+  const labelId = hideLabel ? undefined : `${base}-label`;
 
   return (
     <div className="ie-toggle">
@@ -278,7 +279,12 @@ export function Toggle({
         id={id}
         role="switch"
         aria-checked={checked}
+        // The visible label is a sibling, not a wrapper, so the switch has to
+        // be pointed at it. Without this the control has no name at all: the
+        // text is right there on screen and entirely absent to a screen
+        // reader, which is the worst of both.
         aria-label={hideLabel ? label : undefined}
+        aria-labelledby={labelId}
         aria-describedby={descriptionId}
         disabled={disabled}
         className={`ie-toggle__track${checked ? ' is-on' : ''}`}
@@ -288,7 +294,7 @@ export function Toggle({
       </button>
       {hideLabel ? null : (
         <span className="ie-toggle__text">
-          {label}
+          <span id={labelId}>{label}</span>
           {description ? (
             <span className="ie-toggle__description" id={descriptionId}>
               {description}

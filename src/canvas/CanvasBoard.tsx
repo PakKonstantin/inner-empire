@@ -16,6 +16,7 @@ import { renderMarkdown } from '@/markdown/renderer';
 import { api } from '@/services/api';
 import type { VaultPath } from '@/types/domain';
 import { pathStem } from '@/types/domain';
+import { IconButton, Tooltip } from '@/ui';
 
 import {
   anchorOf,
@@ -382,28 +383,34 @@ export function CanvasBoard({ path, onOpenNote, assetUrl }: CanvasBoardProps) {
           Add group
         </button>
         <span className="ie-viewer__spacer" />
-        <button
-          type="button"
-          className="ie-button ie-button--quiet"
-          onClick={() => setViewport((current) => ({ ...current, k: current.k / 1.25 }))}
-        >
-          Zoom out
-        </button>
-        <span>{Math.round(viewport.k * 100)}%</span>
-        <button
-          type="button"
-          className="ie-button ie-button--quiet"
-          onClick={() => setViewport((current) => ({ ...current, k: current.k * 1.25 }))}
-        >
-          Zoom in
-        </button>
-        <button
-          type="button"
-          className="ie-button ie-button--quiet"
-          onClick={() => setViewport(fitToContent(document.nodes, surface.current))}
-        >
-          Fit
-        </button>
+        <Tooltip content="Zoom out">
+          <IconButton
+            icon="minus"
+            label="Zoom out"
+            size="sm"
+            onClick={() => setViewport((current) => ({ ...current, k: zoomStep(current.k, 1 / 1.25) }))}
+          />
+        </Tooltip>
+        {/* Tabular figures, so the readout does not jiggle as it changes. */}
+        <span className="ie-canvas__zoom-level" aria-live="polite">
+          {Math.round(viewport.k * 100)}%
+        </span>
+        <Tooltip content="Zoom in">
+          <IconButton
+            icon="plus"
+            label="Zoom in"
+            size="sm"
+            onClick={() => setViewport((current) => ({ ...current, k: zoomStep(current.k, 1.25) }))}
+          />
+        </Tooltip>
+        <Tooltip content="Fit everything on screen">
+          <IconButton
+            icon="maximize"
+            label="Fit to view"
+            size="sm"
+            onClick={() => setViewport(fitToContent(document.nodes, surface.current))}
+          />
+        </Tooltip>
       </div>
 
       <div
@@ -965,4 +972,9 @@ function fitToContent(nodes: CanvasNode[], element: HTMLElement | null): Viewpor
 
 function message(error: unknown): string {
   return error instanceof Object && 'message' in error ? String(error.message) : String(error);
+}
+
+/** Keep a zoom step inside the range the wheel already respects. */
+function zoomStep(current: number, factor: number): number {
+  return Math.max(0.15, Math.min(4, current * factor));
 }

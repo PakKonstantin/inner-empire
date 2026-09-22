@@ -94,6 +94,7 @@ const paths = {
 
   // ---- Actions ----
   plus: <path d="M12 5.5v13M5.5 12h13" />,
+  minus: <path d="M5.5 12h13" />,
   close: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
   check: <path d="M5 12.5l4.5 4.5L19 7" />,
   search: (
